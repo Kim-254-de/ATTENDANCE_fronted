@@ -4,7 +4,7 @@ import { App } from './app/App'
 import './index.css'
 
 async function enableMocks() {
-  if (import.meta.env.VITE_USE_MOCKS !== 'true') return
+  if (!['true', 'data'].includes(import.meta.env.VITE_USE_MOCKS ?? '')) return
   const { worker } = await import('./mocks/browser')
   await worker.start({ onUnhandledRequest: 'bypass' })
 }

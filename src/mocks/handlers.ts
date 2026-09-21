@@ -1,7 +1,8 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { AttendanceSession, CreateSessionInput, Lecturer, Overview, RecentSession, Unit } from '@/types'
 
-const API = '/api'
+// Mocks follow the same base URL as the client, so the two can never disagree.
+const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
 const SESSION_FLAG = 'mock-auth'
 
 const lecturer: Lecturer = {
@@ -24,7 +25,9 @@ const units: Unit[] = [
 const store = (() => {
   let memory = false
   return {
-    get: () => (typeof sessionStorage === 'undefined' ? memory : sessionStorage.getItem(SESSION_FLAG) === '1'),
+    // VITE_USE_MOCKS=data: sign-in is real (handled by the backend); only the dashboard/session
+    // data below is mocked, so it trusts the real session instead of the mock login flag.
+    get: () => import.meta.env.VITE_USE_MOCKS === 'data' || (typeof sessionStorage === 'undefined' ? memory : sessionStorage.getItem(SESSION_FLAG) === '1'),
     set: (v: boolean) => (typeof sessionStorage === 'undefined' ? (memory = v) : v ? sessionStorage.setItem(SESSION_FLAG, '1') : sessionStorage.removeItem(SESSION_FLAG)),
   }
 })()
@@ -33,7 +36,7 @@ const sessions = new Map<string, AttendanceSession>()
 const token = () => `att.${crypto.randomUUID()}.${Date.now()}`
 const unauthorized = () => HttpResponse.json({ message: 'Not signed in' }, { status: 401 })
 
-export const handlers = [
+const authHandlers = [
   http.post(`${API}/auth/login`, async ({ request }) => {
     const { identifier, password } = (await request.json()) as { identifier: string; password: string }
     await delay(300)
@@ -47,7 +50,11 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 })
   }),
   http.get(`${API}/auth/me`, () => (store.get() ? HttpResponse.json(lecturer) : unauthorized())),
+  // Mock sessions never expire, so there is never anything to refresh.
+  http.post(`${API}/auth/refresh`, unauthorized),
+]
 
+export const dataHandlers = [
   http.get(`${API}/lecturer/overview`, async () => {
     if (!store.get()) return unauthorized()
     await delay(200)
@@ -107,3 +114,5 @@ export const handlers = [
     return HttpResponse.json(next)
   }),
 ]
+
+export const handlers = [...authHandlers, ...dataHandlers]
