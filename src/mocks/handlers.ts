@@ -43,10 +43,25 @@ export const resetMocks = () => {
 }
 
 const authHandlers = [
+  http.post(`${API}/auth/register`, async ({ request }) => {
+    const input = (await request.json()) as { email: string; fullName: string; staffNumber: string; password: string }
+    await delay(450)
+    if (!input.email || !input.fullName || !input.staffNumber || input.password.length < 8) {
+      return HttpResponse.json({ message: 'Complete all required fields.' }, { status: 422 })
+    }
+    return HttpResponse.json({ message: 'Account request submitted.' }, { status: 201 })
+  }),
+  http.post(`${API}/auth/forgot-password`, async ({ request }) => {
+    const { email } = (await request.json()) as { email: string }
+    await delay(450)
+    if (!email) return HttpResponse.json({ message: 'Enter your school email.' }, { status: 422 })
+    return HttpResponse.json({ message: 'If an account exists, reset instructions are on the way.' })
+  }),
   http.post(`${API}/auth/login`, async ({ request }) => {
     const { identifier, password } = (await request.json()) as { identifier: string; password: string }
     await delay(300)
-    const ok = [lecturer.email, lecturer.staffNumber].includes(identifier) && password === 'password'
+    const normalizedIdentifier = identifier.trim().toLowerCase()
+    const ok = [lecturer.email.toLowerCase(), lecturer.staffNumber.toLowerCase()].includes(normalizedIdentifier) && password === 'password'
     if (!ok) return HttpResponse.json({ message: 'Invalid staff number/email or password' }, { status: 401 })
     store.set(true)
     return HttpResponse.json(lecturer)

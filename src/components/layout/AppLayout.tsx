@@ -13,14 +13,15 @@ export function AppLayout() {
   const { data: overview } = useOverview()
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh bg-surface">
       <Sidebar open={open} onClose={() => setOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-line bg-white px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-8">
+        <header className="flex items-center gap-3 border-b border-line bg-white px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))] sm:px-10">
           <button onClick={() => setOpen(true)} className="rounded-lg p-2 hover:bg-surface lg:hidden" aria-label="Open menu"><Menu className="size-5" /></button>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-navy-900">{title ?? 'Dashboard Overview'}</h1>
-            <p className="text-sm text-muted">{formatLongDate()}</p>
+            <p className="text-xs font-semibold tracking-[0.16em] text-gold-600">UNILEARN ERP</p>
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-navy-900">{title ?? 'Dashboard Overview'}</h1>
+            <p className="mt-0.5 text-sm text-muted">{formatLongDate()}</p>
           </div>
           {overview?.erpSync.status === 'synced' && (
             <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-success sm:inline-flex">
@@ -37,7 +38,7 @@ export function AppLayout() {
             </div>
           )}
         </header>
-        <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8">
+        <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8 lg:px-10 lg:py-9">
           <Outlet />
         </main>
       </div>

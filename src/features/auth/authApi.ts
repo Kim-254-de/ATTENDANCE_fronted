@@ -9,6 +9,13 @@ export interface LoginInput {
   password: string
 }
 
+export interface SignupInput {
+  email: string
+  fullName: string
+  staffNumber: string
+  password: string
+}
+
 export function useMe() {
   return useQuery({
     queryKey: ME_KEY,
@@ -33,6 +40,20 @@ export function useLogin() {
     mutationKey: ['login'],
     mutationFn: async (input: LoginInput) => (await api.post<Lecturer>('/auth/login', input)).data,
     onSuccess: (user) => qc.setQueryData(ME_KEY, user),
+  })
+}
+
+export function useSignup() {
+  return useMutation({
+    mutationKey: ['signup'],
+    mutationFn: async (input: SignupInput) => (await api.post<{ message: string }>('/auth/register', input)).data,
+  })
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationKey: ['forgot-password'],
+    mutationFn: async (email: string) => (await api.post<{ message: string }>('/auth/forgot-password', { email })).data,
   })
 }
 
