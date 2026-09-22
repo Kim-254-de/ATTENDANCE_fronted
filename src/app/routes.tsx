@@ -1,19 +1,25 @@
-import { Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { RouteError } from '@/components/RouteError'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
-import { OverviewPage } from '@/features/dashboard/OverviewPage'
 import { ComingSoon } from '@/pages/ComingSoon'
 
+// Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
-  { path: '/login', element: <LoginPage /> },
+  { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
   {
     element: <RequireAuth />,
+    errorElement: <RouteError />,
     children: [
       {
         element: <AppLayout />,
+        errorElement: <RouteError />,
         children: [
-          { index: true, element: <OverviewPage />, handle: { title: 'Dashboard Overview' } },
+          {
+            index: true,
+            lazy: async () => ({ Component: (await import('@/features/dashboard/OverviewPage')).OverviewPage }),
+            handle: { title: 'Dashboard Overview' },
+          },
           { path: 'attendance', element: <ComingSoon name="Attendance" />, handle: { title: 'Attendance' } },
           { path: 'students', element: <ComingSoon name="Students" />, handle: { title: 'Students' } },
           { path: 'units', element: <ComingSoon name="Units" />, handle: { title: 'Units' } },
@@ -21,5 +27,5 @@ export const routes = [
       },
     ],
   },
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', errorElement: <RouteError />, loader: () => { throw new Response('Not Found', { status: 404 }) } },
 ]

@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { useEffect } from 'react'
 import { BookOpen, ClipboardCheck, GraduationCap, LayoutGrid, LogOut, Users, X } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useLogout, useMe } from '@/features/auth/authApi'
@@ -18,6 +19,15 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const logout = useLogout()
   const navigate = useNavigate()
   const sync = overview?.erpSync
+  const syncLabel = { synced: 'ERP Synced', syncing: 'ERP Syncing…', failed: 'ERP Sync Failed' }
+  const syncColour = { synced: 'text-emerald-300', syncing: 'text-amber-300', failed: 'text-red-300' }
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
 
   return (
     <>
@@ -25,8 +35,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       <aside
         aria-label="Primary"
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-navy-900 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-white transition-transform lg:static lg:translate-x-0',
-          open ? 'translate-x-0' : '-translate-x-full',
+          'fixed inset-y-0 left-0 z-40 transition-[transform,visibility] duration-200 flex w-64 flex-col bg-navy-900 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-white lg:static lg:translate-x-0',
+          open ? 'translate-x-0' : '-translate-x-full max-lg:invisible',
         )}
       >
         <div className="flex items-center gap-3 px-1 py-2">
@@ -48,7 +58,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               </div>
             </div>
             <div className="mt-3 flex justify-between border-t border-white/10 pt-2 text-xs">
-              <span className="text-emerald-300">● ERP Synced</span>
+              <span className={syncColour[sync?.status ?? 'syncing']}>● {syncLabel[sync?.status ?? 'syncing']}</span>
               <span className="text-sky-300">{user.staffNumber}</span>
             </div>
           </div>

@@ -9,6 +9,9 @@ async function signIn(page: Page) {
   await expect(page.getByText('QR-CS301-0908')).toBeVisible()
 }
 
+// Pixel comparisons need baselines generated on the CI OS (Linux). Enable with VISUAL=1.
+const visual = !!process.env.VISUAL
+
 const noHorizontalScroll = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
 
@@ -18,7 +21,7 @@ test('login page renders consistently', async ({ page }) => {
   await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => document.fonts.check('16px "Inter Variable"'))).toBe(true)
   expect(await noHorizontalScroll(page)).toBe(true)
-  await expect(page).toHaveScreenshot('login.png')
+  if (visual) await expect(page).toHaveScreenshot('login.png')
 })
 
 test('inputs never trigger iOS zoom on touch devices', async ({ page, isMobile }) => {
@@ -44,7 +47,7 @@ test('dashboard has no overflow, native select chrome or tiny tap targets', asyn
     expect(box.height, 'tap target height').toBeGreaterThanOrEqual(40)
   }
   if (isMobile) await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible()
-  await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
+  if (visual) await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
 })
 
 test('QR flow works end to end', async ({ page }) => {

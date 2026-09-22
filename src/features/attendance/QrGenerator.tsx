@@ -1,6 +1,6 @@
 import { Download, QrCode, RefreshCw, XCircle } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useRef, useState, useSyncExternalStore } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useUnits } from '@/features/dashboard/dashboardApi'
@@ -124,18 +124,15 @@ export function QrGenerator() {
   )
 }
 
+const subscribeToSeconds = (notify: () => void) => {
+  const t = setInterval(notify, 1000)
+  return () => clearInterval(t)
+}
+const noSubscription = () => () => {}
+const currentSecond = () => Math.floor(Date.now() / 1000) * 1000
+
 /** Milliseconds left until `iso`, re-rendering each second. Returns 0 when no target. */
 function useCountdown(iso?: string) {
-  const [now, setNow] = useState(() => Date.now())
-  const [seenIso, setSeenIso] = useState(iso)
-  if (iso !== seenIso) {
-    setSeenIso(iso)
-    setNow(Date.now())
-  }
-  useEffect(() => {
-    if (!iso) return
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [iso])
+  const now = useSyncExternalStore(iso ? subscribeToSeconds : noSubscription, currentSecond)
   return iso ? new Date(iso).getTime() - now : 0
 }
