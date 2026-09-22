@@ -41,7 +41,10 @@ export function OverviewPage() {
           <QuickAction to="/students" icon={UserRound} title="Allocated Students" hint="Browse student roster" />
           <QuickAction to="/units" icon={Plus} title="Add New Unit" hint="Register a course unit" highlight />
           <Card className="space-y-1 p-5 text-sm">
-            <p className="flex items-center gap-2 font-semibold text-success"><RefreshCw className="size-4" aria-hidden /> ERP System Synced</p>
+            <p className={`flex items-center gap-2 font-semibold ${data?.erpSync.status === 'failed' ? 'text-red-600' : 'text-success'}`}>
+              <RefreshCw className="size-4" aria-hidden />
+              {data?.erpSync.status === 'failed' ? 'ERP Sync Failed' : data?.erpSync.status === 'syncing' ? 'ERP Syncing…' : 'ERP System Synced'}
+            </p>
             <p className="text-muted">Lecturer profile, unit roster, and student records are live-synced with the university database.</p>
             {data && <p className="pt-1 text-xs text-muted">Last sync: {formatDateTime(data.erpSync.lastSyncedAt)}</p>}
           </Card>
