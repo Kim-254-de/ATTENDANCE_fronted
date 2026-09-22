@@ -1,12 +1,16 @@
 import { AppLayout } from '@/components/layout/AppLayout'
 import { RouteError } from '@/components/RouteError'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
+import { SignupPage } from '@/features/auth/SignupPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { ComingSoon } from '@/pages/ComingSoon'
 
 // Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
+  { path: '/signup', element: <SignupPage />, errorElement: <RouteError /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteError /> },
   {
     element: <RequireAuth />,
     errorElement: <RouteError />,

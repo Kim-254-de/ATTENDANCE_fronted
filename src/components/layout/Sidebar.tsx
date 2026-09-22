@@ -35,15 +35,17 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       <aside
         aria-label="Primary"
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 transition-[transform,visibility] duration-200 flex w-64 flex-col bg-navy-900 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-white lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-hidden bg-navy-900 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-white transition-[transform,visibility] duration-200 lg:static lg:translate-x-0 relative',
           open ? 'translate-x-0' : '-translate-x-full max-lg:invisible',
         )}
       >
+        <div className="pointer-events-none absolute -right-28 -top-24 size-72 rounded-full border-[28px] border-white/5" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-navy-800/70" aria-hidden />
         <div className="flex items-center gap-3 px-1 py-2">
-          <span className="grid size-10 place-items-center rounded-xl bg-gold-500"><GraduationCap className="size-5" aria-hidden /></span>
+          <span className="grid size-12 place-items-center rounded-xl bg-gold-500 shadow-[0_8px_18px_rgba(201,151,28,0.25)]"><GraduationCap className="size-6" aria-hidden /></span>
           <div className="flex-1 leading-tight">
-            <p className="font-bold">UniLearn ERP</p>
-            <p className="text-xs text-blue-200">Lecturer Portal</p>
+            <p className="text-lg font-bold tracking-tight">UniLearn ERP</p>
+            <p className="text-sm text-blue-200">Lecturer Portal</p>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 hover:bg-white/10 lg:hidden" aria-label="Close menu"><X className="size-5" /></button>
         </div>
