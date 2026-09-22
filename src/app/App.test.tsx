@@ -1,0 +1,92 @@
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
+import { renderApp } from '@/test/renderApp'
+import { server } from '@/test/setup'
+import { errorMessage } from '@/lib/api'
+import { formatCountdown, initials } from '@/lib/format'
+
+describe('lecturer portal', () => {
+  it('redirects unauthenticated users to login and rejects bad credentials', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+    await screen.findByRole('heading', { name: /lecturer portal/i })
+
+    await user.type(screen.getByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/password/i), 'wrong')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/invalid/i)
+  })
+
+  it('signs in, shows stats and generates a QR session', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByText('Total Students')).toBeInTheDocument()
+    expect(await screen.findByText('86.4%')).toBeInTheDocument()
+
+    expect(await screen.findByText('QR-CS301-0908')).toBeInTheDocument()
+    expect(screen.getAllByText('90%', { selector: 'span' })).toHaveLength(2)
+
+    const generate = screen.getByRole('button', { name: /^generate$/i })
+    expect(generate).toBeDisabled()
+
+    const select = screen.getByLabelText('Unit')
+    await waitFor(() => expect(screen.getByRole('option', { name: /CS301/ })).toBeInTheDocument())
+    await user.selectOptions(select, 'u1')
+    await user.click(generate)
+
+    expect(await screen.findByRole('button', { name: /refresh/i })).toBeEnabled()
+    expect(screen.getByRole('timer')).toHaveTextContent(/expires in 15:0\d|14:5\d/i)
+  })
+
+  it('sends the user back to login when the session expires mid-use', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    await screen.findByText('Total Students')
+
+    // The server-side session expires while the page is open.
+    server.use(
+      http.get('/api/auth/me', () => HttpResponse.json({ message: 'expired' }, { status: 401 })),
+      http.post('/api/sessions', () => HttpResponse.json({ message: 'expired' }, { status: 401 })),
+    )
+    await waitFor(() => expect(screen.getByRole('option', { name: /CS301/ })).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText('Unit'), 'u1')
+    await user.click(screen.getByRole('button', { name: /^generate$/i }))
+    expect(await screen.findByRole('heading', { name: /lecturer portal/i })).toBeInTheDocument()
+  })
+
+  it('shows a friendly page for unknown routes', async () => {
+    renderApp('/nope')
+    expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument()
+  })
+
+  it('shows a failed ERP sync instead of claiming everything is fine', async () => {
+    server.use(
+      http.get('/api/lecturer/overview', () =>
+        HttpResponse.json({ totalStudents: 1, unitsTaught: 1, avgAttendance: 50, sessionsHeld: 1, periodLabel: 'Sep 2026', erpSync: { status: 'failed', lastSyncedAt: new Date().toISOString() } }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderApp('/')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    expect((await screen.findAllByText(/ERP Sync Failed/i)).length).toBeGreaterThan(0)
+  })
+})
+
+describe('helpers', () => {
+  it('formats countdowns, initials and errors', () => {
+    expect(formatCountdown(65_000)).toBe('01:05')
+    expect(formatCountdown(-5)).toBe('00:00')
+    expect(initials('Dr. Joseph K. Osei')).toBe('JK')
+    expect(errorMessage(new Error('x'))).toMatch(/something went wrong/i)
+  })
+})
