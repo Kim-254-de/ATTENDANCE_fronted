@@ -33,6 +33,12 @@ const sessions = new Map<string, AttendanceSession>()
 const token = () => `att.${crypto.randomUUID()}.${Date.now()}`
 const unauthorized = () => HttpResponse.json({ message: 'Not signed in' }, { status: 401 })
 
+/** Test helper: back to a signed-out, empty server. */
+export const resetMocks = () => {
+  store.set(false)
+  sessions.clear()
+}
+
 export const handlers = [
   http.post(`${API}/auth/login`, async ({ request }) => {
     const { identifier, password } = (await request.json()) as { identifier: string; password: string }
