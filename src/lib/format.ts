@@ -16,6 +16,15 @@ export const formatCountdown = (ms: number) => {
   return `${m}:${s}`
 }
 
+/** Elapsed running time, e.g. a class in progress: "04:12" or "1:04:12" past the hour. */
+export const formatElapsed = (ms: number) => {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(total / 3600)
+  const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0')
+  const s = String(total % 60).padStart(2, '0')
+  return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`
+}
+
 export const initials = (name: string) =>
   name
     .replace(/^(dr|prof|mr|mrs|ms)\.?\s+/i, '')

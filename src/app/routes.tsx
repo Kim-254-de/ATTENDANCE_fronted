@@ -43,10 +43,20 @@ export const routes = [
             lazy: async () => ({ Component: (await import('@/features/auth/ProfilePage')).ProfilePage }),
             handle: { title: 'My Profile' },
           },
-          { path: 'attendance', element: <ComingSoon name="Attendance" />, handle: { title: 'Attendance' } },
+          {
+            path: 'attendance',
+            lazy: async () => ({ Component: (await import('@/features/attendance/AttendanceReportsPage')).AttendanceReportsPage }),
+            handle: { title: 'Attendance Reports' },
+          },
           { path: 'students', element: <ComingSoon name="Students" />, handle: { title: 'Students' } },
           { path: 'units', element: <ComingSoon name="Units" />, handle: { title: 'Units' } },
         ],
+      },
+      {
+        // Full-bleed: no sidebar/bottom-nav chrome, so this is what's actually projected in the room.
+        path: 'session/:sessionId',
+        lazy: async () => ({ Component: (await import('@/features/attendance/LiveSessionPage')).LiveSessionPage }),
+        handle: { title: 'Live Session' },
       },
     ],
   },

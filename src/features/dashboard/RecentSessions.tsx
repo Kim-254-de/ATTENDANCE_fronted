@@ -8,8 +8,8 @@ import { formatShortDate } from '@/lib/format'
 import type { RecentSession } from '@/types'
 import { useRecentSessions } from './dashboardApi'
 
-export function RecentSessions() {
-  const { data, isPending, error, refetch } = useRecentSessions()
+export function RecentSessions({ limit = 5 }: { limit?: number }) {
+  const { data, isPending, error, refetch } = useRecentSessions(limit)
 
   return (
     <Card className="overflow-hidden">
@@ -26,7 +26,7 @@ export function RecentSessions() {
       ) : isPending ? (
         <div className="space-y-2 border-t border-line p-5">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-9" />)}</div>
       ) : data.length === 0 ? (
-        <p className="border-t border-line p-8 text-center text-sm text-muted">No sessions yet. Generate a QR code to start one.</p>
+        <p className="border-t border-line p-8 text-center text-sm text-muted">No sessions yet. Activate a class to start one.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">

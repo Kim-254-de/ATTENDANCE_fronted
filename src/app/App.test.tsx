@@ -18,29 +18,28 @@ describe('lecturer portal', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/invalid/i)
   })
 
-  it('signs in, shows stats and generates a QR session', async () => {
+  it('signs in, shows stats and activates a class', async () => {
     const user = userEvent.setup()
     renderApp('/')
     await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
     await user.type(screen.getByLabelText(/password/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByText('Total Students')).toBeInTheDocument()
     expect(await screen.findByText('86.4%')).toBeInTheDocument()
-
     expect(await screen.findByText('QR-CS301-0908')).toBeInTheDocument()
     expect(screen.getAllByText('90%', { selector: 'span' })).toHaveLength(2)
 
-    const generate = screen.getByRole('button', { name: /^generate$/i })
-    expect(generate).toBeDisabled()
+    const activate = screen.getByRole('button', { name: /activate class/i })
+    expect(activate).toBeDisabled()
 
     const select = screen.getByLabelText('Unit')
     await waitFor(() => expect(screen.getByRole('option', { name: /CS301/ })).toBeInTheDocument())
     await user.selectOptions(select, 'u1')
-    await user.click(generate)
+    await user.click(activate)
 
-    expect(await screen.findByRole('button', { name: /refresh/i })).toBeEnabled()
-    expect(screen.getByRole('timer')).toHaveTextContent(/expires in 15:0\d|14:5\d/i)
+    expect(await screen.findByText('CS301')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^pause$/i })).toBeEnabled()
+    expect(await screen.findByRole('timer')).toHaveTextContent(/refreshes in/i)
   })
 
   it('opens the profile and saves updated lecturer details', async () => {
@@ -97,16 +96,16 @@ describe('lecturer portal', () => {
     await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
     await user.type(screen.getByLabelText(/password/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
-    await screen.findByText('Total Students')
+    await screen.findByText('86.4%')
 
     // The server-side session expires while the page is open.
     server.use(
-      http.get('/api/auth/me', () => HttpResponse.json({ message: 'expired' }, { status: 401 })),
-      http.post('/api/sessions', () => HttpResponse.json({ message: 'expired' }, { status: 401 })),
+      http.get('/api/auth/me', () => HttpResponse.json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'expired' } }, { status: 401 })),
+      http.post('/api/sessions', () => HttpResponse.json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'expired' } }, { status: 401 })),
     )
     await waitFor(() => expect(screen.getByRole('option', { name: /CS301/ })).toBeInTheDocument())
     await user.selectOptions(screen.getByLabelText('Unit'), 'u1')
-    await user.click(screen.getByRole('button', { name: /^generate$/i }))
+    await user.click(screen.getByRole('button', { name: /activate class/i }))
     expect(await screen.findByRole('heading', { name: /lecturer portal/i })).toBeInTheDocument()
   })
 

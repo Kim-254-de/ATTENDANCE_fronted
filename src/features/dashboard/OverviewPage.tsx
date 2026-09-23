@@ -1,19 +1,25 @@
-import { Activity, ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ClipboardCheck, Clock3, Users } from 'lucide-react'
+import { ArrowUpRight, BookOpen, ClipboardCheck, Plus, Radio, UserRound } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ActivateClass } from '@/features/attendance/ActivateClass'
+import { getActiveSessionId, useSessionQr } from '@/features/attendance/sessionApi'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { StatCard } from '@/components/ui/StatCard'
 import { useMe } from '@/features/auth/authApi'
 import { errorMessage } from '@/lib/api'
-import { QrGenerator } from '@/features/attendance/QrGenerator'
-import { formatDateTime, initials } from '@/lib/format'
 import { RecentSessions } from './RecentSessions'
 import { useOverview, useUnits } from './dashboardApi'
 
+/**
+ * A lecturer opens this between classes, mid-walk to the lecture hall. It
+ * leads with the one action that's actually urgent — activating the class —
+ * and keeps everything else one glance, not a read.
+ */
 export function OverviewPage() {
   const { data: user } = useMe()
   const { data, isPending, error, refetch } = useOverview()
-  const { data: units, isPending: unitsPending } = useUnits()
+  const [activeSessionId] = useState(getActiveSessionId)
   const firstName = user?.fullName.replace(/^\S+\.?\s*/, '').split(' ')[0] ?? 'Lecturer'
 
   return (
@@ -34,80 +40,67 @@ export function OverviewPage() {
         </div>
       </section>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold tracking-[0.16em] text-gold-600">PERFORMANCE SNAPSHOT</p>
-          <h2 className="mt-1 text-lg font-bold text-navy-900">Your teaching at a glance</h2>
-        </div>
-        {user && <span className="hidden size-9 place-items-center rounded-full bg-navy-900 text-xs font-bold text-white sm:grid" aria-label={`Signed in as ${user.fullName}`}>{initials(user.fullName)}</span>}
-      </div>
+      {activeSessionId && <ActiveSessionBanner sessionId={activeSessionId} />}
+
+      <ActivateClass />
+
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
           <p className="text-sm text-red-700">{errorMessage(error, 'Could not load your statistics.')}</p>
           <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
         </Card>
       ) : (
-        <section aria-label="Key statistics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section aria-label="Key statistics" className="grid grid-cols-2 gap-4">
           {isPending || !data ? (
-            Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[104px]" />)
+            Array.from({ length: 2 }, (_, i) => <Skeleton key={i} className="h-[104px]" />)
           ) : (
             <>
-              <StatCard icon={Users} label="Total Students" value={data.totalStudents} hint={`Across ${data.unitsTaught} units`} />
               <StatCard icon={ClipboardCheck} label="Avg. Attendance" value={`${data.avgAttendance.toFixed(1)}%`} hint="This semester" accent />
-              <StatCard icon={BookOpen} label="Units Taught" value={data.unitsTaught} hint="Current semester" />
-              <StatCard icon={CalendarDays} label="Sessions Held" value={data.sessionsHeld} hint={data.periodLabel} />
+              <StatCard icon={BookOpen} label="Sessions Held" value={data.sessionsHeld} hint={data.periodLabel} />
             </>
           )}
         </section>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <QrGenerator />
-        <div className="space-y-6">
-          <Card className="overflow-hidden">
-            <div className="flex items-center justify-between border-b border-line px-5 py-4">
-              <div>
-                <p className="text-xs font-semibold tracking-wider text-muted">TEACHING ROSTER</p>
-                <h2 className="mt-1 font-semibold text-navy-900">Allocated units</h2>
-              </div>
-              <Link to="/units" aria-label="View all units" className="rounded-lg p-2 text-muted transition hover:bg-surface hover:text-navy-900"><ArrowUpRight className="size-4" /></Link>
-            </div>
-            <div className="divide-y divide-line">
-              {unitsPending ? Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="mx-5 my-4 h-10" />) : units?.slice(0, 4).map((unit) => (
-                <div key={unit.id} className="flex items-center gap-3 px-5 py-3.5">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-navy-900/5 text-navy-800"><BookOpen className="size-4" aria-hidden /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-navy-900">{unit.name}</p>
-                    <p className="mt-0.5 text-xs text-muted">{unit.code} · {unit.studentCount} students</p>
-                  </div>
-                  <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-success">Active</span>
-                </div>
-              ))}
-            </div>
-            <Link to="/units" className="flex items-center justify-center gap-1 border-t border-line px-5 py-3 text-xs font-semibold text-navy-800 hover:bg-surface">Manage all units <ArrowUpRight className="size-3.5" /></Link>
-          </Card>
+      <section aria-label="Quick actions" className="grid grid-cols-3 gap-3">
+        <QuickAction to="/attendance" icon={ClipboardCheck} label="Reports" />
+        <QuickAction to="/students" icon={UserRound} label="Students" />
+        <QuickAction to="/units" icon={Plus} label="Add Unit" />
+      </section>
 
-          <Card className="p-5">
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-success"><Activity className="size-5" aria-hidden /></span>
-              <div>
-                <p className="font-semibold text-navy-900">System health</p>
-                <p className="text-xs text-muted">Your workspace is up to date</p>
-              </div>
-            </div>
-            <div className="mt-4 space-y-3 text-sm">
-              <HealthRow icon={CheckCircle2} label="ERP data synchronisation" value={data?.erpSync.status === 'failed' ? 'Needs attention' : 'Operational'} bad={data?.erpSync.status === 'failed'} />
-              <HealthRow icon={Clock3} label="Last data refresh" value={data ? formatDateTime(data.erpSync.lastSyncedAt) : 'Loading…'} />
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      <RecentSessions />
+      <RecentSessions limit={3} />
     </div>
   )
 }
 
-function HealthRow({ icon: Icon, label, value, bad }: { icon: typeof CheckCircle2; label: string; value: string; bad?: boolean }) {
-  return <div className="flex items-center gap-2"><Icon className={`size-4 ${bad ? 'text-red-600' : 'text-success'}`} aria-hidden /><span className="flex-1 text-muted">{label}</span><span className={`text-xs font-semibold ${bad ? 'text-red-600' : 'text-navy-900'}`}>{value}</span></div>
+function ActiveSessionBanner({ sessionId }: { sessionId: string }) {
+  const qr = useSessionQr(sessionId)
+  const { data: units } = useUnits()
+  const capacity = units?.find((u) => u.id === qr.data?.session.unitId)?.studentCount
+
+  return (
+    <Link to={`/session/${sessionId}`} className="block">
+      <Card className="flex items-center gap-3 border border-emerald-200 bg-emerald-50 p-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-success"><Radio className="size-5" aria-hidden /></span>
+        <span className="flex-1 leading-tight">
+          <span className="block font-semibold text-navy-900">Class in progress</span>
+          <span className="text-sm text-muted">
+            {qr.data ? `${qr.data.checkedIn}${capacity !== undefined ? `/${capacity}` : ''} checked in — tap to reopen` : 'Tap to reopen the live QR code'}
+          </span>
+        </span>
+        <span className="text-muted" aria-hidden>›</span>
+      </Card>
+    </Link>
+  )
+}
+
+function QuickAction({ to, icon: Icon, label }: { to: string; icon: typeof Plus; label: string }) {
+  return (
+    <Link to={to} className="block">
+      <Card className="flex flex-col items-center gap-2 p-4 text-center transition hover:shadow-md">
+        <span className="grid size-11 place-items-center rounded-xl bg-navy-900/5 text-navy-800"><Icon className="size-5" aria-hidden /></span>
+        <span className="text-sm font-medium text-navy-900">{label}</span>
+      </Card>
+    </Link>
+  )
 }
