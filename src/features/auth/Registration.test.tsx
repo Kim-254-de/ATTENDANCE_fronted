@@ -9,10 +9,10 @@ async function fillForm(values: Partial<Record<'name' | 'staff' | 'email' | 'pas
   const v = { name: 'Mary Atieno', staff: 'stf/0002', email: 'Mary.Atieno@uni.ac.ke', password: 'Lecturer-Pass-2026', ...values }
   await user.type(await screen.findByLabelText('Full name'), v.name)
   await user.type(screen.getByLabelText('Staff number'), v.staff)
-  await user.type(screen.getByLabelText('Email'), v.email)
+  await user.type(screen.getByLabelText('School email'), v.email)
   await user.type(screen.getByLabelText('Password'), v.password)
   await user.type(screen.getByLabelText('Confirm password'), values.confirm ?? v.password)
-  await user.click(screen.getByRole('button', { name: /create account/i }))
+  await user.click(screen.getByRole('button', { name: /register account/i }))
 }
 
 describe('lecturer registration', () => {
@@ -20,13 +20,18 @@ describe('lecturer registration', () => {
     const user = userEvent.setup()
     renderApp('/login')
     await user.click(await screen.findByRole('link', { name: /create an account/i }))
-    expect(await screen.findByRole('heading', { name: /create lecturer account/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^create account$/i })).toBeInTheDocument()
+  })
+
+  it('keeps the old /register link working', async () => {
+    renderApp('/register')
+    expect(await screen.findByRole('heading', { name: /^create account$/i })).toBeInTheDocument()
   })
 
   it('checks the password rules before sending anything', async () => {
     let calls = 0
     server.use(http.post('/api/auth/lecturer/register', () => { calls += 1; return HttpResponse.json({}) }))
-    renderApp('/register')
+    renderApp('/signup')
     await fillForm({ password: 'short', confirm: 'different' })
     expect(await screen.findByText('Password must be at least 12 characters.')).toBeInTheDocument()
     expect(screen.getByText('Passwords do not match.')).toBeInTheDocument()
@@ -35,7 +40,7 @@ describe('lecturer registration', () => {
   })
 
   it('rejects a password containing the staff number', async () => {
-    renderApp('/register')
+    renderApp('/signup')
     await fillForm({ password: 'Stf/0002-Password1' })
     expect(await screen.findByText(/must not contain your staff number/i)).toBeInTheDocument()
   })
@@ -51,7 +56,7 @@ describe('lecturer registration', () => {
         )
       }),
     )
-    renderApp('/register')
+    renderApp('/signup')
     await fillForm()
     expect(await screen.findByRole('heading', { name: /check your email/i })).toBeInTheDocument()
     expect(screen.getByText('mary.atieno@uni.ac.ke')).toBeInTheDocument()
@@ -67,7 +72,7 @@ describe('lecturer registration', () => {
         ),
       ),
     )
-    renderApp('/register')
+    renderApp('/signup')
     await fillForm({ staff: 'STF/9999' })
     expect(await screen.findByRole('alert')).toHaveTextContent(/not listed in the institutional staff records/i)
     expect(screen.queryByRole('heading', { name: /check your email/i })).not.toBeInTheDocument()
@@ -82,10 +87,10 @@ describe('lecturer registration', () => {
         ),
       ),
     )
-    renderApp('/register')
+    renderApp('/signup')
     await fillForm()
     expect(await screen.findByText('Email domain is not allowed.')).toBeInTheDocument()
-    expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('School email')).toHaveAttribute('aria-invalid', 'true')
   })
 })
 

@@ -36,6 +36,13 @@ export function useLogin() {
   })
 }
 
+export function useForgotPassword() {
+  return useMutation({
+    mutationKey: ['forgot-password'],
+    mutationFn: async (email: string) => (await api.post<{ message: string }>('/auth/forgot-password', { email })).data,
+  })
+}
+
 export function useLogout() {
   const qc = useQueryClient()
   return useMutation({
