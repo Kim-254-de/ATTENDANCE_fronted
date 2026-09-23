@@ -10,7 +10,7 @@ describe('lecturer portal', () => {
   it('redirects unauthenticated users to login and rejects bad credentials', async () => {
     const user = userEvent.setup()
     renderApp('/')
-    await screen.findByRole('heading', { name: /lecturer portal/i })
+    await screen.findByRole('heading', { name: /welcome back/i })
 
     await user.type(screen.getByLabelText(/staff number or email/i), 'LEC00123')
     await user.type(screen.getByLabelText(/password/i), 'wrong')
@@ -41,6 +41,54 @@ describe('lecturer portal', () => {
 
     expect(await screen.findByRole('button', { name: /refresh/i })).toBeEnabled()
     expect(screen.getByRole('timer')).toHaveTextContent(/expires in 15:0\d|14:5\d/i)
+  })
+
+  it('opens the profile and saves updated lecturer details', async () => {
+    const user = userEvent.setup()
+    renderApp('/profile')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByRole('heading', { name: /your profile/i })).toBeInTheDocument()
+    const name = screen.getByLabelText('Full name')
+    await user.clear(name)
+    await user.type(name, 'Dr. Joseph Osei')
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(await screen.findByText('Profile updated')).toBeInTheDocument()
+    expect(screen.getByText('Dr. Joseph Osei')).toBeInTheDocument()
+  })
+
+  it('opens the student profile with a student account', async () => {
+    const user = userEvent.setup()
+    renderApp('/student-profile')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'STU00042')
+    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByRole('heading', { name: /student profile/i })).toBeInTheDocument()
+    expect(screen.getByText('Ama Mensah')).toBeInTheDocument()
+    expect(screen.getByText('STU00042')).toBeInTheDocument()
+  })
+
+  it('registers a student and routes the new account to its dashboard and profile', async () => {
+    const user = userEvent.setup()
+    renderApp('/signup?role=student')
+    await user.type(await screen.findByLabelText(/school email/i), 'new.student@university.edu')
+    await user.type(screen.getByLabelText(/full name/i), 'New Student')
+    await user.type(screen.getByLabelText(/student number/i), 'STU00999')
+    await user.type(screen.getByLabelText(/^password$/i), 'studentpass')
+    await user.type(screen.getByLabelText(/confirm password/i), 'studentpass')
+    await user.click(screen.getByRole('button', { name: /register as student/i }))
+
+    expect(await screen.findByRole('heading', { name: /student sign in/i })).toBeInTheDocument()
+    await user.type(screen.getByLabelText(/student number or email/i), 'STU00999')
+    await user.type(screen.getByLabelText(/password/i), 'studentpass')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByRole('heading', { name: /good morning, new/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /my profile/i })).toHaveAttribute('href', '/student-profile')
   })
 
   it('sends the user back to login when the session expires mid-use', async () => {

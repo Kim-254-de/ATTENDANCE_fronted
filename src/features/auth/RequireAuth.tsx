@@ -22,8 +22,10 @@ export function RequireAuth() {
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
-  if (user.role !== 'lecturer') {
-    return <div className="grid min-h-dvh place-items-center p-6 text-center text-navy-900">This portal is for lecturers only.</div>
+  const studentRoute = location.pathname === '/student-profile' || location.pathname === '/student-dashboard'
+  const allowed = user.role === 'lecturer' ? !studentRoute : user.role === 'student' ? studentRoute : false
+  if (!allowed) {
+    return <Navigate to={user.role === 'student' ? '/student-dashboard' : '/'} replace />
   }
   return <Outlet />
 }

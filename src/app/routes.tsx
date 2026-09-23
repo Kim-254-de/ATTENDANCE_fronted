@@ -16,6 +16,16 @@ export const routes = [
     errorElement: <RouteError />,
     children: [
       {
+        path: 'student-profile',
+        lazy: async () => ({ Component: (await import('@/features/auth/StudentProfilePage')).StudentProfilePage }),
+        handle: { title: 'Student Profile' },
+      },
+      {
+        path: 'student-dashboard',
+        lazy: async () => ({ Component: (await import('@/features/dashboard/StudentDashboardPage')).StudentDashboardPage }),
+        handle: { title: 'Student Dashboard' },
+      },
+      {
         element: <AppLayout />,
         errorElement: <RouteError />,
         children: [
@@ -23,6 +33,11 @@ export const routes = [
             index: true,
             lazy: async () => ({ Component: (await import('@/features/dashboard/OverviewPage')).OverviewPage }),
             handle: { title: 'Dashboard Overview' },
+          },
+          {
+            path: 'profile',
+            lazy: async () => ({ Component: (await import('@/features/auth/ProfilePage')).ProfilePage }),
+            handle: { title: 'My Profile' },
           },
           { path: 'attendance', element: <ComingSoon name="Attendance" />, handle: { title: 'Attendance' } },
           { path: 'students', element: <ComingSoon name="Students" />, handle: { title: 'Students' } },

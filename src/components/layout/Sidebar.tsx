@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { useEffect } from 'react'
-import { BookOpen, ClipboardCheck, GraduationCap, LayoutGrid, LogOut, Users, X } from 'lucide-react'
+import { BookOpen, ClipboardCheck, GraduationCap, LayoutGrid, LogOut, UserRound, Users, X } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useLogout, useMe } from '@/features/auth/authApi'
 import { useOverview } from '@/features/dashboard/dashboardApi'
@@ -8,6 +8,7 @@ import { formatRelative, initials } from '@/lib/format'
 
 const nav = [
   { to: '/', label: 'Overview', icon: LayoutGrid, end: true },
+  { to: '/profile', label: 'My Profile', icon: UserRound },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/units', label: 'Units', icon: BookOpen },
