@@ -27,13 +27,13 @@ export const api = axios.create({
 interface Envelope {
   success: boolean
   data?: unknown
-  error?: { code?: string; message?: string }
+  error?: { code?: string; message?: string; details?: unknown }
 }
 const isEnvelope = (v: unknown): v is Envelope =>
   typeof v === 'object' && v !== null && typeof (v as Envelope).success === 'boolean'
 
 /** Auth calls must never trigger a refresh-and-retry (that would loop or hide real failures). */
-const NO_REFRESH = ['/auth/login', '/auth/refresh', '/auth/logout']
+const NO_REFRESH = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/lecturer/register', '/auth/verify-email']
 
 type Retriable = InternalAxiosRequestConfig & { _retried?: boolean }
 let refreshing: Promise<unknown> | null = null
@@ -48,7 +48,7 @@ api.interceptors.response.use(
 
     const body = error.response?.data
     if (isEnvelope(body) && body.error) {
-      error.response!.data = { message: body.error.message ?? 'Something went wrong.', code: body.error.code }
+      error.response!.data = { message: body.error.message ?? 'Something went wrong.', code: body.error.code, details: body.error.details }
     }
 
     // The access token lasts ~15 minutes. On a 401, quietly trade the refresh cookie for a new
@@ -75,10 +75,21 @@ export function errorMessage(err: unknown, fallback = 'Something went wrong. Ple
     if (err.code === 'ECONNABORTED') return 'The server took too long to respond. Please try again.'
     if (!err.response) return 'Cannot reach the server. Check your connection.'
     if (err.response.status === 429) return 'Too many attempts. Please wait a moment and try again.'
-    if (err.response.status >= 500) return 'The server had a problem. Please try again shortly.'
-    return (err.response.data as ApiErrorBody | undefined)?.message ?? fallback
+    const body = err.response.data as ApiErrorBody | undefined
+    // A coded 5xx came from our API, which only ever sends safe, user-facing messages (e.g.
+    // ERP_UNAVAILABLE explains the staff records system is down). An uncoded one is a proxy page.
+    if (err.response.status >= 500) return body?.code && body.message ? body.message : 'The server had a problem. Please try again shortly.'
+    return body?.message ?? fallback
   }
   return fallback
+}
+
+/** Per-field messages from a 400 VALIDATION_FAILED, keyed by field name. */
+export function fieldErrors(err: unknown): Record<string, string> {
+  if (!(err instanceof AxiosError)) return {}
+  const details = (err.response?.data as ApiErrorBody | undefined)?.details
+  if (!Array.isArray(details)) return {}
+  return Object.fromEntries(details.map((d) => [d.field, d.message]))
 }
 
 export function isUnauthorized(err: unknown): boolean {

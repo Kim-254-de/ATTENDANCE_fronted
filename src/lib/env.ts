@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 const schema = z.object({
   VITE_API_URL: z.string().min(1).default('/api'),
-  VITE_USE_MOCKS: z.enum(['true', 'false']).default('false'),
+  VITE_USE_MOCKS: z.enum(['true', 'data', 'false']).default('false'),
 })
 
 const parsed = schema.safeParse(import.meta.env)

@@ -45,6 +45,31 @@ export interface CreateSessionInput {
 export interface ApiErrorBody {
   message: string
   code?: string
+  details?: { field: string; message: string }[]
+}
+
+export interface RegistrationInput {
+  fullName: string
+  email: string
+  staffNumber: string
+  password: string
+  confirmPassword: string
+}
+
+export interface RegistrationResult {
+  id: string
+  fullName: string
+  email: string
+  staffNumber: string
+  status: string
+  nextStep: string
+  message: string
+}
+
+export interface EmailVerificationResult {
+  status: string
+  nextStep: 'AWAIT_APPROVAL' | 'SIGN_IN' | string
+  message: string
 }
 
 export interface RecentSession {

@@ -2,7 +2,7 @@ import { AxiosError } from 'axios'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { server } from '@/test/setup'
-import { api, errorMessage } from './api'
+import { api, errorMessage, fieldErrors } from './api'
 
 describe('api client (backend envelope adapter)', () => {
   it('unwraps { success, data } into the bare object', async () => {
@@ -75,5 +75,28 @@ describe('api client (backend envelope adapter)', () => {
     )
     await api.post('/auth/login', {}).catch(() => undefined)
     expect(refreshes).toBe(0)
+  })
+  it('shows the API\'s own message for a coded 5xx (ERP down), but not a proxy error page', async () => {
+    server.use(
+      http.post('/api/auth/lecturer/register', () =>
+        HttpResponse.json({ success: false, error: { code: 'ERP_UNAVAILABLE', message: 'The staff records system is unreachable.' } }, { status: 503 }),
+      ),
+      http.get('/api/thing', () => new HttpResponse('<html>Bad Gateway</html>', { status: 502 })),
+    )
+    expect(errorMessage(await api.post('/auth/lecturer/register', {}).catch((e: unknown) => e))).toBe('The staff records system is unreachable.')
+    expect(errorMessage(await api.get('/thing').catch((e: unknown) => e))).toMatch(/server had a problem/i)
+  })
+
+  it('exposes per-field validation errors from a 400 envelope', async () => {
+    server.use(
+      http.post('/api/auth/lecturer/register', () =>
+        HttpResponse.json(
+          { success: false, error: { code: 'VALIDATION_FAILED', message: 'Invalid', details: [{ field: 'email', message: 'Enter a valid email address.' }] } },
+          { status: 400 },
+        ),
+      ),
+    )
+    const err = await api.post('/auth/lecturer/register', {}).catch((e: unknown) => e)
+    expect(fieldErrors(err)).toEqual({ email: 'Enter a valid email address.' })
   })
 })
