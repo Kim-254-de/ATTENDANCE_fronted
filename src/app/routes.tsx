@@ -1,7 +1,9 @@
+import { Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { RouteError } from '@/components/RouteError'
 import { LoginPage } from '@/features/auth/LoginPage'
-import { RegisterPage } from '@/features/auth/RegisterPage'
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
+import { SignupPage } from '@/features/auth/SignupPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage'
 import { ComingSoon } from '@/pages/ComingSoon'
@@ -9,8 +11,10 @@ import { ComingSoon } from '@/pages/ComingSoon'
 // Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
-  { path: '/register', element: <RegisterPage />, errorElement: <RouteError /> },
+  { path: '/signup', element: <SignupPage />, errorElement: <RouteError /> },
+  { path: '/register', element: <Navigate to="/signup" replace /> },
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <RouteError /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteError /> },
   {
     element: <RequireAuth />,
     errorElement: <RouteError />,

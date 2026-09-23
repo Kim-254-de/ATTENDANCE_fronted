@@ -1,7 +1,7 @@
 import { CircleAlert, CircleCheck } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { errorMessage } from '@/lib/api'
-import { AuthCard } from './AuthCard'
+import { AuthShell } from './AuthShell'
 import { useVerifyEmail } from './authApi'
 
 /** Landing page for the link in the registration email: /verify-email?token=… */
@@ -11,7 +11,8 @@ export function VerifyEmailPage() {
   const verify = useVerifyEmail(token)
 
   return (
-    <AuthCard title="Email confirmation" subtitle="Smart Attendance lecturer account">
+    <AuthShell title="Email confirmation">
+      <div className="space-y-5">
       {!token ? (
         <Notice ok={false}>This link is missing its confirmation token. Open the link from your email again.</Notice>
       ) : verify.isPending ? (
@@ -21,8 +22,9 @@ export function VerifyEmailPage() {
       ) : (
         <Notice ok>{verify.data.message}</Notice>
       )}
-      <Link to="/login" className="block text-center text-sm font-semibold text-navy-900 hover:underline">Go to sign in</Link>
-    </AuthCard>
+      <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to sign in</Link>
+      </div>
+    </AuthShell>
   )
 }
 
