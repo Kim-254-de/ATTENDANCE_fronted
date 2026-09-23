@@ -15,6 +15,23 @@ const lecturer: Lecturer = {
   department: 'Computer Science',
 }
 
+const student: Lecturer = {
+  id: 'stu-1',
+  role: 'student',
+  fullName: 'Ama Mensah',
+  email: 'a.mensah@student.university.edu',
+  staffNumber: 'STU00042',
+  title: '',
+  department: 'BSc Computer Science',
+}
+
+const accounts = new Map<string, { user: Lecturer; password: string }>([
+  [lecturer.staffNumber.toLowerCase(), { user: lecturer, password: 'password' }],
+  [student.staffNumber.toLowerCase(), { user: student, password: 'password' }],
+  [lecturer.email.toLowerCase(), { user: lecturer, password: 'password' }],
+  [student.email.toLowerCase(), { user: student, password: 'password' }],
+])
+
 const units: Unit[] = [
   { id: 'u1', code: 'CS301', name: 'Data Structures & Algorithms', studentCount: 92 },
   { id: 'u2', code: 'CS305', name: 'Operating Systems', studentCount: 81 },
@@ -32,6 +49,8 @@ const store = (() => {
   }
 })()
 
+let currentAccount: Lecturer = lecturer
+
 const sessions = new Map<string, AttendanceSession>()
 const token = () => `att.${crypto.randomUUID()}.${Date.now()}`
 const unauthorized = () => HttpResponse.json({ message: 'Not signed in' }, { status: 401 })
@@ -39,10 +58,35 @@ const unauthorized = () => HttpResponse.json({ message: 'Not signed in' }, { sta
 /** Test helper: back to a signed-out, empty server. */
 export const resetMocks = () => {
   store.set(false)
+  currentAccount = lecturer
   sessions.clear()
 }
 
 const authHandlers = [
+  http.post(`${API}/auth/register`, async ({ request }) => {
+    const input = (await request.json()) as { email: string; fullName: string; staffNumber: string; password: string; role?: string }
+    await delay(450)
+    const identifier = input.staffNumber.trim().toLowerCase()
+    const email = input.email.trim().toLowerCase()
+    if (!input.email || !input.fullName || !input.staffNumber || input.password.length < 8) {
+      return HttpResponse.json({ message: 'Complete all required fields.' }, { status: 422 })
+    }
+    if (accounts.has(identifier) || accounts.has(email)) {
+      return HttpResponse.json({ message: 'That email or ID is already registered.' }, { status: 409 })
+    }
+    const account: Lecturer = {
+      id: `${input.role ?? 'lecturer'}-${crypto.randomUUID()}`,
+      role: input.role === 'student' ? 'student' : 'lecturer',
+      fullName: input.fullName.trim(),
+      email: input.email.trim(),
+      staffNumber: input.staffNumber.trim(),
+      title: input.role === 'student' ? '' : 'Lecturer',
+      department: input.role === 'student' ? 'Programme pending' : 'Department pending',
+    }
+    accounts.set(identifier, { user: account, password: input.password })
+    accounts.set(email, { user: account, password: input.password })
+    return HttpResponse.json({ message: `${input.role === 'student' ? 'Student' : 'Lecturer'} account request submitted.` }, { status: 201 })
+  }),
   http.post(`${API}/auth/forgot-password`, async ({ request }) => {
     const { email } = (await request.json()) as { email: string }
     await delay(450)
@@ -52,17 +96,34 @@ const authHandlers = [
   http.post(`${API}/auth/login`, async ({ request }) => {
     const { identifier, password } = (await request.json()) as { identifier: string; password: string }
     await delay(300)
-    const normalizedIdentifier = identifier.trim().toLowerCase()
-    const ok = [lecturer.email.toLowerCase(), lecturer.staffNumber.toLowerCase()].includes(normalizedIdentifier) && password === 'password'
+    const accountRecord = accounts.get(identifier.trim().toLowerCase())
+    const account = accountRecord?.user
+    const ok = Boolean(accountRecord) && accountRecord?.password === password
     if (!ok) return HttpResponse.json({ message: 'Invalid staff number/email or password' }, { status: 401 })
     store.set(true)
-    return HttpResponse.json(lecturer)
+    currentAccount = account as Lecturer
+    return HttpResponse.json(account)
   }),
   http.post(`${API}/auth/logout`, () => {
     store.set(false)
+    currentAccount = lecturer
     return new HttpResponse(null, { status: 204 })
   }),
-  http.get(`${API}/auth/me`, () => (store.get() ? HttpResponse.json(lecturer) : unauthorized())),
+  http.get(`${API}/auth/me`, () => (store.get() ? HttpResponse.json(currentAccount) : unauthorized())),
+  http.patch(`${API}/auth/me`, async ({ request }) => {
+    if (!store.get()) return unauthorized()
+    const input = (await request.json()) as { email?: string; fullName?: string; title?: string; department?: string }
+    if (!input.email?.trim() || !input.fullName?.trim() || !input.department?.trim()) {
+      return HttpResponse.json({ message: 'Name, email and department are required.' }, { status: 422 })
+    }
+    Object.assign(currentAccount, {
+      email: input.email.trim(),
+      fullName: input.fullName.trim(),
+      title: input.title?.trim() ?? '',
+      department: input.department.trim(),
+    })
+    return HttpResponse.json(currentAccount)
+  }),
   // Mock sessions never expire, so there is never anything to refresh.
   http.post(`${API}/auth/refresh`, unauthorized),
 

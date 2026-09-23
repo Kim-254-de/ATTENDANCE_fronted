@@ -9,6 +9,21 @@ export interface LoginInput {
   password: string
 }
 
+export interface SignupInput {
+  email: string
+  fullName: string
+  staffNumber: string
+  password: string
+  role: 'lecturer' | 'student'
+}
+
+export interface UpdateProfileInput {
+  email: string
+  fullName: string
+  title: string
+  department: string
+}
+
 export function useMe() {
   return useQuery({
     queryKey: ME_KEY,
@@ -32,6 +47,22 @@ export function useLogin() {
   return useMutation({
     mutationKey: ['login'],
     mutationFn: async (input: LoginInput) => (await api.post<Lecturer>('/auth/login', input)).data,
+    onSuccess: (user) => qc.setQueryData(ME_KEY, user),
+  })
+}
+
+export function useSignup() {
+  return useMutation({
+    mutationKey: ['signup'],
+    mutationFn: async (input: SignupInput) => (await api.post<{ message: string }>('/auth/register', input)).data,
+  })
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationKey: ['profile'],
+    mutationFn: async (input: UpdateProfileInput) => (await api.patch<Lecturer>('/auth/me', input)).data,
     onSuccess: (user) => qc.setQueryData(ME_KEY, user),
   })
 }

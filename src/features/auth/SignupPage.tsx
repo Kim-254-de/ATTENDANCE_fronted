@@ -1,14 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { MailCheck } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { errorMessage, fieldErrors } from '@/lib/api'
 import type { RegistrationInput } from '@/types'
 import { Field } from './AuthCard'
 import { AuthShell } from './AuthShell'
-import { useMe, useRegister } from './authApi'
+import { useMe, useRegister, useSignup } from './authApi'
 
 // Mirrors the backend's rules so most mistakes are caught before a request (and an ERP lookup)
 // is spent. The backend stays the authority: its per-field errors are shown the same way.
@@ -37,11 +37,17 @@ const schema = z
 const FIELDS = ['fullName', 'email', 'staffNumber', 'password', 'confirmPassword'] as const
 
 export function SignupPage() {
+  const [searchParams] = useSearchParams()
+  if (searchParams.get('role') === 'student') return <StudentSignup />
+  return <LecturerSignup />
+}
+
+function LecturerSignup() {
   const { data: me } = useMe()
   const signup = useRegister()
   const { register, handleSubmit, setError, formState: { errors } } = useForm<RegistrationInput>({ resolver: zodResolver(schema) })
 
-  if (me) return <Navigate to="/" replace />
+  if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/'} replace />
 
   if (signup.isSuccess) {
     return (
@@ -81,6 +87,43 @@ export function SignupPage() {
         </div>
         <p className="text-xs leading-5 text-muted">Use upper and lower case letters and a digit. Your staff number is checked against the university staff directory before the account is created.</p>
         <Button type="submit" loading={signup.isPending} className="h-12 w-full">Register account</Button>
+      </form>
+    </AuthShell>
+  )
+}
+
+const studentSchema = z
+  .object({
+    email: z.string().trim().email('Enter a valid school email.'),
+    fullName: z.string().trim().min(3, 'Enter your full name.'),
+    staffNumber: z.string().trim().min(4, 'Enter your student number.'),
+    password: z.string().min(8, 'Use at least 8 characters.'),
+    confirmPassword: z.string(),
+  })
+  .refine((v) => v.password === v.confirmPassword, { path: ['confirmPassword'], message: 'Passwords do not match.' })
+type StudentValues = z.infer<typeof studentSchema>
+
+function StudentSignup() {
+  const navigate = useNavigate()
+  const signup = useSignup()
+  const { data: me } = useMe()
+  const { register, handleSubmit, formState: { errors } } = useForm<StudentValues>({ resolver: zodResolver(studentSchema) })
+
+  if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/'} replace />
+
+  return (
+    <AuthShell title="Register as a student" subtitle={<>Already registered? <Link to="/login?role=student" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></>}>
+      <form className="space-y-5" noValidate onSubmit={handleSubmit(({ confirmPassword: _, ...values }) => signup.mutate({ ...values, role: 'student' }, { onSuccess: () => navigate('/login?role=student', { state: { message: 'Account created. Sign in to continue.' } }) }))}>
+        {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
+        <Field label="School email" error={errors.email?.message}><input {...register('email')} type="email" autoComplete="email" placeholder="a.mensah@student.uni.ac.ke" className="input" /></Field>
+        <Field label="Full name" error={errors.fullName?.message}><input {...register('fullName')} autoComplete="name" className="input" /></Field>
+        <Field label="Student number" error={errors.staffNumber?.message}><input {...register('staffNumber')} autoComplete="off" placeholder="STU00042" className="input" /></Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Password" error={errors.password?.message}><input {...register('password')} type="password" autoComplete="new-password" placeholder="At least 8 characters" className="input" /></Field>
+          <Field label="Confirm password" error={errors.confirmPassword?.message}><input {...register('confirmPassword')} type="password" autoComplete="new-password" placeholder="Repeat password" className="input" /></Field>
+        </div>
+        <p className="text-xs leading-5 text-muted">Your student account will be verified against university records before access is granted.</p>
+        <Button type="submit" loading={signup.isPending} className="h-12 w-full">Register as student</Button>
       </form>
     </AuthShell>
   )
