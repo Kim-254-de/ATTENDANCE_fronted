@@ -5,7 +5,7 @@ async function signIn(page: Page) {
   await page.getByLabel('Staff number or email').fill('LEC00123')
   await page.getByLabel('Password').fill('password')
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByText('Total Students')).toBeVisible()
+  await expect(page.getByText('Activate Class').first()).toBeVisible()
   await expect(page.getByText('QR-CS301-0908')).toBeVisible()
 }
 
@@ -40,7 +40,7 @@ test('dashboard has no overflow, native select chrome or tiny tap targets', asyn
   const selectBox = (await select.boundingBox())!
   expect(selectBox.height, 'unit select height').toBeGreaterThanOrEqual(40)
 
-  const buttons = page.getByRole('button', { name: /^(Generate|Sign Out)$/ })
+  const buttons = page.getByRole('button', { name: /^(Activate Class|Sign Out)$/ })
   for (const b of await buttons.all()) {
     if (!(await b.isVisible())) continue
     const box = (await b.boundingBox())!
@@ -50,10 +50,11 @@ test('dashboard has no overflow, native select chrome or tiny tap targets', asyn
   if (visual) await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
 })
 
-test('QR flow works end to end', async ({ page }) => {
+test('activate class flow works end to end', async ({ page }) => {
   await signIn(page)
   await page.getByLabel('Unit').selectOption({ label: 'CS301 — Data Structures & Algorithms' })
-  await page.getByRole('button', { name: 'Generate', exact: true }).click()
-  await expect(page.getByRole('timer')).toContainText('Expires in')
+  await page.getByRole('button', { name: 'Activate Class', exact: true }).click()
+  await page.waitForURL(/\/session\//)
+  await expect(page.getByRole('timer')).toContainText('Refreshes in')
   await expect(page.locator('canvas')).toBeVisible()
 })

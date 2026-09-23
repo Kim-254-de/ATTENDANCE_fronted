@@ -4,6 +4,7 @@ import { Outlet, useMatches } from 'react-router-dom'
 import { useMe } from '@/features/auth/authApi'
 import { useOverview } from '@/features/dashboard/dashboardApi'
 import { formatLongDate, initials } from '@/lib/format'
+import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
 
 export function AppLayout() {
@@ -39,8 +40,10 @@ export function AppLayout() {
         </header>
         <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8">
           <Outlet />
+          <div className="h-16 lg:hidden" aria-hidden />
         </main>
       </div>
+      <BottomNav />
     </div>
   )
 }

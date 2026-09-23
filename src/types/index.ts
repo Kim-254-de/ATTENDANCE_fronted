@@ -1,5 +1,3 @@
-export type VerificationMethod = 'qr' | 'fingerprint' | 'rfid' | 'face'
-
 export interface Lecturer {
   id: string
   role: 'lecturer' | 'student' | 'admin'
@@ -15,6 +13,8 @@ export interface Unit {
   code: string
   name: string
   studentCount: number
+  creditHours: number
+  attendanceRate: number // 0–100, semester-to-date average for this unit
 }
 
 export interface Overview {
@@ -26,25 +26,42 @@ export interface Overview {
   erpSync: { status: 'synced' | 'syncing' | 'failed'; lastSyncedAt: string }
 }
 
-export interface AttendanceSession {
+export type SessionStatus = 'OPEN' | 'PAUSED' | 'CLOSED'
+
+/** A class meeting. One row for the whole class, however long it runs — the QR rotates without writing anything new. */
+export interface SessionSummary {
   id: string
   unitId: string
-  qrToken: string
-  status: 'open' | 'paused' | 'closed'
-  startsAt: string
-  expiresAt: string
-  verificationMethods: VerificationMethod[]
+  unitCode: string
+  unitName: string | null
+  title: string | null
+  status: SessionStatus
+  opensAt: string
+  closesAt: string
+  rotationSeconds: number
+}
+
+/** The code to show right now, plus when it next changes. */
+export interface CurrentQr {
+  session: SessionSummary
+  payload: string
+  expiresInSeconds: number
+  rotatesAt: string
+  /** Students recorded present so far this session. */
+  checkedIn: number
 }
 
 export interface CreateSessionInput {
   unitId: string
-  durationMinutes: number
-  verificationMethods: VerificationMethod[]
+  title?: string
+  closesAt: string
+  rotationSeconds?: number
 }
 
-export interface ApiErrorBody {
-  message: string
-  code?: string
+export interface ApiErrorEnvelope {
+  success: false
+  error: { code: string; message: string; details?: unknown }
+  requestId?: string
 }
 
 export interface RecentSession {
