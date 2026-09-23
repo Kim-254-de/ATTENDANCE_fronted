@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { GraduationCap } from 'lucide-react'
+import { ArrowRight, GraduationCap, UserRound } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
@@ -16,6 +16,8 @@ type Values = z.infer<typeof schema>
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const role = searchParams.get('role') === 'student' ? 'student' : 'lecturer'
   const from = (location.state as { from?: string } | null)?.from ?? '/'
   const message = (location.state as { message?: string } | null)?.message
   const { data: me } = useMe()
@@ -26,20 +28,30 @@ export function LoginPage() {
     formState: { errors },
   } = useForm<Values>({ resolver: zodResolver(schema) })
 
-  if (me) return <Navigate to={from} replace />
+  if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : from} replace />
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-navy-900 p-4">
-      <form
-        onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: () => navigate(from, { replace: true }) }))}
-        className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-8 shadow-xl"
-        noValidate
-      >
+    <main className="min-h-dvh bg-navy-900 px-4 py-8 sm:grid sm:place-items-center">
+      <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1fr_0.8fr]">
+        <section className="hidden rounded-2xl border border-white/10 bg-navy-800 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div>
+            <span className="grid size-14 place-items-center rounded-2xl bg-gold-500 shadow-lg"><GraduationCap className="size-7" aria-hidden /></span>
+            <p className="mt-8 text-sm font-semibold tracking-[0.18em] text-gold-300">UNILEARN ERP</p>
+            <h1 className="mt-3 max-w-md text-4xl font-bold leading-tight">One connected campus for every class.</h1>
+            <p className="mt-5 max-w-md text-base leading-7 text-blue-100">Manage teaching, attendance and academic identity from one secure university workspace.</p>
+          </div>
+          <p className="text-sm text-blue-200">Secure access for lecturers and students</p>
+        </section>
+        <form
+          onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: (user) => navigate(user.role === 'student' ? '/student-dashboard' : from === '/' ? '/' : from, { replace: true }) }))}
+          className="w-full space-y-5 rounded-2xl bg-white p-6 shadow-xl sm:p-8"
+          noValidate
+        >
         <div className="flex items-center gap-3">
           <span className="grid size-11 place-items-center rounded-xl bg-gold-500 text-white"><GraduationCap className="size-6" aria-hidden /></span>
           <div>
-            <h1 className="text-lg font-bold text-navy-900">Lecturer Portal</h1>
-            <p className="text-sm text-muted">Sign in to manage attendance</p>
+            <h1 className="text-lg font-bold text-navy-900">{role === 'student' ? 'Student sign in' : 'Lecturer sign in'}</h1>
+            <p className="text-sm text-muted">Continue to your {role} portal</p>
           </div>
         </div>
 
@@ -48,7 +60,7 @@ export function LoginPage() {
         )}
         {message && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-success">{message}</p>}
 
-        <Field label="Staff number or email" error={errors.identifier?.message}>
+        <Field label={role === 'student' ? 'Student number or email' : 'Staff number or email'} error={errors.identifier?.message}>
           <input {...register('identifier')} autoComplete="username" className="input" />
         </Field>
         <Field label="Password" error={errors.password?.message}>
@@ -58,8 +70,15 @@ export function LoginPage() {
         <div className="flex justify-end"><Link to="/forgot-password" className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
 
         <Button type="submit" loading={login.isPending} className="w-full">Sign in</Button>
-        <p className="text-center text-sm text-muted">New to UniLearn? <Link to="/signup" className="font-semibold text-navy-900 hover:underline">Create an account</Link></p>
+        <div className="border-t border-line pt-5">
+          <p className="text-center text-xs font-semibold uppercase tracking-wider text-muted">New to UniLearn?</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Link to="/signup?role=lecturer" className="flex items-center justify-between rounded-xl border border-line px-3 py-2.5 text-sm font-semibold text-navy-900 hover:bg-surface"><span className="flex items-center gap-2"><GraduationCap className="size-4 text-gold-600" /> Lecturer</span><ArrowRight className="size-4" /></Link>
+            <Link to="/signup?role=student" className="flex items-center justify-between rounded-xl border border-line px-3 py-2.5 text-sm font-semibold text-navy-900 hover:bg-surface"><span className="flex items-center gap-2"><UserRound className="size-4 text-gold-600" /> Student</span><ArrowRight className="size-4" /></Link>
+          </div>
+        </div>
       </form>
+      </div>
     </main>
   )
 }
