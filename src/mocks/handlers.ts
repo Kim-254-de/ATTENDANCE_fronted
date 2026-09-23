@@ -58,6 +58,33 @@ const authHandlers = [
   http.get(`${API}/auth/me`, () => (store.get() ? HttpResponse.json(lecturer) : unauthorized())),
   // Mock sessions never expire, so there is never anything to refresh.
   http.post(`${API}/auth/refresh`, unauthorized),
+
+  // Stand-in for the ERP gate: only staff numbers starting with STF/ "exist".
+  http.post(`${API}/auth/lecturer/register`, async ({ request }) => {
+    const input = (await request.json()) as { fullName: string; email: string; staffNumber: string }
+    await delay(300)
+    const staffNumber = input.staffNumber.trim().toUpperCase()
+    if (!staffNumber.startsWith('STF/')) {
+      return HttpResponse.json(
+        { message: 'Registration was not completed. This staff number is not listed in the institutional staff records.', code: 'ERP_STAFF_NOT_FOUND' },
+        { status: 403 },
+      )
+    }
+    return HttpResponse.json(
+      {
+        id: crypto.randomUUID(), fullName: input.fullName, email: input.email.trim().toLowerCase(), staffNumber,
+        status: 'PENDING_VERIFICATION', nextStep: 'VERIFY_EMAIL',
+        message: 'Your staff number was verified successfully. Check your email to confirm your address.',
+      },
+      { status: 201 },
+    )
+  }),
+  http.post(`${API}/auth/verify-email`, async ({ request }) => {
+    const { token } = (await request.json()) as { token: string }
+    return token === 'expired'
+      ? HttpResponse.json({ message: 'This verification link is invalid or has expired.', code: 'INVALID_TOKEN' }, { status: 400 })
+      : HttpResponse.json({ status: 'PENDING_APPROVAL', nextStep: 'AWAIT_APPROVAL', message: 'Email confirmed. An administrator will review and approve your account.' })
+  }),
 ]
 
 export const dataHandlers = [

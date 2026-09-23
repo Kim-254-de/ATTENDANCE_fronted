@@ -1,12 +1,16 @@
 import { AppLayout } from '@/components/layout/AppLayout'
 import { RouteError } from '@/components/RouteError'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { RegisterPage } from '@/features/auth/RegisterPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage'
 import { ComingSoon } from '@/pages/ComingSoon'
 
 // Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
+  { path: '/register', element: <RegisterPage />, errorElement: <RouteError /> },
+  { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <RouteError /> },
   {
     element: <RequireAuth />,
     errorElement: <RouteError />,

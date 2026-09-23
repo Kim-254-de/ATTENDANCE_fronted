@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { GraduationCap } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
+import { AuthCard, Field } from './AuthCard'
 import { useLogin, useMe } from './authApi'
 
 const schema = z.object({
@@ -28,20 +28,12 @@ export function LoginPage() {
   if (me) return <Navigate to={from} replace />
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-navy-900 p-4">
+    <AuthCard title="Lecturer Portal" subtitle="Sign in to manage attendance">
       <form
         onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: () => navigate(from, { replace: true }) }))}
-        className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-8 shadow-xl"
+        className="space-y-5"
         noValidate
       >
-        <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-xl bg-gold-500 text-white"><GraduationCap className="size-6" aria-hidden /></span>
-          <div>
-            <h1 className="text-lg font-bold text-navy-900">Lecturer Portal</h1>
-            <p className="text-sm text-muted">Sign in to manage attendance</p>
-          </div>
-        </div>
-
         {login.isError && (
           <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage(login.error, 'Sign-in failed.')}</p>
         )}
@@ -55,16 +47,9 @@ export function LoginPage() {
 
         <Button type="submit" loading={login.isPending} className="w-full">Sign in</Button>
       </form>
-    </main>
-  )
-}
-
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return (
-    <label className="block space-y-1.5 text-sm font-medium text-navy-900">
-      {label}
-      {children}
-      {error && <span role="alert" className="block text-xs font-normal text-red-600">{error}</span>}
-    </label>
+      <p className="text-center text-sm text-muted">
+        New lecturer? <Link to="/register" className="font-semibold text-navy-900 underline-offset-2 hover:underline">Create an account</Link>
+      </p>
+    </AuthCard>
   )
 }

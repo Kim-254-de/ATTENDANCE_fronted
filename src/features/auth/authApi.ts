@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, isUnauthorized } from '@/lib/api'
-import type { Lecturer } from '@/types'
+import type { EmailVerificationResult, Lecturer, RegistrationInput, RegistrationResult } from '@/types'
 
 export const ME_KEY = ['auth', 'me'] as const
 
@@ -41,5 +41,30 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => api.post('/auth/logout'),
     onSettled: () => qc.clear(),
+  })
+}
+
+/** Creates the account. The backend checks the staff number against the ERP before anything is stored. */
+export function useRegister() {
+  return useMutation({
+    mutationKey: ['register'],
+    mutationFn: async (input: RegistrationInput) =>
+      (await api.post<RegistrationResult>('/auth/lecturer/register', input)).data,
+  })
+}
+
+/**
+ * A query rather than a mutation: the token is single-use, and a query is deduplicated, so
+ * StrictMode's double mount or a re-render can never send it twice and report the second
+ * (already consumed) attempt as a failure.
+ */
+export function useVerifyEmail(token: string | null) {
+  return useQuery({
+    queryKey: ['auth', 'verify-email', token],
+    queryFn: async () => (await api.post<EmailVerificationResult>('/auth/verify-email', { token })).data,
+    enabled: !!token,
+    retry: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
   })
 }
