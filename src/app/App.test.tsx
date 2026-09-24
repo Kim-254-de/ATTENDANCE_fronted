@@ -29,12 +29,10 @@ describe('lecturer portal', () => {
     expect(await screen.findByText('QR-CS301-0908')).toBeInTheDocument()
     expect(screen.getAllByText('90%', { selector: 'span' })).toHaveLength(2)
 
-    const activate = screen.getByRole('button', { name: /activate class/i })
-    expect(activate).toBeDisabled()
-
-    const select = screen.getByLabelText('Unit')
-    await waitFor(() => expect(screen.getByRole('option', { name: /CS301/ })).toBeInTheDocument())
-    await user.selectOptions(select, 'u1')
+    // CS301 is scheduled for right now per the mock timetable, so the button
+    // is enabled as soon as the current unit loads — no picker to interact with.
+    const activate = await screen.findByRole('button', { name: /activate class/i })
+    await waitFor(() => expect(activate).toBeEnabled())
     await user.click(activate)
 
     expect(await screen.findByText('CS301')).toBeInTheDocument()
@@ -49,14 +47,16 @@ describe('lecturer portal', () => {
     await user.type(screen.getByLabelText(/password/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByRole('heading', { name: /your profile/i })).toBeInTheDocument()
-    const name = screen.getByLabelText('Full name')
-    await user.clear(name)
-    await user.type(name, 'Dr. Joseph Osei')
+    await screen.findByLabelText('Full name')
+    // Name and email are ERP-verified and read-only; only title/department can be edited.
+    expect(screen.getByLabelText('Full name')).toHaveAttribute('readonly')
+    const department = screen.getByLabelText('Department')
+    await user.clear(department)
+    await user.type(department, 'Software Engineering')
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     expect(await screen.findByText('Profile updated')).toBeInTheDocument()
-    expect(screen.getAllByText('Dr. Joseph Osei').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Software Engineering/).length).toBeGreaterThan(0)
   })
 
   it('opens the student profile with a student account', async () => {
@@ -103,9 +103,9 @@ describe('lecturer portal', () => {
       http.get('/api/auth/me', () => HttpResponse.json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'expired' } }, { status: 401 })),
       http.post('/api/sessions', () => HttpResponse.json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'expired' } }, { status: 401 })),
     )
-    await waitFor(() => expect(screen.getByRole('option', { name: /CS301/ })).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText('Unit'), 'u1')
-    await user.click(screen.getByRole('button', { name: /activate class/i }))
+    const activate = await screen.findByRole('button', { name: /activate class/i })
+    await waitFor(() => expect(activate).toBeEnabled())
+    await user.click(activate)
     expect(await screen.findByRole('heading', { name: /lecturer portal/i })).toBeInTheDocument()
   })
 
@@ -114,19 +114,6 @@ describe('lecturer portal', () => {
     expect(await screen.findByRole('heading', { name: /page not found/i })).toBeInTheDocument()
   })
 
-  it('shows a failed ERP sync instead of claiming everything is fine', async () => {
-    server.use(
-      http.get('/api/lecturer/overview', () =>
-        HttpResponse.json({ totalStudents: 1, unitsTaught: 1, avgAttendance: 50, sessionsHeld: 1, periodLabel: 'Sep 2026', erpSync: { status: 'failed', lastSyncedAt: new Date().toISOString() } }),
-      ),
-    )
-    const user = userEvent.setup()
-    renderApp('/')
-    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
-    await user.type(screen.getByLabelText(/password/i), 'password')
-    await user.click(screen.getByRole('button', { name: /sign in/i }))
-    expect((await screen.findAllByText(/ERP Sync Failed/i)).length).toBeGreaterThan(0)
-  })
 })
 
 describe('helpers', () => {

@@ -1,37 +1,27 @@
-import { Zap } from 'lucide-react'
-import { useId, useState } from 'react'
+import { FingerprintPattern, IdCard, QrCode, ScanFace, Zap } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
-import { useMyUnits } from '@/features/units/unitsApi'
+import { useCurrentUnit } from '@/features/units/unitsApi'
 import { useCreateSession, setActiveSessionId } from './sessionApi'
 
-const DURATIONS = [
-  { minutes: 30, label: '30 min' },
-  { minutes: 60, label: '1 hr' },
-  { minutes: 90, label: '1.5 hr' },
-  { minutes: 120, label: '2 hr' },
-]
-
 /**
- * The one action a lecturer needs fastest: pick the unit in front of them and
- * go live. Everything else — rotation window, image export, verification
- * rules — lives on the live session screen, not here.
+ * The one action a lecturer needs fastest: whatever class the issued
+ * timetable says is on right now, go live for it. There is no unit or
+ * duration to pick — the backend derives both from the schedule and refuses
+ * to open a session outside the scheduled window either way, so this screen
+ * just reflects that truth.
  */
 export function ActivateClass() {
-  const unitSelectId = useId()
-  const { data: units, isPending: unitsLoading, error: unitsError } = useMyUnits()
-  const [unitId, setUnitId] = useState('')
-  const [duration, setDuration] = useState(60)
+  const { data: unit, isPending, error, refetch } = useCurrentUnit()
   const navigate = useNavigate()
-
   const create = useCreateSession()
 
   const activate = () => {
-    const closesAt = new Date(Date.now() + duration * 60_000).toISOString()
+    if (!unit) return
     create.mutate(
-      { unitId, closesAt },
+      { unitId: unit.id },
       {
         onSuccess: (session) => {
           setActiveSessionId(session.id)
@@ -47,45 +37,74 @@ export function ActivateClass() {
         <span className="grid size-11 place-items-center rounded-xl bg-gold-100 text-gold-600"><Zap className="size-5" aria-hidden /></span>
         <div className="leading-tight">
           <h2 className="font-semibold text-navy-900">Activate Class</h2>
-          <p className="text-sm text-muted">Start a session so students can check in</p>
+          <p className="text-sm text-muted">Per your timetable — start a session so students can check in</p>
         </div>
       </div>
 
-      <div className="space-y-3 p-5">
-        <label htmlFor={unitSelectId} className="sr-only">Unit</label>
-        <select
-          id={unitSelectId}
-          className="input"
-          value={unitId}
-          disabled={unitsLoading}
-          onChange={(e) => setUnitId(e.target.value)}
-        >
-          <option value="">{unitsLoading ? 'Loading units…' : units?.length === 0 ? 'No units assigned to you yet' : 'Select a unit'}</option>
-          {units?.map((u) => <option key={u.id} value={u.id}>{u.name ? `${u.code} — ${u.name}` : u.code}</option>)}
-        </select>
-        {unitsError && <p role="alert" className="text-sm text-red-600">{errorMessage(unitsError, 'Could not load your units.')}</p>}
-        {units?.length === 0 && (
-          <p className="text-sm text-muted">
-            <Link to="/units" className="font-semibold text-navy-900 underline">Add a unit</Link> you teach to activate a class for it.
+      <div className="space-y-4 p-5">
+        {error ? (
+          <p role="alert" className="text-sm text-red-600">
+            {errorMessage(error, 'Could not load your timetable.')}{' '}
+            <button onClick={() => refetch()} className="font-semibold underline">Retry</button>
           </p>
+        ) : isPending ? (
+          <p className="text-sm text-muted">Checking your timetable…</p>
+        ) : !unit ? (
+          <p className="text-sm text-muted">
+            No class scheduled right now. <Link to="/units" className="font-semibold text-navy-900 underline">View your units</Link>.
+          </p>
+        ) : (
+          <div className="rounded-xl bg-navy-900/5 px-4 py-3">
+            <p className="font-semibold text-navy-900">{unit.name ? `${unit.code} — ${unit.name}` : unit.code}</p>
+            {unit.schedule && (
+              <p className="text-sm text-muted">{unit.schedule.startTime}–{unit.schedule.endTime} today</p>
+            )}
+          </div>
         )}
 
-        <div className="flex gap-2">
-          <label className="sr-only" htmlFor={`${unitSelectId}-duration`}>Class duration</label>
-          <select
-            id={`${unitSelectId}-duration`}
-            className="input !w-32 flex-none"
-            value={duration}
-            onChange={(e) => setDuration(Number(e.target.value))}
-          >
-            {DURATIONS.map((d) => <option key={d.minutes} value={d.minutes}>{d.label}</option>)}
-          </select>
-          <Button className="flex-1" onClick={activate} disabled={!unitId} loading={create.isPending}>
-            <Zap className="size-4" aria-hidden /> Activate Class
-          </Button>
-        </div>
+        <VerificationMethods />
+
+        <Button className="w-full" onClick={activate} disabled={!unit} loading={create.isPending}>
+          <Zap className="size-4" aria-hidden /> Activate Class
+        </Button>
         {create.error && <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>}
       </div>
     </Card>
+  )
+}
+
+/**
+ * Only QR is implemented (src/modules/verification is a placeholder for the
+ * rest — see backend README). Shown anyway so the roadmap is visible, but the
+ * other three are inert: nothing consumes their state yet.
+ */
+function VerificationMethods() {
+  const methods = [
+    { icon: QrCode, label: 'QR Code', active: true },
+    { icon: FingerprintPattern, label: 'Biometric', active: false },
+    { icon: ScanFace, label: 'Facial Recognition', active: false },
+    { icon: IdCard, label: 'Student ID Scan', active: false },
+  ]
+
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-xs font-semibold uppercase tracking-wider text-muted">Verification method</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {methods.map(({ icon: Icon, label, active }) => (
+          <label
+            key={label}
+            title={active ? undefined : 'Coming soon'}
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+              active ? 'border-gold-500/40 bg-gold-50 text-navy-900' : 'border-line text-muted opacity-60'
+            }`}
+          >
+            <input type="checkbox" checked={active} disabled={!active} readOnly className="accent-gold-500" />
+            <Icon className="size-4 shrink-0" aria-hidden />
+            <span className="flex-1 truncate">{label}</span>
+            {!active && <span className="shrink-0 text-xs">Soon</span>}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   )
 }

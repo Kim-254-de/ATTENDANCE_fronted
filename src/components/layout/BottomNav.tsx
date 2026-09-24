@@ -3,7 +3,7 @@ import { BookOpen, ClipboardCheck, LayoutGrid, Users } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const nav = [
-  { to: '/', label: 'Overview', icon: LayoutGrid, end: true },
+  { to: '/', label: 'Dashboard', icon: LayoutGrid, end: true },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/units', label: 'Units', icon: BookOpen },

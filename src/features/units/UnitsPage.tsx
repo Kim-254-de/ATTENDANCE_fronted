@@ -8,6 +8,11 @@ import { errorMessage, fieldErrors } from '@/lib/api'
 import type { TaughtUnit } from '@/types'
 import { useCreateUnit, useMyUnits } from './unitsApi'
 
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+const formatSchedule = (schedule: TaughtUnit['schedule']) =>
+  schedule ? `${DAYS[schedule.dayOfWeek]} ${schedule.startTime}–${schedule.endTime}` : null
+
 /**
  * The units a lecturer teaches. Until units come from the ERP, lecturers add
  * their own here — a unit must exist before a class can be activated for it.
@@ -65,9 +70,12 @@ function UnitRow({ unit }: { unit: TaughtUnit }) {
           <span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{unit.code}</span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-semibold text-navy-900">{unit.name ?? unit.code}</span>
-            <span className="flex items-center gap-1 text-sm text-muted">
-              <UserRound className="size-3.5" aria-hidden />
-              {unit.studentCount} {unit.studentCount === 1 ? 'student' : 'students'}
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted">
+              <span className="flex items-center gap-1">
+                <UserRound className="size-3.5" aria-hidden />
+                {unit.studentCount} {unit.studentCount === 1 ? 'student' : 'students'}
+              </span>
+              {formatSchedule(unit.schedule) && <span>{formatSchedule(unit.schedule)}</span>}
             </span>
           </span>
           {unit.pendingCount > 0 && (
@@ -87,11 +95,14 @@ function AddUnitForm({ onDone }: { onDone: () => void }) {
   const create = useCreateUnit()
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
+  const [dayOfWeek, setDayOfWeek] = useState(1)
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
   const fields = fieldErrors(create.error)
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    create.mutate({ code, name }, { onSuccess: onDone })
+    create.mutate({ code, name, dayOfWeek, startTime, endTime }, { onSuccess: onDone })
   }
 
   return (
@@ -129,10 +140,53 @@ function AddUnitForm({ onDone }: { onDone: () => void }) {
             {fields.name && <p className="text-xs text-red-600">{fields.name}</p>}
           </div>
         </div>
-        {create.error && !fields.name && <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>}
+        <div className="grid gap-4 sm:grid-cols-[10rem_1fr_1fr]">
+          <div className="space-y-1.5">
+            <label htmlFor={`${id}-day`} className="text-sm font-medium text-navy-900">Day</label>
+            <select
+              id={`${id}-day`}
+              className="input"
+              value={dayOfWeek}
+              onChange={(e) => setDayOfWeek(Number(e.target.value))}
+            >
+              {DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor={`${id}-start`} className="text-sm font-medium text-navy-900">Start time</label>
+            <input
+              id={`${id}-start`}
+              type="time"
+              className="input"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              required
+              aria-invalid={!!fields.startTime || undefined}
+            />
+            {fields.startTime && <p className="text-xs text-red-600">{fields.startTime}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor={`${id}-end`} className="text-sm font-medium text-navy-900">End time</label>
+            <input
+              id={`${id}-end`}
+              type="time"
+              className="input"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              required
+              aria-invalid={!!fields.endTime || undefined}
+            />
+            {fields.endTime && <p className="text-xs text-red-600">{fields.endTime}</p>}
+          </div>
+        </div>
+        {create.error && !fields.name && !fields.startTime && !fields.endTime && (
+          <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>
+        )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
-          <Button type="submit" loading={create.isPending} disabled={!code.trim() || !name.trim()}>Add unit</Button>
+          <Button type="submit" loading={create.isPending} disabled={!code.trim() || !name.trim() || !startTime || !endTime}>
+            Add unit
+          </Button>
         </div>
       </form>
     </Card>

@@ -1,14 +1,6 @@
 export const formatLongDate = (d: Date = new Date()) =>
   new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(d)
 
-export const formatRelative = (iso: string, now = Date.now()) => {
-  const mins = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000))
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins} min ago`
-  const hrs = Math.round(mins / 60)
-  return hrs < 24 ? `${hrs} hr ago` : `${Math.round(hrs / 24)} d ago`
-}
-
 export const formatCountdown = (ms: number) => {
   const total = Math.max(0, Math.floor(ms / 1000))
   const m = String(Math.floor(total / 60)).padStart(2, '0')
@@ -24,6 +16,17 @@ export const formatElapsed = (ms: number) => {
   const s = String(total % 60).padStart(2, '0')
   return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`
 }
+
+/** "Good morning"/"Good afternoon"/"Good evening", by the hour. */
+export const getGreeting = (date: Date = new Date()) => {
+  const hour = date.getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
+/** Strips a leading title ("Dr.", "Prof.") and returns the first given name. */
+export const firstName = (fullName: string) => fullName.replace(/^\S+\.?\s*/, '').split(' ')[0] ?? 'there'
 
 export const initials = (name: string) =>
   name

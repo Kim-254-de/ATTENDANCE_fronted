@@ -21,11 +21,14 @@ describe('units', () => {
     await user.click(screen.getByRole('button', { name: /add unit/i }))
     await user.type(screen.getByLabelText(/unit code/i), 'cosc 100')
     await user.type(screen.getByLabelText(/unit name/i), 'Introduction to Computing')
+    // Typing into segmented time inputs is slow under userEvent; this test needs more than the default 5s.
+    await user.type(screen.getByLabelText(/start time/i), '0900')
+    await user.type(screen.getByLabelText(/end time/i), '1100')
     await user.click(screen.getByRole('button', { name: /^add unit$/i }))
 
     expect(await screen.findByText('COSC 100')).toBeInTheDocument()
     expect(screen.getByText('Introduction to Computing')).toBeInTheDocument()
-  })
+  }, 10_000)
 
   it('adds students by registration number and reports the ones that failed', async () => {
     const user = await signIn('/units/u1')

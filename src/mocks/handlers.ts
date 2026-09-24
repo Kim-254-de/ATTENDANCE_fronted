@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Allocation, AllocationResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, TaughtUnit, Unit } from '@/types'
+import type { Allocation, AllocationResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, TaughtUnit, Unit, UnitSchedule } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -14,6 +14,8 @@ const lecturer: Lecturer = {
   staffNumber: 'LEC00123',
   title: 'Dr.',
   department: 'Computer Science',
+  status: 'ACTIVE',
+  avatarUrl: null,
 }
 
 const student: Lecturer = {
@@ -24,6 +26,8 @@ const student: Lecturer = {
   staffNumber: 'STU00042',
   title: '',
   department: 'BSc Computer Science',
+  status: 'ACTIVE',
+  avatarUrl: null,
 }
 
 const accounts = new Map<string, { user: Lecturer; password: string }>([
@@ -42,6 +46,14 @@ const units: Unit[] = [
 
 /** Units added during a test are dropped again by resetMocks. */
 const BASE_UNIT_COUNT = units.length
+
+/**
+ * Every unit's issued weekly slot, keyed by unit id. The base units span
+ * today's whole day so the demo (and tests) always finds a "current" class
+ * regardless of when it runs, rather than being flaky around real wall-clock time.
+ */
+const ALWAYS_TODAY: UnitSchedule = { dayOfWeek: new Date().getDay(), startTime: '00:00', endTime: '23:59' }
+const schedules = new Map<string, UnitSchedule>(units.map((u) => [u.id, ALWAYS_TODAY]))
 
 const store = (() => {
   let memory = false
@@ -81,6 +93,7 @@ export const resetMocks = () => {
   currentAccount = lecturer
   sessions.clear()
   allocations.clear()
+  for (const u of units.slice(BASE_UNIT_COUNT)) schedules.delete(u.id)
   units.length = BASE_UNIT_COUNT
 }
 
@@ -130,6 +143,8 @@ const authHandlers = [
       staffNumber: input.staffNumber.trim(),
       title: input.role === 'student' ? '' : 'Lecturer',
       department: input.role === 'student' ? 'Programme pending' : 'Department pending',
+      status: 'ACTIVE',
+      avatarUrl: null,
     }
     accounts.set(identifier, { user: account, password: input.password })
     accounts.set(email, { user: account, password: input.password })
@@ -158,19 +173,40 @@ const authHandlers = [
     return new HttpResponse(null, { status: 204 })
   }),
   http.get(`${API}/auth/me`, () => (store.get() ? HttpResponse.json(currentAccount) : unauthorized())),
+  // Name and email are excluded on purpose — those are ERP-verified at registration; see
+  // updateProfileSchema on the real backend.
   http.patch(`${API}/auth/me`, async ({ request }) => {
     if (!store.get()) return unauthorized()
-    const input = (await request.json()) as { email?: string; fullName?: string; title?: string; department?: string }
-    if (!input.email?.trim() || !input.fullName?.trim() || !input.department?.trim()) {
-      return HttpResponse.json({ message: 'Name, email and department are required.' }, { status: 422 })
+    const input = (await request.json()) as { title?: string; department?: string }
+    if (!input.department?.trim()) {
+      return HttpResponse.json({ message: 'Enter your department.' }, { status: 422 })
     }
     Object.assign(currentAccount, {
-      email: input.email.trim(),
-      fullName: input.fullName.trim(),
       title: input.title?.trim() ?? '',
       department: input.department.trim(),
     })
     return HttpResponse.json(currentAccount)
+  }),
+  http.post(`${API}/auth/me/avatar`, async ({ request }) => {
+    if (!store.get()) return unauthorized()
+    const { avatarDataUrl } = (await request.json()) as { avatarDataUrl?: string }
+    currentAccount.avatarUrl = avatarDataUrl ?? null
+    return HttpResponse.json({ avatarUrl: currentAccount.avatarUrl })
+  }),
+  http.delete(`${API}/auth/me/avatar`, () => {
+    if (!store.get()) return unauthorized()
+    currentAccount.avatarUrl = null
+    return HttpResponse.json({ avatarUrl: null })
+  }),
+  http.post(`${API}/auth/change-password`, async ({ request }) => {
+    if (!store.get()) return unauthorized()
+    const input = (await request.json()) as { currentPassword?: string; newPassword?: string }
+    const record = [...accounts.values()].find((a) => a.user === currentAccount)
+    if (!record || input.currentPassword !== record.password) {
+      return HttpResponse.json({ message: 'Your current password is incorrect.' }, { status: 400 })
+    }
+    if (input.newPassword) record.password = input.newPassword
+    return HttpResponse.json({ message: 'Your password has been changed. You have been signed out on every other device.' })
   }),
   // Mock sessions never expire, so there is never anything to refresh.
   http.post(`${API}/auth/refresh`, unauthorized),
@@ -203,20 +239,26 @@ const authHandlers = [
   }),
 ]
 
+/**
+ * `/lecturers/overview` is real now (see lecturer.routes.ts on the backend) —
+ * deliberately NOT in dataHandlers, so VITE_USE_MOCKS=data lets the request
+ * through to the real backend instead of shadowing it. Only registered for
+ * full VITE_USE_MOCKS=true demo/test mode, where there is no backend at all.
+ */
+const overviewHandler = http.get(`${API}/lecturers/overview`, async () => {
+  if (!store.get()) return unauthorized()
+  await delay(200)
+  const overview: Overview = {
+    totalStudents: units.reduce((n, u) => n + u.studentCount, 0),
+    unitsTaught: units.length,
+    avgAttendance: 86.4,
+    sessionsHeld: 38,
+    periodLabel: 'All time',
+  }
+  return ok(overview)
+})
+
 export const dataHandlers = [
-  http.get(`${API}/lecturer/overview`, async () => {
-    if (!store.get()) return unauthorized()
-    await delay(200)
-    const overview: Overview = {
-      totalStudents: units.reduce((n, u) => n + u.studentCount, 0),
-      unitsTaught: units.length,
-      avgAttendance: 86.4,
-      sessionsHeld: 38,
-      periodLabel: 'Sep 2026',
-      erpSync: { status: 'synced', lastSyncedAt: new Date(Date.now() - 2 * 60_000).toISOString() },
-    }
-    return ok(overview)
-  }),
   http.get(`${API}/lecturer/units`, () => (store.get() ? ok(units) : unauthorized())),
 
   http.get(`${API}/lecturer/sessions/recent`, async () => {
@@ -243,7 +285,23 @@ const taughtUnit = (u: Unit): TaughtUnit => {
     studentCount: u.studentCount + list.filter((a) => a.status === 'ACTIVE').length,
     pendingCount: list.filter((a) => a.status === 'PENDING').length,
     createdAt: '2026-09-01T08:00:00Z',
+    schedule: schedules.get(u.id) ?? null,
   }
+}
+
+/** Whether `now` falls inside a unit's issued slot — mirrors session.service.ts's resolveClosesAt. */
+function isWithinSchedule(schedule: UnitSchedule, now = new Date()): boolean {
+  if (schedule.dayOfWeek !== now.getDay()) return false
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  return hhmm >= schedule.startTime && hhmm <= schedule.endTime
+}
+
+/** Today's Date at the given "HH:MM" time. */
+function atTimeOfDay(hhmm: string, now = new Date()): Date {
+  const [h, m] = hhmm.split(':').map(Number)
+  const result = new Date(now)
+  result.setHours(h ?? 0, m ?? 0, 0, 0)
+  return result
 }
 
 /**
@@ -253,6 +311,16 @@ const taughtUnit = (u: Unit): TaughtUnit => {
 export const liveHandlers = [
   http.get(`${API}/units`, () => (store.get() ? ok(units.map(taughtUnit)) : unauthorized())),
 
+  /** The unit ActivateClass may open a session for right now, per its issued schedule. */
+  http.get(`${API}/units/current`, () => {
+    if (!store.get()) return unauthorized()
+    const unit = units.find((u) => {
+      const schedule = schedules.get(u.id)
+      return schedule && isWithinSchedule(schedule)
+    })
+    return ok(unit ? taughtUnit(unit) : null)
+  }),
+
   http.post(`${API}/units`, async ({ request }) => {
     if (!store.get()) return unauthorized()
     const input = (await request.json()) as CreateUnitInput
@@ -260,6 +328,7 @@ export const liveHandlers = [
     if (units.some((u) => u.code === code)) return fail(409, 'CONFLICT', `You have already added ${code}.`)
     const unit: Unit = { id: crypto.randomUUID(), code, name: input.name.trim(), studentCount: 0, creditHours: 3, attendanceRate: 0 }
     units.push(unit)
+    schedules.set(unit.id, { dayOfWeek: input.dayOfWeek, startTime: input.startTime, endTime: input.endTime })
     return ok(taughtUnit(unit), 201)
   }),
 
@@ -322,8 +391,22 @@ export const liveHandlers = [
     await delay(300)
     const unit = units.find((u) => u.id === input.unitId)
     if (!unit) return fail(404, 'NOT_FOUND', 'Unit not found')
-    const closesAt = new Date(input.closesAt)
-    if (!(closesAt.getTime() > Date.now())) return fail(400, 'VALIDATION_FAILED', 'The session must close after it opens.')
+
+    // Mirrors session.service.ts's resolveClosesAt: a unit with an issued
+    // schedule gets closesAt derived from the slot's end time, ignoring any
+    // client-supplied value; only a legacy unschedule unit falls back to it.
+    const schedule = schedules.get(unit.id)
+    let closesAt: Date
+    if (schedule) {
+      if (!isWithinSchedule(schedule)) {
+        return fail(403, 'FORBIDDEN', `You can only activate this class during its scheduled time (${schedule.startTime}–${schedule.endTime}).`)
+      }
+      closesAt = atTimeOfDay(schedule.endTime)
+    } else {
+      if (!input.closesAt) return fail(400, 'VALIDATION_FAILED', 'This unit has no issued schedule; closesAt is required.')
+      closesAt = new Date(input.closesAt)
+      if (!(closesAt.getTime() > Date.now())) return fail(400, 'VALIDATION_FAILED', 'The session must close after it opens.')
+    }
 
     const session: MockSession = {
       id: crypto.randomUUID(),
@@ -373,4 +456,4 @@ export const liveHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, ...dataHandlers, ...liveHandlers]
+export const handlers = [...authHandlers, overviewHandler, ...dataHandlers, ...liveHandlers]

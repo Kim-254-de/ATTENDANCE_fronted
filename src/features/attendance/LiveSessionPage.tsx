@@ -1,12 +1,27 @@
 import { ArrowLeft, Pause, PictureInPicture2, Play, TriangleAlert } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
 import { formatElapsed } from '@/lib/format'
 import type { SessionAttendance, SessionStatus, SessionSummary } from '@/types'
 import { clearActiveSessionId, useSessionAttendance, useSessionQr, useSetSessionStatus } from './sessionApi'
+
+/**
+ * Experimental, Chrome/Edge 116+ only — not yet in the standard DOM lib types.
+ * Lets a site open a real floating window at a size it chooses and put live
+ * HTML in it (unlike video-based PiP, which is a frozen visual capture).
+ */
+interface DocumentPictureInPicture {
+  requestWindow(options?: { width?: number; height?: number }): Promise<Window>
+}
+declare global {
+  interface Window {
+    documentPictureInPicture?: DocumentPictureInPicture
+  }
+}
 
 const subscribeToSeconds = (notify: () => void) => {
   const t = setInterval(notify, 1000)
@@ -117,7 +132,10 @@ export function LiveSessionPage() {
               {session.status === 'PAUSED' ? <Play className="size-4" aria-hidden /> : <Pause className="size-4" aria-hidden />}
               {session.status === 'PAUSED' ? 'Resume' : 'Pause'}
             </Button>
-            <FloatButton payload={session.status === 'OPEN' ? qr.data?.payload : undefined} />
+            <FloatButton
+              payload={session.status === 'OPEN' ? qr.data?.payload : undefined}
+              refreshLabel={secondsLeft !== null ? `Refreshes in ${secondsLeft}s` : undefined}
+            />
             <Button variant="ghost" onClick={endClass} disabled={setStatus.isPending} className="text-red-300 hover:bg-red-500/10">
               End Class
             </Button>
@@ -224,22 +242,32 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
 }
 
 /**
- * The closest a web app gets to "overlay this over other apps": stream the QR
- * canvas into a hidden video and ask the browser for Picture-in-Picture, which
- * floats above every other window/app on Chrome, Edge and Safari alike. There
- * is no way for a website to draw a true system overlay without a native
- * shell, so this is offered where supported and simply hidden otherwise.
+ * The closest a web app gets to "overlay this over other apps" — there is no
+ * way for a website to draw a true system overlay without a native shell, so
+ * this is the platform's one narrow exception: a floating always-on-top window.
+ *
+ * Two implementations, picked at runtime:
+ *  - Document Picture-in-Picture (Chrome/Edge 116+): a real window we choose
+ *    the size of and render live HTML into via a portal — the QR stays crisp
+ *    and the countdown keeps ticking, because it's the same React tree.
+ *  - Classic video Picture-in-Picture (broader support): the QR canvas is
+ *    streamed into a hidden <video>, which is a frozen visual capture — no
+ *    live countdown, and the window's initial size is the browser's default.
+ * Hidden entirely where neither is supported.
  */
-function FloatButton({ payload }: { payload?: string }) {
+function FloatButton({ payload, refreshLabel }: { payload?: string; refreshLabel?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [floating, setFloating] = useState(false)
-  const supported = typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && document.pictureInPictureEnabled
+  const [videoFloating, setVideoFloating] = useState(false)
+  const [pipWindow, setPipWindow] = useState<Window | null>(null)
+
+  const documentPipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture
+  const videoPipSupported = typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && document.pictureInPictureEnabled
 
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    const onEnter = () => setFloating(true)
-    const onLeave = () => setFloating(false)
+    const onEnter = () => setVideoFloating(true)
+    const onLeave = () => setVideoFloating(false)
     video.addEventListener('enterpictureinpicture', onEnter)
     video.addEventListener('leavepictureinpicture', onLeave)
     return () => {
@@ -248,9 +276,33 @@ function FloatButton({ payload }: { payload?: string }) {
     }
   }, [])
 
-  if (!supported || !payload) return null
+  // Closing the floating window (its own close button) must clear our state;
+  // leaving this page while it's open (class stays live) must not leak it.
+  useEffect(() => {
+    if (!pipWindow) return
+    const onClose = () => setPipWindow(null)
+    pipWindow.addEventListener('pagehide', onClose, { once: true })
+    return () => {
+      pipWindow.removeEventListener('pagehide', onClose)
+      pipWindow.close()
+    }
+  }, [pipWindow])
 
-  const toggle = async () => {
+  if ((!documentPipSupported && !videoPipSupported) || !payload) return null
+
+  const openDocumentPip = async () => {
+    try {
+      const win = await window.documentPictureInPicture!.requestWindow({ width: 360, height: 420 })
+      copyStylesInto(win.document)
+      win.document.body.style.margin = '0'
+      win.document.body.style.background = '#0f1b33'
+      setPipWindow(win)
+    } catch {
+      // Refused (missing gesture, disabled setting) — button just stays put so they can retry.
+    }
+  }
+
+  const toggleVideoPip = async () => {
     const video = videoRef.current
     if (!video) return
     try {
@@ -268,14 +320,56 @@ function FloatButton({ payload }: { payload?: string }) {
     }
   }
 
+  const floating = documentPipSupported ? !!pipWindow : videoFloating
+  const toggle = () => {
+    if (documentPipSupported) {
+      if (pipWindow) setPipWindow(null) // effect cleanup closes the real window
+      else void openDocumentPip()
+    } else {
+      void toggleVideoPip()
+    }
+  }
+
   return (
     <>
       <Button variant="secondary" onClick={toggle}>
         <PictureInPicture2 className="size-4" aria-hidden />
         {floating ? 'Stop floating' : 'Float over apps'}
       </Button>
+      {pipWindow &&
+        createPortal(
+          <div className="flex h-dvh flex-col items-center justify-center gap-3 bg-navy-950 p-4 text-white">
+            <QrPanel payload={payload} />
+            {refreshLabel && <p className="text-sm text-sky-300">{refreshLabel}</p>}
+          </div>,
+          pipWindow.document.body,
+        )}
       {/* Off-screen, never display:none — hidden video elements can be blocked from entering Picture-in-Picture. */}
       <video ref={videoRef} muted playsInline className="fixed left-0 top-0 -z-10 h-px w-px opacity-0" />
     </>
   )
+}
+
+/**
+ * A Document PiP window starts with a blank document — none of the page's
+ * Tailwind styles apply until copied in. Same-origin stylesheets (Vite's
+ * injected <style> tags in dev, bundled CSS in prod) are cloned as rules;
+ * anything that throws on `cssRules` (a cross-origin stylesheet) is
+ * re-attached as a <link> instead so the browser fetches it itself.
+ */
+function copyStylesInto(doc: Document): void {
+  for (const sheet of document.styleSheets) {
+    try {
+      const style = doc.createElement('style')
+      style.textContent = [...sheet.cssRules].map((rule) => rule.cssText).join('\n')
+      doc.head.appendChild(style)
+    } catch {
+      if (sheet.href) {
+        const link = doc.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = sheet.href
+        doc.head.appendChild(link)
+      }
+    }
+  }
 }
