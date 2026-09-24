@@ -258,19 +258,24 @@ const overviewHandler = http.get(`${API}/lecturers/overview`, async () => {
   return ok(overview)
 })
 
+/**
+ * `/reports/sessions` is real now (see reporting.routes.ts on the backend) —
+ * deliberately NOT in dataHandlers, same reasoning as overviewHandler above.
+ */
+const recentSessionsHandler = http.get(`${API}/reports/sessions`, async ({ request }) => {
+  if (!store.get()) return unauthorized()
+  await delay(200)
+  const limit = Number(new URL(request.url).searchParams.get('limit') ?? '5')
+  const recent: RecentSession[] = [
+    { id: 's1', date: '2026-09-07T08:00:00Z', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', present: 78, absent: 9, total: 87, rate: 90, reference: 'QR-CS301-0908' },
+    { id: 's2', date: '2026-09-07T11:00:00Z', unitId: 'u2', unitCode: 'CS405', unitName: 'Database Management Systems', present: 61, absent: 3, total: 64, rate: 95, reference: 'QR-CS405-0908' },
+    { id: 's3', date: '2026-09-04T09:00:00Z', unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', present: 47, absent: 5, total: 52, rate: 90, reference: 'QR-CS502-0905' },
+  ]
+  return ok(recent.slice(0, limit))
+})
+
 export const dataHandlers = [
   http.get(`${API}/lecturer/units`, () => (store.get() ? ok(units) : unauthorized())),
-
-  http.get(`${API}/lecturer/sessions/recent`, async () => {
-    if (!store.get()) return unauthorized()
-    await delay(200)
-    const recent: RecentSession[] = [
-      { id: 's1', date: '2026-09-07T08:00:00Z', unitCode: 'CS301', present: 78, total: 87, reference: 'QR-CS301-0908' },
-      { id: 's2', date: '2026-09-07T11:00:00Z', unitCode: 'CS405', present: 61, total: 64, reference: 'QR-CS405-0908' },
-      { id: 's3', date: '2026-09-04T09:00:00Z', unitCode: 'CS502', present: 47, total: 52, reference: 'QR-CS502-0905' },
-    ]
-    return ok(recent)
-  }),
 ]
 
 /** Students on each mock unit. The roster sizes in `units` are just numbers; only added students are listed. */
@@ -456,4 +461,4 @@ export const liveHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, overviewHandler, ...dataHandlers, ...liveHandlers]
+export const handlers = [...authHandlers, overviewHandler, recentSessionsHandler, ...dataHandlers, ...liveHandlers]

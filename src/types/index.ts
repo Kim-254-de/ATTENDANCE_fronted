@@ -161,11 +161,16 @@ export interface EmailVerificationResult {
   message: string
 }
 
+/** One row from GET /reports/sessions — the Dashboard's "Recent Sessions" and the Attendance page's full log both use this shape. */
 export interface RecentSession {
   id: string
   date: string // ISO
+  unitId: string
   unitCode: string
+  unitName: string | null
   present: number
+  absent: number
   total: number
-  reference: string // attendance reference number, e.g. QR-CS301-0908
+  rate: number // 0–100
+  reference: string // display-only, derived — not stored under this name; e.g. QR-CS301-0908
 }
