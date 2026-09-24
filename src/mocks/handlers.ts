@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { CreateSessionInput, CurrentQr, Lecturer, Overview, RecentSession, SessionStatus, SessionSummary, Unit } from '@/types'
+import type { Allocation, AllocationResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, TaughtUnit, Unit } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -40,11 +40,14 @@ const units: Unit[] = [
   { id: 'u4', code: 'CS210', name: 'Object-Oriented Programming', studentCount: 110, creditHours: 3, attendanceRate: 84 },
 ]
 
+/** Units added during a test are dropped again by resetMocks. */
+const BASE_UNIT_COUNT = units.length
+
 const store = (() => {
   let memory = false
   return {
-    // VITE_USE_MOCKS=data: sign-in is real (handled by the backend); only the dashboard/session
-    // data below is mocked, so it trusts the real session instead of the mock login flag.
+    // VITE_USE_MOCKS=data: sign-in, units, sessions and check-ins are real (handled by the
+    // backend); only the dashboard data below is mocked, so it trusts the real session instead of the mock login flag.
     get: () => import.meta.env.VITE_USE_MOCKS === 'data' || (typeof sessionStorage === 'undefined' ? memory : sessionStorage.getItem(SESSION_FLAG) === '1'),
     set: (v: boolean) => (typeof sessionStorage === 'undefined' ? (memory = v) : v ? sessionStorage.setItem(SESSION_FLAG, '1') : sessionStorage.removeItem(SESSION_FLAG)),
   }
@@ -77,6 +80,8 @@ export const resetMocks = () => {
   store.set(false)
   currentAccount = lecturer
   sessions.clear()
+  allocations.clear()
+  units.length = BASE_UNIT_COUNT
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -224,6 +229,92 @@ export const dataHandlers = [
     ]
     return ok(recent)
   }),
+]
+
+/** Students on each mock unit. The roster sizes in `units` are just numbers; only added students are listed. */
+const allocations = new Map<string, Allocation[]>()
+
+const taughtUnit = (u: Unit): TaughtUnit => {
+  const list = allocations.get(u.id) ?? []
+  return {
+    id: u.id,
+    code: u.code,
+    name: u.name,
+    studentCount: u.studentCount + list.filter((a) => a.status === 'ACTIVE').length,
+    pendingCount: list.filter((a) => a.status === 'PENDING').length,
+    createdAt: '2026-09-01T08:00:00Z',
+  }
+}
+
+/**
+ * Units, allocations, sessions, QR codes and check-ins. Mocked only when VITE_USE_MOCKS=true;
+ * in `data` mode these requests go to the real backend.
+ */
+export const liveHandlers = [
+  http.get(`${API}/units`, () => (store.get() ? ok(units.map(taughtUnit)) : unauthorized())),
+
+  http.post(`${API}/units`, async ({ request }) => {
+    if (!store.get()) return unauthorized()
+    const input = (await request.json()) as CreateUnitInput
+    const code = input.code.trim().replace(/\s+/g, ' ').toUpperCase()
+    if (units.some((u) => u.code === code)) return fail(409, 'CONFLICT', `You have already added ${code}.`)
+    const unit: Unit = { id: crypto.randomUUID(), code, name: input.name.trim(), studentCount: 0, creditHours: 3, attendanceRate: 0 }
+    units.push(unit)
+    return ok(taughtUnit(unit), 201)
+  }),
+
+  http.get(`${API}/units/:unitId/students`, ({ params }) => {
+    if (!store.get()) return unauthorized()
+    if (!units.some((u) => u.id === params.unitId)) return fail(404, 'NOT_FOUND', 'Unit not found.')
+    return ok(allocations.get(params.unitId as string) ?? [])
+  }),
+
+  // Mock student records: any registration number containing a digit exists; one ending in /OLD has graduated.
+  http.post(`${API}/units/:unitId/students`, async ({ params, request }) => {
+    if (!store.get()) return unauthorized()
+    const unitId = params.unitId as string
+    const { registrationNumbers } = (await request.json()) as { registrationNumbers: string[] }
+    await delay(300)
+    const list = allocations.get(unitId) ?? []
+    const results: AllocationResult[] = registrationNumbers.map((raw) => {
+      const registrationNumber = raw.trim().toUpperCase()
+      if (!/\d/.test(registrationNumber)) return { registrationNumber, status: 'NOT_FOUND', fullName: null }
+      const fullName = `Student ${registrationNumber.replace(/\D/g, '').slice(-4)}`
+      if (registrationNumber.endsWith('/OLD')) return { registrationNumber, status: 'INACTIVE', fullName }
+      const existing = list.find((a) => a.registrationNumber === registrationNumber)
+      if (existing?.status === 'ACTIVE') return { registrationNumber, status: 'ALREADY_ALLOCATED', fullName }
+      if (existing) {
+        existing.status = 'ACTIVE'
+        return { registrationNumber, status: 'RESTORED', fullName }
+      }
+      list.push({ id: crypto.randomUUID(), registrationNumber, studentUserId: null, fullName, status: 'ACTIVE', source: 'LECTURER', hasAccount: false, createdAt: new Date().toISOString() })
+      return { registrationNumber, status: 'ADDED', fullName }
+    })
+    allocations.set(unitId, list)
+    return ok(results)
+  }),
+
+  http.patch(`${API}/units/:unitId/students/:allocationId`, async ({ params, request }) => {
+    if (!store.get()) return unauthorized()
+    const allocation = allocations.get(params.unitId as string)?.find((a) => a.id === params.allocationId)
+    if (!allocation) return fail(404, 'NOT_FOUND', 'That student is not on this unit.')
+    allocation.status = ((await request.json()) as { status: Allocation['status'] }).status
+    return ok(allocation)
+  }),
+
+  http.get(`${API}/attendance/sessions/:id`, ({ params }) => {
+    if (!store.get()) return unauthorized()
+    const session = sessions.get(params.id as string)
+    if (!session) return fail(404, 'NOT_FOUND', 'Session not found.')
+    const attendees: SessionAttendance['attendees'] = Array.from({ length: session.checkedIn }, (_, i) => ({
+      id: `${session.id}-${i}`,
+      studentUserId: `stu-${i}`,
+      fullName: `Student ${String(session.checkedIn - i).padStart(3, '0')}`,
+      registrationNumber: null,
+      recordedAt: new Date(Date.now() - i * 20_000).toISOString(),
+    }))
+    return ok({ sessionId: session.id, checkedIn: session.checkedIn, attendees })
+  }),
 
   http.post(`${API}/sessions`, async ({ request }) => {
     if (!store.get()) return unauthorized()
@@ -262,7 +353,8 @@ export const dataHandlers = [
     const { payload, expiresInSeconds, rotatesAt } = currentToken(session)
     const checkedIn = simulateCheckIns(session)
     const { secret: _secret, checkedIn: _checkedIn, ...summary } = session
-    const body: CurrentQr = { session: summary, payload, expiresInSeconds, rotatesAt, checkedIn }
+    const enrolled = units.find((u) => u.id === session.unitId)?.studentCount ?? 0
+    const body: CurrentQr = { session: summary, payload, expiresInSeconds, rotatesAt, checkedIn, enrolled }
     return ok(body)
   }),
 
@@ -281,4 +373,4 @@ export const dataHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, ...dataHandlers]
+export const handlers = [...authHandlers, ...dataHandlers, ...liveHandlers]

@@ -9,7 +9,7 @@ import { StatCard } from '@/components/ui/StatCard'
 import { useMe } from '@/features/auth/authApi'
 import { errorMessage } from '@/lib/api'
 import { RecentSessions } from './RecentSessions'
-import { useOverview, useUnits } from './dashboardApi'
+import { useOverview } from './dashboardApi'
 
 /**
  * A lecturer opens this between classes, mid-walk to the lecture hall. It
@@ -75,8 +75,7 @@ export function OverviewPage() {
 
 function ActiveSessionBanner({ sessionId }: { sessionId: string }) {
   const qr = useSessionQr(sessionId)
-  const { data: units } = useUnits()
-  const capacity = units?.find((u) => u.id === qr.data?.session.unitId)?.studentCount
+  const capacity = qr.data?.enrolled
 
   return (
     <Link to={`/session/${sessionId}`} className="block">

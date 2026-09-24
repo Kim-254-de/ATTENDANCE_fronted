@@ -49,7 +49,16 @@ export const routes = [
             handle: { title: 'Attendance Reports' },
           },
           { path: 'students', element: <ComingSoon name="Students" />, handle: { title: 'Students' } },
-          { path: 'units', element: <ComingSoon name="Units" />, handle: { title: 'Units' } },
+          {
+            path: 'units',
+            lazy: async () => ({ Component: (await import('@/features/units/UnitsPage')).UnitsPage }),
+            handle: { title: 'Units' },
+          },
+          {
+            path: 'units/:unitId',
+            lazy: async () => ({ Component: (await import('@/features/units/UnitStudentsPage')).UnitStudentsPage }),
+            handle: { title: 'Unit Students' },
+          },
         ],
       },
       {

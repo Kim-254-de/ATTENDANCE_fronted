@@ -3,11 +3,10 @@ import { QRCodeCanvas } from 'qrcode.react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { useUnits } from '@/features/dashboard/dashboardApi'
 import { errorMessage } from '@/lib/api'
 import { formatElapsed } from '@/lib/format'
-import type { SessionStatus, SessionSummary } from '@/types'
-import { clearActiveSessionId, useSessionQr, useSetSessionStatus } from './sessionApi'
+import type { SessionAttendance, SessionStatus, SessionSummary } from '@/types'
+import { clearActiveSessionId, useSessionAttendance, useSessionQr, useSetSessionStatus } from './sessionApi'
 
 const subscribeToSeconds = (notify: () => void) => {
   const t = setInterval(notify, 1000)
@@ -55,9 +54,10 @@ export function LiveSessionPage() {
   const secondsLeft = qr.data ? Math.max(0, Math.round((new Date(qr.data.rotatesAt).getTime() - now) / 1000)) : null
   const elapsed = session ? formatElapsed(now - new Date(session.opensAt).getTime()) : null
 
-  const { data: units } = useUnits()
-  const capacity = units?.find((u) => u.id === session?.unitId)?.studentCount
-  const checkedIn = qr.data?.checkedIn
+  const attendance = useSessionAttendance(sessionId, session?.status === 'OPEN')
+  // The QR poll carries the roster size; the attendance poll is fresher on who has arrived.
+  const capacity = qr.data?.enrolled
+  const checkedIn = attendance.data?.checkedIn ?? qr.data?.checkedIn
 
   return (
     <div className="flex min-h-dvh flex-col bg-navy-950 text-white">
@@ -105,6 +105,8 @@ export function LiveSessionPage() {
           <p className="text-sky-300" role="status">Starting session…</p>
         )}
 
+        {attendance.data && attendance.data.attendees.length > 0 && <Attendees attendees={attendance.data.attendees} />}
+
         {session && session.status !== 'CLOSED' && (
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button
@@ -144,6 +146,26 @@ function CheckedInStat({ checkedIn, capacity }: { checkedIn: number; capacity?: 
         )}
       </div>
     </div>
+  )
+}
+
+/** Names as they arrive, newest first, so the lecturer can see check-ins happening without a report. */
+function Attendees({ attendees }: { attendees: SessionAttendance['attendees'] }) {
+  const SHOWN = 8
+  return (
+    <section aria-label="Checked-in students" className="w-full max-w-xs text-left">
+      <ul className="space-y-1 text-sm">
+        {attendees.slice(0, SHOWN).map((a) => (
+          <li key={a.id} className="flex justify-between gap-3 rounded-lg bg-white/5 px-3 py-1.5">
+            <span className="truncate">{a.fullName}</span>
+            <span className="shrink-0 tabular-nums text-sky-300">
+              {new Date(a.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {attendees.length > SHOWN && <p className="mt-1 text-center text-xs text-sky-400">and {attendees.length - SHOWN} more</p>}
+    </section>
   )
 }
 

@@ -49,6 +49,62 @@ export interface CurrentQr {
   rotatesAt: string
   /** Students recorded present so far this session. */
   checkedIn: number
+  /** Students active on the unit, i.e. who could check in. */
+  enrolled: number
+}
+
+/** Who has checked in to a session, most recent first. */
+export interface SessionAttendance {
+  sessionId: string
+  checkedIn: number
+  attendees: {
+    id: string
+    studentUserId: string
+    fullName: string
+    registrationNumber: string | null
+    recordedAt: string
+  }[]
+}
+
+/** A unit the signed-in lecturer teaches, as the backend holds it. */
+export interface TaughtUnit {
+  id: string
+  code: string
+  name: string | null
+  /** Students who can check in. */
+  studentCount: number
+  /** Students who asked to join and are waiting for approval. */
+  pendingCount: number
+  createdAt: string
+}
+
+export interface CreateUnitInput {
+  code: string
+  name: string
+}
+
+export type AllocationStatus = 'ACTIVE' | 'PENDING' | 'DROPPED'
+
+/** A student on a unit. */
+export interface Allocation {
+  id: string
+  registrationNumber: string | null
+  studentUserId: string | null
+  fullName: string | null
+  status: AllocationStatus
+  source: 'LECTURER' | 'SELF_ENROLLED'
+  /** False until the student registers — they are on the list but cannot sign in to check in yet. */
+  hasAccount: boolean
+  createdAt: string
+}
+
+export type AllocationResultStatus = 'ADDED' | 'RESTORED' | 'ALREADY_ALLOCATED' | 'NOT_FOUND' | 'INACTIVE' | 'UNAVAILABLE'
+
+/** What happened to one registration number in a bulk add. */
+export interface AllocationResult {
+  registrationNumber: string
+  status: AllocationResultStatus
+  fullName: string | null
 }
 
 export interface CreateSessionInput {

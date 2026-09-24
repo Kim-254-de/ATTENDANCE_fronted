@@ -1,10 +1,10 @@
 import { Zap } from 'lucide-react'
 import { useId, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { useUnits } from '@/features/dashboard/dashboardApi'
 import { errorMessage } from '@/lib/api'
+import { useMyUnits } from '@/features/units/unitsApi'
 import { useCreateSession, setActiveSessionId } from './sessionApi'
 
 const DURATIONS = [
@@ -21,7 +21,7 @@ const DURATIONS = [
  */
 export function ActivateClass() {
   const unitSelectId = useId()
-  const { data: units, isPending: unitsLoading, error: unitsError } = useUnits()
+  const { data: units, isPending: unitsLoading, error: unitsError } = useMyUnits()
   const [unitId, setUnitId] = useState('')
   const [duration, setDuration] = useState(60)
   const navigate = useNavigate()
@@ -60,10 +60,15 @@ export function ActivateClass() {
           disabled={unitsLoading}
           onChange={(e) => setUnitId(e.target.value)}
         >
-          <option value="">{unitsLoading ? 'Loading units…' : 'Select a unit'}</option>
-          {units?.map((u) => <option key={u.id} value={u.id}>{u.code} — {u.name}</option>)}
+          <option value="">{unitsLoading ? 'Loading units…' : units?.length === 0 ? 'No units assigned to you yet' : 'Select a unit'}</option>
+          {units?.map((u) => <option key={u.id} value={u.id}>{u.name ? `${u.code} — ${u.name}` : u.code}</option>)}
         </select>
         {unitsError && <p role="alert" className="text-sm text-red-600">{errorMessage(unitsError, 'Could not load your units.')}</p>}
+        {units?.length === 0 && (
+          <p className="text-sm text-muted">
+            <Link to="/units" className="font-semibold text-navy-900 underline">Add a unit</Link> you teach to activate a class for it.
+          </p>
+        )}
 
         <div className="flex gap-2">
           <label className="sr-only" htmlFor={`${unitSelectId}-duration`}>Class duration</label>
