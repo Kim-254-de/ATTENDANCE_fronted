@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { CreateSessionInput, CurrentQr, SessionStatus, SessionSummary } from '@/types'
+import type { CreateSessionInput, CurrentQr, SessionAttendance, SessionStatus, SessionSummary } from '@/types'
 
 export const useCreateSession = () =>
   useMutation({
@@ -21,6 +21,16 @@ export const useSessionQr = (sessionId: string | undefined, enabled = true) =>
     refetchInterval: (query) => (query.state.data ? query.state.data.expiresInSeconds * 1000 : 5_000),
     refetchOnWindowFocus: false,
     retry: false,
+  })
+
+/** Who has checked in so far. Polled while the class is live so names appear as students scan. */
+export const useSessionAttendance = (sessionId: string | undefined, live: boolean) =>
+  useQuery({
+    queryKey: ['sessions', sessionId, 'attendance'],
+    queryFn: async () => (await api.get<SessionAttendance>(`/attendance/sessions/${sessionId}`)).data,
+    enabled: !!sessionId,
+    refetchInterval: live ? 5_000 : false,
+    refetchOnWindowFocus: false,
   })
 
 export const useSetSessionStatus = (sessionId: string | undefined) => {
