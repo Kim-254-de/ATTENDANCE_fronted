@@ -36,7 +36,6 @@ export const routes = [
           {
             index: true,
             lazy: async () => ({ Component: (await import('@/features/dashboard/OverviewPage')).OverviewPage }),
-            handle: { title: 'Dashboard Overview' },
           },
           {
             path: 'profile',

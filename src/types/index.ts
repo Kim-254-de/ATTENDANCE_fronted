@@ -1,3 +1,5 @@
+export type AccountStatus = 'PENDING_VERIFICATION' | 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED'
+
 export interface Lecturer {
   id: string
   role: 'lecturer' | 'student' | 'admin'
@@ -6,6 +8,9 @@ export interface Lecturer {
   staffNumber: string
   title: string
   department: string
+  status: AccountStatus
+  /** Only present on /auth/me — deliberately left off the lighter session-auth payloads. */
+  avatarUrl: string | null
 }
 
 export interface Unit {
@@ -23,7 +28,6 @@ export interface Overview {
   avgAttendance: number // 0–100
   sessionsHeld: number
   periodLabel: string
-  erpSync: { status: 'synced' | 'syncing' | 'failed'; lastSyncedAt: string }
 }
 
 export type SessionStatus = 'OPEN' | 'PAUSED' | 'CLOSED'
@@ -66,6 +70,13 @@ export interface SessionAttendance {
   }[]
 }
 
+/** The unit's issued weekly meeting slot. 0=Sunday..6=Saturday, matches JS Date#getDay(). */
+export interface UnitSchedule {
+  dayOfWeek: number
+  startTime: string // "HH:MM", 24h
+  endTime: string
+}
+
 /** A unit the signed-in lecturer teaches, as the backend holds it. */
 export interface TaughtUnit {
   id: string
@@ -76,11 +87,16 @@ export interface TaughtUnit {
   /** Students who asked to join and are waiting for approval. */
   pendingCount: number
   createdAt: string
+  /** Null only for units created before schedules existed. */
+  schedule: UnitSchedule | null
 }
 
 export interface CreateUnitInput {
   code: string
   name: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
 }
 
 export type AllocationStatus = 'ACTIVE' | 'PENDING' | 'DROPPED'
@@ -110,7 +126,8 @@ export interface AllocationResult {
 export interface CreateSessionInput {
   unitId: string
   title?: string
-  closesAt: string
+  /** Omitted for a unit with an issued schedule — the backend derives it from the slot's end time. */
+  closesAt?: string
   rotationSeconds?: number
 }
 

@@ -13,6 +13,18 @@ export const useMyUnits = () =>
     staleTime: 60_000,
   })
 
+/**
+ * The unit ActivateClass may open a session for right now, per the lecturer's
+ * issued timetable — null if nothing is scheduled. Polled so the card updates
+ * itself once class time arrives without a manual refresh.
+ */
+export const useCurrentUnit = () =>
+  useQuery({
+    queryKey: ['units', 'current'],
+    queryFn: async () => (await api.get<TaughtUnit | null>('/units/current')).data,
+    refetchInterval: 30_000,
+  })
+
 export const useCreateUnit = () => {
   const qc = useQueryClient()
   return useMutation({

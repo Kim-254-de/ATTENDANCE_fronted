@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, ClipboardCheck, Plus, Radio, UserRound } from 'lucide-react'
+import { BookOpen, ClipboardCheck, Plus, Radio, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ActivateClass } from '@/features/attendance/ActivateClass'
@@ -6,7 +6,6 @@ import { getActiveSessionId, useSessionQr } from '@/features/attendance/sessionA
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { StatCard } from '@/components/ui/StatCard'
-import { useMe } from '@/features/auth/authApi'
 import { errorMessage } from '@/lib/api'
 import { RecentSessions } from './RecentSessions'
 import { useOverview } from './dashboardApi'
@@ -17,29 +16,11 @@ import { useOverview } from './dashboardApi'
  * and keeps everything else one glance, not a read.
  */
 export function OverviewPage() {
-  const { data: user } = useMe()
   const { data, isPending, error, refetch } = useOverview()
   const [activeSessionId] = useState(getActiveSessionId)
-  const firstName = user?.fullName.replace(/^\S+\.?\s*/, '').split(' ')[0] ?? 'Lecturer'
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      <section className="relative overflow-hidden rounded-2xl bg-navy-900 px-5 py-6 text-white shadow-[0_12px_30px_rgba(18,48,95,0.16)] sm:px-8 sm:py-7">
-        <div className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full border-[32px] border-white/5" aria-hidden />
-        <div className="pointer-events-none absolute bottom-[-5rem] right-32 size-44 rounded-full bg-gold-500/10" aria-hidden />
-        <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div>
-            <p className="mb-2 text-xs font-semibold tracking-[0.18em] text-sky-300">LECTURER WORKSPACE</p>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Good morning, {firstName}</h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-blue-100 sm:text-base">Stay on top of your classes, monitor attendance, and keep every student connected to the learning journey.</p>
-          </div>
-          <Link to="/attendance" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gold-500 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-gold-600">
-            <ClipboardCheck className="size-4" aria-hidden /> Open attendance
-            <ArrowUpRight className="size-4" aria-hidden />
-          </Link>
-        </div>
-      </section>
-
       {activeSessionId && <ActiveSessionBanner sessionId={activeSessionId} />}
 
       <ActivateClass />
@@ -55,7 +36,7 @@ export function OverviewPage() {
             Array.from({ length: 2 }, (_, i) => <Skeleton key={i} className="h-[104px]" />)
           ) : (
             <>
-              <StatCard icon={ClipboardCheck} label="Avg. Attendance" value={`${data.avgAttendance.toFixed(1)}%`} hint="This semester" accent />
+              <StatCard icon={ClipboardCheck} label="Avg. Attendance" value={`${data.avgAttendance.toFixed(1)}%`} hint={data.periodLabel} accent />
               <StatCard icon={BookOpen} label="Sessions Held" value={data.sessionsHeld} hint={data.periodLabel} />
             </>
           )}

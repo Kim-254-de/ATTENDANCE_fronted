@@ -1,24 +1,45 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, GraduationCap, Mail, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { errorMessage } from '@/lib/api'
+import { api, errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
-import { useMe, useUpdateProfile, type UpdateProfileInput } from './authApi'
+import type { Lecturer } from '@/types'
+import { ME_KEY, useMe } from './authApi'
+
+/**
+ * Separate from the lecturer's UpdateProfileInput on purpose: the student
+ * module has no real backend yet (only mocks), so this shape is whatever the
+ * mock expects rather than a contract the real API has committed to.
+ */
+interface StudentProfileInput {
+  fullName: string
+  email: string
+  department: string
+}
+
+function useUpdateStudentProfile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: StudentProfileInput) => (await api.patch<Lecturer>('/auth/me', input)).data,
+    onSuccess: (user) => qc.setQueryData(ME_KEY, user),
+  })
+}
 
 export function StudentProfilePage() {
   const { data: user } = useMe()
-  const updateProfile = useUpdateProfile()
-  const [form, setForm] = useState<UpdateProfileInput>(() => (user ? { fullName: user.fullName, title: '', department: user.department, email: user.email } : { fullName: '', title: '', department: '', email: '' }))
+  const updateProfile = useUpdateStudentProfile()
+  const [form, setForm] = useState<StudentProfileInput>(() => (user ? { fullName: user.fullName, department: user.department, email: user.email } : { fullName: '', department: '', email: '' }))
   const [saved, setSaved] = useState(false)
 
   // Fill the form once per account: a background refetch of /auth/me must not wipe unsaved edits.
   useEffect(() => {
-    if (user) setForm({ fullName: user.fullName, title: '', department: user.department, email: user.email })
+    if (user) setForm({ fullName: user.fullName, department: user.department, email: user.email })
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) return null
-  const setField = (field: keyof UpdateProfileInput, value: string) => {
+  const setField = (field: keyof StudentProfileInput, value: string) => {
     setSaved(false)
     setForm((current) => ({ ...current, [field]: value }))
   }

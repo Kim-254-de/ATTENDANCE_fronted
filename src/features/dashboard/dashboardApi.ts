@@ -2,10 +2,17 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { Overview, RecentSession, Unit } from '@/types'
 
+/**
+ * Real backend data: units taught, total students, avg. attendance, sessions
+ * held. Powers both the Dashboard's stat cards and the Profile page's
+ * teaching summary. Note the plural `/lecturers` — this previously pointed at
+ * the singular `/lecturer/overview`, which the backend's lecturer router was
+ * never actually mounted at, so this endpoint was unreachable until now.
+ */
 export const useOverview = () =>
   useQuery({
     queryKey: ['lecturer', 'overview'],
-    queryFn: async () => (await api.get<Overview>('/lecturer/overview')).data,
+    queryFn: async () => (await api.get<Overview>('/lecturers/overview')).data,
     refetchInterval: 60_000,
   })
 

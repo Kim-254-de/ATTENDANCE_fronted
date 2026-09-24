@@ -17,9 +17,12 @@ export interface SignupInput {
   role: 'lecturer' | 'student'
 }
 
+/**
+ * Full name and email are excluded on purpose: they're the exact fields the
+ * ERP identity check verified at registration, and the backend rejects any
+ * attempt to change them here (see updateProfileSchema in the backend).
+ */
 export interface UpdateProfileInput {
-  email: string
-  fullName: string
   title: string
   department: string
 }
@@ -58,12 +61,49 @@ export function useSignup() {
   })
 }
 
+/** Partial responses (title/department only, or just avatarUrl) merge into the cached user rather than replacing it. */
+const mergeMe = (qc: ReturnType<typeof useQueryClient>) => (patch: Partial<Lecturer>) =>
+  qc.setQueryData<Lecturer | null>(ME_KEY, (current) => (current ? { ...current, ...patch } : current))
+
 export function useUpdateProfile() {
   const qc = useQueryClient()
   return useMutation({
     mutationKey: ['profile'],
     mutationFn: async (input: UpdateProfileInput) => (await api.patch<Lecturer>('/auth/me', input)).data,
-    onSuccess: (user) => qc.setQueryData(ME_KEY, user),
+    onSuccess: mergeMe(qc),
+  })
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string
+  newPassword: string
+  confirmNewPassword: string
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationKey: ['change-password'],
+    mutationFn: async (input: ChangePasswordInput) =>
+      (await api.post<{ message: string }>('/auth/change-password', input)).data,
+  })
+}
+
+export function useSetAvatar() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationKey: ['avatar', 'set'],
+    mutationFn: async (avatarDataUrl: string) =>
+      (await api.post<{ avatarUrl: string | null }>('/auth/me/avatar', { avatarDataUrl })).data,
+    onSuccess: mergeMe(qc),
+  })
+}
+
+export function useRemoveAvatar() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationKey: ['avatar', 'remove'],
+    mutationFn: async () => (await api.delete<{ avatarUrl: string | null }>('/auth/me/avatar')).data,
+    onSuccess: mergeMe(qc),
   })
 }
 
