@@ -23,9 +23,14 @@ export const useUnits = () =>
     staleTime: 5 * 60_000,
   })
 
+/**
+ * Real backend data (GET /reports/sessions) — same singular/plural bug class
+ * as useOverview: this used to call /lecturer/sessions/recent, which the
+ * backend never served.
+ */
 export const useRecentSessions = (limit = 5) =>
   useQuery({
     queryKey: ['lecturer', 'sessions', 'recent', limit],
-    queryFn: async () => (await api.get<RecentSession[]>('/lecturer/sessions/recent', { params: { limit } })).data,
+    queryFn: async () => (await api.get<RecentSession[]>('/reports/sessions', { params: { limit } })).data,
     refetchInterval: 60_000,
   })
