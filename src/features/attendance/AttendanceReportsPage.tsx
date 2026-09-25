@@ -1,18 +1,13 @@
 import { Download } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useMyUnits } from '@/features/units/unitsApi'
 import { errorMessage } from '@/lib/api'
 import { formatShortDate } from '@/lib/format'
 import type { RecentSession, TaughtUnit } from '@/types'
-import { sessionExportUrl, useSessionReports } from './reportingApi'
-
-function rateColour(rate: number) {
-  if (rate >= 90) return { text: 'text-success', bar: 'bg-success' }
-  if (rate >= 70) return { text: 'text-gold-500', bar: 'bg-gold-500' }
-  return { text: 'text-red-600', bar: 'bg-red-600' }
-}
+import { rateColour, sessionExportUrl, useSessionReports, useUnitAttendanceRates } from './reportingApi'
 
 /**
  * Layout borrowed from the Figma mockup (unit cards → filter tabs → session
@@ -26,16 +21,10 @@ function rateColour(rate: number) {
 export function AttendanceReportsPage() {
   const { data: units, isPending: unitsPending, error: unitsError, refetch: refetchUnits } = useMyUnits()
   const { data: sessions, isPending: sessionsPending, error: sessionsError, refetch: refetchSessions } = useSessionReports()
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
-
-  const rateByUnit = useMemo(() => {
-    const byUnit = new Map<string, number[]>()
-    for (const s of sessions ?? []) {
-      if (!byUnit.has(s.unitId)) byUnit.set(s.unitId, [])
-      byUnit.get(s.unitId)!.push(s.rate)
-    }
-    return new Map([...byUnit].map(([id, rates]) => [id, rates.reduce((a, b) => a + b, 0) / rates.length]))
-  }, [sessions])
+  const [searchParams] = useSearchParams()
+  // Lets the Units page's "Attendance" link open this page pre-filtered to one unit.
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(searchParams.get('unit'))
+  const rateByUnit = useUnitAttendanceRates()
 
   const filteredSessions = selectedUnitId ? (sessions ?? []).filter((s) => s.unitId === selectedUnitId) : sessions
 

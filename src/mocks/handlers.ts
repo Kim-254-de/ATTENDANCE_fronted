@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Allocation, AllocationResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, TaughtUnit, Unit, UnitSchedule } from '@/types'
+import type { Allocation, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, TaughtUnit, Unit, UnitSchedule } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -55,6 +55,14 @@ const BASE_UNIT_COUNT = units.length
 const ALWAYS_TODAY: UnitSchedule = { dayOfWeek: new Date().getDay(), startTime: '00:00', endTime: '23:59' }
 const schedules = new Map<string, UnitSchedule>(units.map((u) => [u.id, ALWAYS_TODAY]))
 
+/**
+ * A lecturer-added unit needs admin verification before it can activate a
+ * class (mirrors unit.repository.ts / session.service.ts). Kept parallel to
+ * `units`, the same way `schedules` is, rather than on `Unit` itself — the
+ * seeded units start VERIFIED so the demo has something to activate.
+ */
+const unitStatuses = new Map<string, 'PENDING_VERIFICATION' | 'VERIFIED'>(units.map((u) => [u.id, 'VERIFIED']))
+
 const store = (() => {
   let memory = false
   return {
@@ -87,13 +95,12 @@ function simulateCheckIns(session: MockSession): number {
 
 const sessions = new Map<string, MockSession>()
 
-/** Test helper: back to a signed-out, empty server. */
+/** Test helper: back to a signed-out server with only the seeded units and their rosters. */
 export const resetMocks = () => {
   store.set(false)
   currentAccount = lecturer
   sessions.clear()
-  allocations.clear()
-  for (const u of units.slice(BASE_UNIT_COUNT)) schedules.delete(u.id)
+  for (const u of units.slice(BASE_UNIT_COUNT)) { schedules.delete(u.id); unitStatuses.delete(u.id); allocations.delete(u.id) }
   units.length = BASE_UNIT_COUNT
 }
 
@@ -278,8 +285,34 @@ export const dataHandlers = [
   http.get(`${API}/lecturer/units`, () => (store.get() ? ok(units) : unauthorized())),
 ]
 
-/** Students on each mock unit. The roster sizes in `units` are just numbers; only added students are listed. */
-const allocations = new Map<string, Allocation[]>()
+/**
+ * Students on each mock unit, standing in for what the backend syncs from the
+ * ERP's enrolment records. The roster sizes in `units` are just headline
+ * numbers; these are the rows the roster page actually lists.
+ */
+const mockRoster = (names: Array<[reg: string, fullName: string, hasAccount: boolean]>): Allocation[] =>
+  names.map(([registrationNumber, fullName, hasAccount]) => ({
+    id: crypto.randomUUID(),
+    registrationNumber,
+    studentUserId: hasAccount ? crypto.randomUUID() : null,
+    fullName,
+    status: 'ACTIVE' as const,
+    source: 'ERP' as const,
+    hasAccount,
+    createdAt: '2026-09-01T08:00:00Z',
+  }))
+
+const allocations = new Map<string, Allocation[]>([
+  ['u1', mockRoster([
+    ['SC211/0001/2022', 'Amina Wanjiku Kamau', true],
+    ['SC211/0002/2022', 'Brian Otieno Odhiambo', true],
+    ['SC211/0006/2021', 'Felix Kiprono Rotich', false],
+  ])],
+  ['u2', mockRoster([
+    ['SC211/0003/2023', 'Cynthia Achieng Ouma', true],
+    ['SC211/0004/2023', 'David Mwangi Njoroge', false],
+  ])],
+])
 
 const taughtUnit = (u: Unit): TaughtUnit => {
   const list = allocations.get(u.id) ?? []
@@ -291,6 +324,7 @@ const taughtUnit = (u: Unit): TaughtUnit => {
     pendingCount: list.filter((a) => a.status === 'PENDING').length,
     createdAt: '2026-09-01T08:00:00Z',
     schedule: schedules.get(u.id) ?? null,
+    status: unitStatuses.get(u.id) ?? 'VERIFIED',
   }
 }
 
@@ -316,64 +350,40 @@ function atTimeOfDay(hhmm: string, now = new Date()): Date {
 export const liveHandlers = [
   http.get(`${API}/units`, () => (store.get() ? ok(units.map(taughtUnit)) : unauthorized())),
 
-  /** The unit ActivateClass may open a session for right now, per its issued schedule. */
+  /** The unit ActivateClass may open a session for right now, per its issued schedule — VERIFIED units only. */
   http.get(`${API}/units/current`, () => {
     if (!store.get()) return unauthorized()
     const unit = units.find((u) => {
       const schedule = schedules.get(u.id)
-      return schedule && isWithinSchedule(schedule)
+      return unitStatuses.get(u.id) === 'VERIFIED' && schedule && isWithinSchedule(schedule)
     })
     return ok(unit ? taughtUnit(unit) : null)
   }),
 
+  /**
+   * A lecturer only sends a code; the name/schedule stand in for what the
+   * real backend pulls from the ERP's issued timetable. This mock timetable
+   * never lists the demo lecturer as any course's assigned staff, so — same
+   * as the real ERP-mismatch case — a newly added unit always lands
+   * PENDING_VERIFICATION rather than auto-verifying.
+   */
   http.post(`${API}/units`, async ({ request }) => {
     if (!store.get()) return unauthorized()
     const input = (await request.json()) as CreateUnitInput
     const code = input.code.trim().replace(/\s+/g, ' ').toUpperCase()
     if (units.some((u) => u.code === code)) return fail(409, 'CONFLICT', `You have already added ${code}.`)
-    const unit: Unit = { id: crypto.randomUUID(), code, name: input.name.trim(), studentCount: 0, creditHours: 3, attendanceRate: 0 }
+    const unit: Unit = { id: crypto.randomUUID(), code, name: `${code} Course`, studentCount: 0, creditHours: 3, attendanceRate: 0 }
     units.push(unit)
-    schedules.set(unit.id, { dayOfWeek: input.dayOfWeek, startTime: input.startTime, endTime: input.endTime })
+    schedules.set(unit.id, ALWAYS_TODAY)
+    unitStatuses.set(unit.id, 'PENDING_VERIFICATION')
     return ok(taughtUnit(unit), 201)
   }),
 
+  /** The roster, as the backend would return it after syncing from the ERP — read-only. */
   http.get(`${API}/units/:unitId/students`, ({ params }) => {
     if (!store.get()) return unauthorized()
     if (!units.some((u) => u.id === params.unitId)) return fail(404, 'NOT_FOUND', 'Unit not found.')
     return ok(allocations.get(params.unitId as string) ?? [])
-  }),
-
-  // Mock student records: any registration number containing a digit exists; one ending in /OLD has graduated.
-  http.post(`${API}/units/:unitId/students`, async ({ params, request }) => {
-    if (!store.get()) return unauthorized()
-    const unitId = params.unitId as string
-    const { registrationNumbers } = (await request.json()) as { registrationNumbers: string[] }
-    await delay(300)
-    const list = allocations.get(unitId) ?? []
-    const results: AllocationResult[] = registrationNumbers.map((raw) => {
-      const registrationNumber = raw.trim().toUpperCase()
-      if (!/\d/.test(registrationNumber)) return { registrationNumber, status: 'NOT_FOUND', fullName: null }
-      const fullName = `Student ${registrationNumber.replace(/\D/g, '').slice(-4)}`
-      if (registrationNumber.endsWith('/OLD')) return { registrationNumber, status: 'INACTIVE', fullName }
-      const existing = list.find((a) => a.registrationNumber === registrationNumber)
-      if (existing?.status === 'ACTIVE') return { registrationNumber, status: 'ALREADY_ALLOCATED', fullName }
-      if (existing) {
-        existing.status = 'ACTIVE'
-        return { registrationNumber, status: 'RESTORED', fullName }
-      }
-      list.push({ id: crypto.randomUUID(), registrationNumber, studentUserId: null, fullName, status: 'ACTIVE', source: 'LECTURER', hasAccount: false, createdAt: new Date().toISOString() })
-      return { registrationNumber, status: 'ADDED', fullName }
-    })
-    allocations.set(unitId, list)
-    return ok(results)
-  }),
-
-  http.patch(`${API}/units/:unitId/students/:allocationId`, async ({ params, request }) => {
-    if (!store.get()) return unauthorized()
-    const allocation = allocations.get(params.unitId as string)?.find((a) => a.id === params.allocationId)
-    if (!allocation) return fail(404, 'NOT_FOUND', 'That student is not on this unit.')
-    allocation.status = ((await request.json()) as { status: Allocation['status'] }).status
-    return ok(allocation)
   }),
 
   http.get(`${API}/attendance/sessions/:id`, ({ params }) => {

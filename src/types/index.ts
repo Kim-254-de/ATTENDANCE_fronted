@@ -77,6 +77,15 @@ export interface UnitSchedule {
   endTime: string
 }
 
+/**
+ * A unit's existence and schedule are checked automatically against the ERP's
+ * issued timetable when a lecturer adds it (unit code only — no free-text
+ * name/schedule). PENDING_VERIFICATION means the timetable doesn't list this
+ * lecturer as the one assigned to teach it, so an admin must confirm that
+ * assignment by hand before a class can be activated for it.
+ */
+export type UnitVerificationStatus = 'PENDING_VERIFICATION' | 'VERIFIED'
+
 /** A unit the signed-in lecturer teaches, as the backend holds it. */
 export interface TaughtUnit {
   id: string
@@ -84,43 +93,36 @@ export interface TaughtUnit {
   name: string | null
   /** Students who can check in. */
   studentCount: number
-  /** Students who asked to join and are waiting for approval. */
+  /** Legacy: nothing creates a pending allocation now that rosters come from the ERP. */
   pendingCount: number
   createdAt: string
   /** Null only for units created before schedules existed. */
   schedule: UnitSchedule | null
+  status: UnitVerificationStatus
 }
 
+/** The name and schedule are never typed in — the backend fills them in from the ERP's course record. */
 export interface CreateUnitInput {
   code: string
-  name: string
-  dayOfWeek: number
-  startTime: string
-  endTime: string
 }
 
 export type AllocationStatus = 'ACTIVE' | 'PENDING' | 'DROPPED'
 
-/** A student on a unit. */
+/**
+ * A student on a unit, as synced from the ERP's enrolment records. `PENDING`,
+ * `LECTURER` and `SELF_ENROLLED` only ever appear on rows written before
+ * rosters came from the ERP.
+ */
 export interface Allocation {
   id: string
   registrationNumber: string | null
   studentUserId: string | null
   fullName: string | null
   status: AllocationStatus
-  source: 'LECTURER' | 'SELF_ENROLLED'
+  source: 'ERP' | 'LECTURER' | 'SELF_ENROLLED'
   /** False until the student registers — they are on the list but cannot sign in to check in yet. */
   hasAccount: boolean
   createdAt: string
-}
-
-export type AllocationResultStatus = 'ADDED' | 'RESTORED' | 'ALREADY_ALLOCATED' | 'NOT_FOUND' | 'INACTIVE' | 'UNAVAILABLE'
-
-/** What happened to one registration number in a bulk add. */
-export interface AllocationResult {
-  registrationNumber: string
-  status: AllocationResultStatus
-  fullName: string | null
 }
 
 export interface CreateSessionInput {
