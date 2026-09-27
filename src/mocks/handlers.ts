@@ -62,6 +62,12 @@ const schedules = new Map<string, UnitSchedule>(units.map((u) => [u.id, ALWAYS_T
  * seeded units start VERIFIED so the demo has something to activate.
  */
 const unitStatuses = new Map<string, 'PENDING_VERIFICATION' | 'VERIFIED'>(units.map((u) => [u.id, 'VERIFIED']))
+/** The seeded units stand in for ones synced from the timetable (SMARTTT): they carry its registered count. A unit added by code has none. */
+const timetableCounts = new Map<string, number>(units.map((u) => [u.id, u.studentCount]))
+/** One seeded unit stands in for a group of a split unit, with registered students still to pick a group. */
+const timetableGroups = new Map<string, { baseCode: string; group: string; withoutGroup: number }>([
+  ['u2', { baseCode: 'CS405', group: 'GR A', withoutGroup: 12 }],
+])
 
 const store = (() => {
   let memory = false
@@ -100,7 +106,7 @@ export const resetMocks = () => {
   store.set(false)
   currentAccount = lecturer
   sessions.clear()
-  for (const u of units.slice(BASE_UNIT_COUNT)) { schedules.delete(u.id); unitStatuses.delete(u.id); allocations.delete(u.id) }
+  for (const u of units.slice(BASE_UNIT_COUNT)) { schedules.delete(u.id); unitStatuses.delete(u.id); allocations.delete(u.id); timetableCounts.delete(u.id) }
   units.length = BASE_UNIT_COUNT
 }
 
@@ -297,7 +303,7 @@ const mockRoster = (names: Array<[reg: string, fullName: string, hasAccount: boo
     studentUserId: hasAccount ? crypto.randomUUID() : null,
     fullName,
     status: 'ACTIVE' as const,
-    source: 'ERP' as const,
+    source: 'SMARTTT' as const,
     hasAccount,
     createdAt: '2026-09-01T08:00:00Z',
   }))
@@ -325,6 +331,11 @@ const taughtUnit = (u: Unit): TaughtUnit => {
     createdAt: '2026-09-01T08:00:00Z',
     schedule: schedules.get(u.id) ?? null,
     status: unitStatuses.get(u.id) ?? 'VERIFIED',
+    baseCode: timetableGroups.get(u.id)?.baseCode ?? (timetableCounts.has(u.id) ? u.code : null),
+    group: timetableGroups.get(u.id)?.group ?? null,
+    registeredStudents: timetableCounts.get(u.id) ?? null,
+    studentsWithoutGroup: timetableGroups.get(u.id)?.withoutGroup ?? null,
+    timetableSyncedAt: timetableCounts.has(u.id) ? '2026-09-01T08:00:00Z' : null,
   }
 }
 

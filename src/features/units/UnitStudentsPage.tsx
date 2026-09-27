@@ -4,17 +4,19 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import type { Allocation } from '@/types'
+import { withoutGroupNotice } from './unitCounts'
 import { useMyUnits, useUnitStudents } from './unitsApi'
 
 /**
- * Who is on one unit. Read-only: enrolment is the registrar's record, held in
- * the ERP, and the backend re-syncs this list from there on every load — a
- * lecturer neither adds students nor approves or removes them.
+ * Who is on one unit. Read-only: the students registered for the unit on the
+ * timetable system (SMARTTT), which the backend re-syncs on load — a lecturer
+ * neither adds students nor approves or removes them.
  */
 export function UnitStudentsPage() {
   const { unitId } = useParams<{ unitId: string }>()
   const { data: units } = useMyUnits()
   const unit = units?.find((u) => u.id === unitId)
+  const ungrouped = unit ? withoutGroupNotice(unit) : null
   const { data: students, isPending, error, refetch } = useUnitStudents(unitId)
 
   const active = students?.filter((s) => s.status === 'ACTIVE') ?? []
@@ -34,10 +36,20 @@ export function UnitStudentsPage() {
       <Card className="flex items-start gap-3 p-4">
         <Users className="mt-0.5 size-4 shrink-0 text-gold-600" aria-hidden />
         <p className="text-sm text-muted">
-          This list comes from the registrar's enrolment records and refreshes each time you open it.
+          This list is the students registered for this unit on the timetable, and refreshes when you open it.
           Speak to your department if someone is missing or shouldn't be here.
         </p>
       </Card>
+
+      {ungrouped && (
+        <Card className="flex items-start gap-3 border border-gold-500/30 p-4" role="status">
+          <Users className="mt-0.5 size-4 shrink-0 text-gold-600" aria-hidden />
+          <p className="text-sm text-muted">
+            <span className="font-semibold text-navy-900">{ungrouped}.</span>{' '}
+            They aren't on any group's list, so they can't check in until they pick their group on the timetable app.
+          </p>
+        </Card>
+      )}
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">

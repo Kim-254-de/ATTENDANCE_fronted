@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { unitStudentCount } from '@/features/units/unitCounts'
 import { useMyUnits } from '@/features/units/unitsApi'
 import { errorMessage } from '@/lib/api'
 import { formatShortDate } from '@/lib/format'
@@ -101,7 +102,7 @@ function UnitReportCard({ unit, rate }: { unit: TaughtUnit; rate: number }) {
       <div className="h-1.5 w-full rounded-full bg-line" role="img" aria-label={`${rate.toFixed(0)}% average attendance`}>
         <div className={`h-full rounded-full ${bar}`} style={{ width: `${rate}%` }} />
       </div>
-      <p className="text-sm text-muted">{unit.studentCount} {unit.studentCount === 1 ? 'student' : 'students'}</p>
+      <p className="text-sm text-muted" title={unitStudentCount(unit).title}>{unitStudentCount(unit).label}</p>
     </Card>
   )
 }

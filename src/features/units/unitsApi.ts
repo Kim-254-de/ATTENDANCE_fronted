@@ -34,8 +34,8 @@ export const useCreateUnit = () => {
 }
 
 /**
- * A unit's roster. Read-only: who's enrolled is the registrar's record, synced
- * from the ERP by the backend on every read — there is nothing here to write.
+ * A unit's roster. Read-only: the students registered for the unit on the
+ * timetable (SMARTTT), synced by the backend on read — there is nothing here to write.
  */
 export const useUnitStudents = (unitId: string | undefined) =>
   useQuery({
