@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { rateColour, useUnitAttendanceRates } from '@/features/attendance/reportingApi'
 import { errorMessage, fieldErrors } from '@/lib/api'
 import type { TaughtUnit } from '@/types'
+import { unitStudentCount, withoutGroupNotice } from './unitCounts'
 import { useCreateUnit, useMyUnits } from './unitsApi'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -34,7 +35,7 @@ export function UnitsPage() {
         <div>
           <p className="text-sm font-semibold text-gold-600">TEACHING</p>
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Your units</h2>
-          <p className="mt-2 max-w-2xl text-sm text-muted">Manage your allocated course units for this semester. Only students on a unit can check in to its classes.</p>
+          <p className="mt-2 max-w-2xl text-sm text-muted">Units you are timetabled to teach this semester appear here automatically, with how many students are registered for each. Only students on a unit can check in to its classes.</p>
         </div>
         {!adding && (
           <Button onClick={() => setAdding(true)}>
@@ -71,6 +72,8 @@ export function UnitsPage() {
 
 function UnitCard({ unit, rate }: { unit: TaughtUnit; rate: number | undefined }) {
   const pending = unit.status === 'PENDING_VERIFICATION'
+  const students = unitStudentCount(unit)
+  const ungrouped = withoutGroupNotice(unit)
   const { text, bar } = rateColour(rate ?? 0)
 
   return (
@@ -92,6 +95,11 @@ function UnitCard({ unit, rate }: { unit: TaughtUnit; rate: number | undefined }
         <div>
           <h3 className="truncate font-semibold text-navy-900">{unit.name ?? unit.code}</h3>
           {formatSchedule(unit.schedule) && <p className="text-xs text-muted">{formatSchedule(unit.schedule)}</p>}
+          {ungrouped && (
+            <p className="mt-2 text-xs font-medium text-gold-600" title="They are on no group's roster until they pick their group on the timetable">
+              {ungrouped}
+            </p>
+          )}
         </div>
 
         <div className="h-1.5 w-full rounded-full bg-line" role="img" aria-label={pending ? 'Awaiting verification' : `${(rate ?? 0).toFixed(0)}% average attendance`}>
@@ -99,9 +107,9 @@ function UnitCard({ unit, rate }: { unit: TaughtUnit; rate: number | undefined }
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1" title={students.title}>
             <UserRound className="size-3.5" aria-hidden />
-            {unit.studentCount} {unit.studentCount === 1 ? 'student' : 'students'}
+            {students.label}
           </span>
           <span className="text-xs">Avg. attendance</span>
         </div>

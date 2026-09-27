@@ -99,6 +99,16 @@ export interface TaughtUnit {
   /** Null only for units created before schedules existed. */
   schedule: UnitSchedule | null
   status: UnitVerificationStatus
+  /** The unit this class belongs to ("COSC 103" for "COSC 103 GR A"); null for units only added by code. */
+  baseCode: string | null
+  /** The teaching group ("GR A") when the unit is split into groups taught by different lecturers; null otherwise. */
+  group: string | null
+  /** Students registered for this class this term, per the timetable system (SMARTTT). Null if it has never reported the unit. */
+  registeredStudents: number | null
+  /** For a group: registered students who haven't picked a group on the timetable yet, so are on no group's roster. */
+  studentsWithoutGroup: number | null
+  /** When the timetable last confirmed the unit; null for a unit only ever added by code. */
+  timetableSyncedAt: string | null
 }
 
 /** The name and schedule are never typed in — the backend fills them in from the ERP's course record. */
@@ -109,9 +119,9 @@ export interface CreateUnitInput {
 export type AllocationStatus = 'ACTIVE' | 'PENDING' | 'DROPPED'
 
 /**
- * A student on a unit, as synced from the ERP's enrolment records. `PENDING`,
- * `LECTURER` and `SELF_ENROLLED` only ever appear on rows written before
- * rosters came from the ERP.
+ * A student on a unit, as synced from the timetable system (SMARTTT), or from
+ * the ERP where SMARTTT isn't configured. `PENDING`, `LECTURER` and
+ * `SELF_ENROLLED` only ever appear on rows written before rosters were synced.
  */
 export interface Allocation {
   id: string
@@ -119,7 +129,7 @@ export interface Allocation {
   studentUserId: string | null
   fullName: string | null
   status: AllocationStatus
-  source: 'ERP' | 'LECTURER' | 'SELF_ENROLLED'
+  source: 'SMARTTT' | 'ERP' | 'LECTURER' | 'SELF_ENROLLED'
   /** False until the student registers — they are on the list but cannot sign in to check in yet. */
   hasAccount: boolean
   createdAt: string

@@ -26,6 +26,20 @@ describe('units', () => {
     expect(screen.getByText(/pending verification/i)).toBeInTheDocument()
   })
 
+  it("shows each timetabled unit's registered-student count from the timetable", async () => {
+    await signIn('/units')
+    const card = (await screen.findByText('CS301')).closest('li')!
+    expect(within(card).getByText('87 registered')).toBeInTheDocument()
+  })
+
+  it("tells a group's lecturer how many registered students haven't picked a group", async () => {
+    await signIn('/units')
+    const card = (await screen.findByText('CS405')).closest('li')!
+    expect(within(card).getByText("12 registered students haven't picked a group yet")).toBeInTheDocument()
+    const other = screen.getByText('CS301').closest('li')!
+    expect(within(other).queryByText(/picked a group/i)).not.toBeInTheDocument()
+  })
+
   it('shows a unit roster read-only — no way for a lecturer to add, approve or remove a student', async () => {
     await signIn('/units/u1')
     await screen.findByRole('heading', { name: /data structures/i })
@@ -33,9 +47,9 @@ describe('units', () => {
     const students = await screen.findByRole('region', { name: 'Students' })
     expect(within(students).getByText('SC211/0001/2022')).toBeInTheDocument()
     expect(within(students).getByText('Amina Wanjiku Kamau')).toBeInTheDocument()
-    // Enrolled per the registrar but without an account yet, so they cannot check in.
+    // Registered for the unit but without an account yet, so they cannot check in.
     expect(within(students).getByText(/hasn't registered yet/i)).toBeInTheDocument()
-    expect(screen.getByText(/comes from the registrar's enrolment records/i)).toBeInTheDocument()
+    expect(screen.getByText(/students registered for this unit on the timetable/i)).toBeInTheDocument()
 
     expect(screen.queryByLabelText(/add students/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /approve|decline|^remove$|restore/i })).not.toBeInTheDocument()
