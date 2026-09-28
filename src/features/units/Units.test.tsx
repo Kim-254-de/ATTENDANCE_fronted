@@ -6,7 +6,7 @@ async function signIn(path: string) {
   const user = userEvent.setup()
   renderApp(path)
   await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
-  await user.type(screen.getByLabelText(/password/i), 'password')
+  await user.type(screen.getByLabelText(/^password$/i), 'password')
   await user.click(screen.getByRole('button', { name: /sign in/i }))
   return user
 }

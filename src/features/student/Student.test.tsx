@@ -18,7 +18,7 @@ async function signInAsStudent(path = '/student-dashboard') {
   const user = userEvent.setup()
   renderApp(path)
   await user.type(await screen.findByLabelText(/registration number or email/i), 'STU00042')
-  await user.type(screen.getByLabelText(/password/i), 'password')
+  await user.type(screen.getByLabelText(/^password$/i), 'password')
   await user.click(screen.getByRole('button', { name: /sign in/i }))
   return user
 }
@@ -67,7 +67,7 @@ describe('student registration errors', () => {
     await user.type(screen.getByLabelText(/full name/i), 'Amina Kamau')
     await user.type(screen.getByLabelText(/^email/i), 'amina@students.tharaka.ac.ke')
     await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
-    await user.type(screen.getByLabelText(/confirm password/i), 'StudentPass123')
+    await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
     await user.click(screen.getByRole('button', { name: /register as student/i }))
   }
 
@@ -85,7 +85,7 @@ describe('student registration errors', () => {
     await user.type(screen.getByLabelText(/full name/i), 'Amina Kamau')
     await user.type(screen.getByLabelText(/^email/i), 'amina@students.tharaka.ac.ke')
     await user.type(screen.getByLabelText(/^password$/i), 'Ebt10822323xyZ')
-    await user.type(screen.getByLabelText(/confirm password/i), 'Ebt10822323xyZ')
+    await user.type(screen.getByLabelText(/^confirm password$/i), 'Ebt10822323xyZ')
     await user.click(screen.getByRole('button', { name: /register as student/i }))
     expect(await screen.findByText(/must not contain your registration number/i)).toBeInTheDocument()
   })

@@ -13,7 +13,7 @@ describe('lecturer portal', () => {
     await screen.findByRole('heading', { name: /lecturer portal/i })
 
     await user.type(screen.getByLabelText(/staff number or email/i), 'LEC00123')
-    await user.type(screen.getByLabelText(/password/i), 'wrong')
+    await user.type(screen.getByLabelText(/^password$/i), 'wrong')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/invalid/i)
   })
@@ -22,7 +22,7 @@ describe('lecturer portal', () => {
     const user = userEvent.setup()
     renderApp('/')
     await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
-    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     expect(await screen.findByText('86.4%')).toBeInTheDocument()
@@ -44,7 +44,7 @@ describe('lecturer portal', () => {
     const user = userEvent.setup()
     renderApp('/profile')
     await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
-    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     await screen.findByLabelText('Full name')
@@ -64,7 +64,7 @@ describe('lecturer portal', () => {
     renderApp('/student-profile')
     // A student page sends a signed-out visitor to the student sign-in form.
     await user.type(await screen.findByLabelText(/registration number or email/i), 'STU00042')
-    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     expect(await screen.findByRole('heading', { name: /student profile/i })).toBeInTheDocument()
@@ -82,7 +82,7 @@ describe('lecturer portal', () => {
     await user.type(screen.getByLabelText(/full name/i), 'New Student')
     await user.type(screen.getByLabelText(/^email/i), 'new.student@university.edu')
     await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
-    await user.type(screen.getByLabelText(/confirm password/i), 'StudentPass123')
+    await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
     await user.click(screen.getByRole('button', { name: /register as student/i }))
 
     // The account is created pending the emailed link (the mock skips that step).
@@ -92,7 +92,7 @@ describe('lecturer portal', () => {
 
     expect(await screen.findByRole('heading', { name: /student sign in/i })).toBeInTheDocument()
     await user.type(screen.getByLabelText(/registration number or email/i), 'ebt1/00999/23')
-    await user.type(screen.getByLabelText(/password/i), 'StudentPass123')
+    await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     expect(await screen.findByRole('heading', { name: /good (morning|afternoon|evening), new/i })).toBeInTheDocument()
@@ -103,7 +103,7 @@ describe('lecturer portal', () => {
     const user = userEvent.setup()
     renderApp('/')
     await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
-    await user.type(screen.getByLabelText(/password/i), 'password')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
     await screen.findByText('86.4%')
 

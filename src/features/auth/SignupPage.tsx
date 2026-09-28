@@ -53,14 +53,23 @@ function LecturerSignup() {
   if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/'} replace />
 
   if (signup.isSuccess) {
+    // The real API asks lecturers to confirm their email first; only go straight to sign-in when it says so.
+    const mustVerify = signup.data.nextStep === 'VERIFY_EMAIL'
     return (
-      <AuthShell title="Account created">
+      <AuthShell title={mustVerify ? 'Check your email' : 'Account created'}>
         <div className="space-y-5" role="status">
           <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><MailCheck className="size-7" aria-hidden /></div>
           <p className="text-sm leading-6 text-muted">
-            {signup.data.message} You can now sign in with your staff number or email and the password you created.
+            {mustVerify ? (
+              <>
+                {signup.data.message} We sent a confirmation link to <strong className="text-navy-900">{signup.data.email}</strong>. After you
+                confirm it, an administrator will approve your account.
+              </>
+            ) : (
+              <>{signup.data.message} You can now sign in with your staff number or email and the password you created.</>
+            )}
           </p>
-          <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to sign in</Link>
+          <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">{mustVerify ? 'Return to sign in' : 'Go to sign in'}</Link>
         </div>
       </AuthShell>
     )
