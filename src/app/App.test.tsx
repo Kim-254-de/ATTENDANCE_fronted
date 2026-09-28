@@ -62,31 +62,40 @@ describe('lecturer portal', () => {
   it('opens the student profile with a student account', async () => {
     const user = userEvent.setup()
     renderApp('/student-profile')
-    await user.type(await screen.findByLabelText(/staff number or email/i), 'STU00042')
+    // A student page sends a signed-out visitor to the student sign-in form.
+    await user.type(await screen.findByLabelText(/registration number or email/i), 'STU00042')
     await user.type(screen.getByLabelText(/password/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     expect(await screen.findByRole('heading', { name: /student profile/i })).toBeInTheDocument()
     expect(screen.getByText('Ama Mensah')).toBeInTheDocument()
     expect(screen.getAllByText('STU00042').length).toBeGreaterThan(0)
+    expect(screen.getByText('BSc Computer Science')).toBeInTheDocument()
+    // Name and email are from the student records, so they're shown, not editable.
+    expect(screen.queryByRole('textbox', { name: /full name/i })).not.toBeInTheDocument()
   })
 
   it('registers a student and routes the new account to its dashboard and profile', async () => {
     const user = userEvent.setup()
     renderApp('/signup?role=student')
-    await user.type(await screen.findByLabelText(/school email/i), 'new.student@university.edu')
+    await user.type(await screen.findByLabelText(/registration number/i), 'EBT1/00999/23')
     await user.type(screen.getByLabelText(/full name/i), 'New Student')
-    await user.type(screen.getByLabelText(/student number/i), 'STU00999')
-    await user.type(screen.getByLabelText(/^password$/i), 'studentpass')
-    await user.type(screen.getByLabelText(/confirm password/i), 'studentpass')
+    await user.type(screen.getByLabelText(/^email/i), 'new.student@university.edu')
+    await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
+    await user.type(screen.getByLabelText(/confirm password/i), 'StudentPass123')
     await user.click(screen.getByRole('button', { name: /register as student/i }))
 
+    // The account is created pending the emailed link (the mock skips that step).
+    expect(await screen.findByRole('heading', { name: /check your email/i })).toBeInTheDocument()
+    expect(screen.getByText('new.student@university.edu')).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: /go to student sign in/i }))
+
     expect(await screen.findByRole('heading', { name: /student sign in/i })).toBeInTheDocument()
-    await user.type(screen.getByLabelText(/student number or email/i), 'STU00999')
-    await user.type(screen.getByLabelText(/password/i), 'studentpass')
+    await user.type(screen.getByLabelText(/registration number or email/i), 'ebt1/00999/23')
+    await user.type(screen.getByLabelText(/password/i), 'StudentPass123')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByRole('heading', { name: /good morning, new/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /good (morning|afternoon|evening), new/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /my profile/i })).toHaveAttribute('href', '/student-profile')
   })
 

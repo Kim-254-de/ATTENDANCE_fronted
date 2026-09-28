@@ -23,7 +23,8 @@ export function RequireAuth() {
     )
   }
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    // A student page sends them to the student sign-in form (registration number, not staff number).
+    return <Navigate to={STUDENT_ROUTES.has(location.pathname) ? '/login?role=student' : '/login'} replace state={{ from: location.pathname }} />
   }
   const studentRoute = STUDENT_ROUTES.has(location.pathname)
   const allowed = user.role === 'lecturer' ? !studentRoute : user.role === 'student' ? studentRoute : false

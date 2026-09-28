@@ -8,7 +8,7 @@ import { AuthCard, Field } from './AuthCard'
 import { useLogin, useMe } from './authApi'
 
 const schema = z.object({
-  identifier: z.string().trim().min(1, 'Enter your staff number or email'),
+  identifier: z.string().trim().min(1, 'Enter your staff number, registration number or email'),
   password: z.string().min(1, 'Enter your password'),
 })
 type Values = z.infer<typeof schema>
@@ -46,7 +46,7 @@ export function LoginPage() {
         )}
         {message && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-success">{message}</p>}
 
-        <Field label={role === 'student' ? 'Student number or email' : 'Staff number or email'} error={errors.identifier?.message}>
+        <Field label={role === 'student' ? 'Registration number or email' : 'Staff number or email'} error={errors.identifier?.message}>
           <input {...register('identifier')} autoComplete="username" className="input" />
         </Field>
         <Field label="Password" error={errors.password?.message}>

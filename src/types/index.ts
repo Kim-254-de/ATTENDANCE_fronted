@@ -2,7 +2,7 @@ export type AccountStatus = 'PENDING_VERIFICATION' | 'PENDING_APPROVAL' | 'ACTIV
 
 export interface Lecturer {
   id: string
-  role: 'lecturer' | 'student' | 'admin'
+  role: 'lecturer'
   fullName: string
   email: string
   staffNumber: string
@@ -11,6 +11,80 @@ export interface Lecturer {
   status: AccountStatus
   /** Only present on /auth/me — deliberately left off the lighter session-auth payloads. */
   avatarUrl: string | null
+}
+
+/** A signed-in student, as GET /auth/me and sign-in return them. */
+export interface Student {
+  id: string
+  role: 'student'
+  fullName: string
+  email: string
+  /** e.g. EBT1/08223/23 — what puts them on unit rosters. */
+  registrationNumber: string
+  programme: string | null
+  yearOfStudy: number | null
+  status: AccountStatus
+  avatarUrl: string | null
+}
+
+/** Whoever is signed in. Check `role` before using lecturer- or student-only fields. */
+export type Account = Lecturer | Student
+
+/** POST /auth/student/register */
+export interface StudentRegistrationInput {
+  fullName: string
+  email: string
+  registrationNumber: string
+  password: string
+  confirmPassword: string
+}
+
+export interface StudentRegistrationResult {
+  id: string
+  fullName: string
+  email: string
+  registrationNumber: string
+  status: AccountStatus
+  nextStep: 'VERIFY_EMAIL'
+  createdAt: string
+  message: string
+}
+
+/** GET /students/me/units: a unit the student is on, with their attendance in it. */
+export interface StudentUnit {
+  id: string
+  /** The class: "COSC 103 GR A", or "COSC 103" when not split into groups. */
+  code: string
+  name: string | null
+  baseCode: string | null
+  group: string | null
+  lecturerName: string
+  schedule: UnitSchedule | null
+  sessionsHeld: number
+  sessionsAttended: number
+  /** 0–100, one decimal; null until a session has been held. */
+  attendanceRate: number | null
+}
+
+/** PRESENT: checked in. OPEN: still taking check-ins (not an absence yet). ABSENT: over, no check-in. */
+export type AttendanceMark = 'PRESENT' | 'OPEN' | 'ABSENT'
+
+export interface StudentAttendanceRecord {
+  sessionId: string
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  title: string | null
+  opensAt: string
+  closesAt: string
+  mark: AttendanceMark
+  recordedAt: string | null
+}
+
+/** GET /students/me/attendance */
+export interface StudentAttendance {
+  summary: { sessionsHeld: number; attended: number; attendanceRate: number | null }
+  records: StudentAttendanceRecord[]
 }
 
 export interface Unit {

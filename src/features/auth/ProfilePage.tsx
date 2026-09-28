@@ -46,7 +46,9 @@ async function resizeImageFile(file: File, maxDim = 320, quality = 0.82): Promis
 }
 
 export function ProfilePage() {
-  const { data: user } = useMe()
+  const { data: me } = useMe()
+  // Lecturer-only page (RequireAuth sends students to theirs); narrowing keeps the lecturer fields typed.
+  const user = me?.role === 'lecturer' ? me : undefined
   const updateProfile = useUpdateProfile()
   const logout = useLogout()
   const navigate = useNavigate()
@@ -181,7 +183,8 @@ export function ProfilePage() {
   )
 }
 
-function ChangePasswordCard() {
+/** Also used on the student profile page. */
+export function ChangePasswordCard() {
   const changePassword = useChangePassword()
   const [form, setForm] = useState<ChangePasswordInput>({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
   const [done, setDone] = useState<string | null>(null)

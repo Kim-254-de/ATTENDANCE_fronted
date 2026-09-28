@@ -21,7 +21,8 @@ vi.mock('@/features/attendance/QrCameraScanner', () => ({
 async function signIn(identifier: string, path: string) {
   const user = userEvent.setup()
   renderApp(path)
-  await user.type(await screen.findByLabelText(/staff number or email/i), identifier)
+  // A student page sends a signed-out visitor to the student form ("Registration number or email").
+  await user.type(await screen.findByLabelText(/(staff|registration) number or email/i), identifier)
   await user.type(screen.getByLabelText(/password/i), 'password')
   await user.click(screen.getByRole('button', { name: /sign in/i }))
   return user

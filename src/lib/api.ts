@@ -33,7 +33,7 @@ const isEnvelope = (v: unknown): v is Envelope =>
   typeof v === 'object' && v !== null && typeof (v as Envelope).success === 'boolean'
 
 /** Auth calls must never trigger a refresh-and-retry (that would loop or hide real failures). */
-const NO_REFRESH = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/lecturer/register', '/auth/verify-email']
+const NO_REFRESH = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/lecturer/register', '/auth/student/register', '/auth/verify-email']
 
 type Retriable = InternalAxiosRequestConfig & { _retried?: boolean }
 let refreshing: Promise<unknown> | null = null
