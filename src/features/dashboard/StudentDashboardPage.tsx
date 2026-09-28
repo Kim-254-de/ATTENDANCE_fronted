@@ -1,4 +1,4 @@
-import { CalendarCheck, ChevronRight, Clock3, GraduationCap } from 'lucide-react'
+import { CalendarCheck, ChevronRight, Clock3, GraduationCap, ScanLine } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { useMe } from '@/features/auth/authApi'
@@ -20,6 +20,12 @@ export function StudentDashboardPage() {
           <p className="text-sm font-semibold text-gold-600">STUDENT WORKSPACE</p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Good morning, {user.fullName.replace(/^(dr|prof|mr|mrs|ms)\.?\s+/i, '').split(' ')[0]}</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Your attendance record and upcoming academic activity are ready for review.</p>
+          <Link
+            to="/scan"
+            className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-gold-500 to-gold-600 px-6 text-sm font-semibold text-white shadow-sm hover:brightness-105 sm:w-auto"
+          >
+            <ScanLine className="size-5" aria-hidden /> Scan attendance QR code
+          </Link>
         </section>
         <div className="grid gap-4 sm:grid-cols-3">
           <Stat icon={<CalendarCheck className="size-5" />} label="Attendance rate" value="92%" detail="This semester" />
@@ -28,7 +34,7 @@ export function StudentDashboardPage() {
         </div>
         <Card className="p-6 sm:p-8">
           <div className="flex items-center justify-between gap-4"><div><p className="text-sm font-semibold text-gold-600">NEXT SESSION</p><h2 className="mt-1 text-xl font-bold text-navy-900">Data Structures &amp; Algorithms</h2><p className="mt-1 text-sm text-muted">CS301 · Today at 08:00</p></div><span className="hidden size-12 place-items-center rounded-xl bg-gold-100 text-gold-600 sm:grid"><CalendarCheck className="size-6" /></span></div>
-          <div className="mt-6 flex flex-col gap-3 border-t border-line pt-5 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="text-muted">Attendance is recorded by your lecturer at the start of class.</p><Link to="/student-profile" className="inline-flex items-center gap-1 font-semibold text-navy-900 hover:text-gold-600">View profile <ChevronRight className="size-4" /></Link></div>
+          <div className="mt-6 flex flex-col gap-3 border-t border-line pt-5 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="text-muted">In class, scan the QR code your lecturer shows to be marked present.</p><Link to="/student-profile" className="inline-flex items-center gap-1 font-semibold text-navy-900 hover:text-gold-600">View profile <ChevronRight className="size-4" /></Link></div>
         </Card>
       </div>
     </main>

@@ -30,6 +30,12 @@ export const routes = [
         handle: { title: 'Student Dashboard' },
       },
       {
+        // Student check-in: scan the lecturer's projected QR code with the phone camera.
+        path: 'scan',
+        lazy: async () => ({ Component: (await import('@/features/attendance/ScanPage')).ScanPage }),
+        handle: { title: 'Scan to check in' },
+      },
+      {
         element: <AppLayout />,
         errorElement: <RouteError />,
         children: [
