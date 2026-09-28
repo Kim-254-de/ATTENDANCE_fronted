@@ -63,7 +63,7 @@ describe('lecturer registration', () => {
     await user.type(screen.getByLabelText('Password'), 'SecurePass2025')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^good (morning|afternoon|evening)/i })).toBeInTheDocument()
   })
 
   it('sends the registration and tells the lecturer to check their email', async () => {

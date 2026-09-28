@@ -23,7 +23,7 @@ async function signIn(identifier: string, path: string) {
   renderApp(path)
   // A student page sends a signed-out visitor to the student form ("Registration number or email").
   await user.type(await screen.findByLabelText(/(staff|registration) number or email/i), identifier)
-  await user.type(screen.getByLabelText(/password/i), 'password')
+  await user.type(screen.getByLabelText(/^password$/i), 'password')
   await user.click(screen.getByRole('button', { name: /sign in/i }))
   return user
 }

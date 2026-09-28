@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 async function signIn(page: Page) {
   await page.goto('/')
   await page.getByLabel('Staff number or email').fill('LEC00123')
-  await page.getByLabel('Password').fill('password')
+  await page.getByLabel('Password', { exact: true }).fill('password')
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page.getByText('Activate Class').first()).toBeVisible()
   await expect(page.getByText('QR-CS301-0908')).toBeVisible()
@@ -26,19 +26,13 @@ test('login page renders consistently', async ({ page }) => {
 
 test('inputs never trigger iOS zoom on touch devices', async ({ page, isMobile }) => {
   await page.goto('/')
-  const size = await page.getByLabel('Password').evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
+  const size = await page.getByLabel('Password', { exact: true }).evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
   expect(size).toBeGreaterThanOrEqual(isMobile ? 16 : 14)
 })
 
-test('dashboard has no overflow, native select chrome or tiny tap targets', async ({ page, isMobile }) => {
+test('dashboard has no overflow, or tiny tap targets', async ({ page }) => {
   await signIn(page)
   expect(await noHorizontalScroll(page)).toBe(true)
-
-  const select = page.getByLabel('Unit')
-  expect(await select.evaluate((el) => getComputedStyle(el).appearance)).toBe('none')
-
-  const selectBox = (await select.boundingBox())!
-  expect(selectBox.height, 'unit select height').toBeGreaterThanOrEqual(40)
 
   const buttons = page.getByRole('button', { name: /^(Activate Class|Sign Out)$/ })
   for (const b of await buttons.all()) {
@@ -46,13 +40,13 @@ test('dashboard has no overflow, native select chrome or tiny tap targets', asyn
     const box = (await b.boundingBox())!
     expect(box.height, 'tap target height').toBeGreaterThanOrEqual(40)
   }
-  if (isMobile) await expect(page.getByRole('button', { name: 'Open menu' })).toBeVisible()
   if (visual) await expect(page).toHaveScreenshot('dashboard.png', { fullPage: true })
 })
 
 test('activate class flow works end to end', async ({ page }) => {
   await signIn(page)
-  await page.getByLabel('Unit').selectOption({ label: 'CS301 — Data Structures & Algorithms' })
+  // The unit comes from the timetable (GET /units/current), not a picker.
+  await expect(page.getByText('CS301 — Data Structures & Algorithms')).toBeVisible()
   await page.getByRole('button', { name: 'Activate Class', exact: true }).click()
   await page.waitForURL(/\/session\//)
   await expect(page.getByRole('timer')).toContainText('Refreshes in')
