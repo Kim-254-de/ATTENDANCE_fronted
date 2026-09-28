@@ -45,6 +45,27 @@ describe('lecturer registration', () => {
     expect(await screen.findByText(/must not contain your staff number/i)).toBeInTheDocument()
   })
 
+  it('allows a newly created lecturer account to sign in immediately with the same details', async () => {
+    const user = userEvent.setup()
+    renderApp('/signup')
+    await fillForm({
+      name: 'Jane Wanjiku',
+      staff: 'STF/9099',
+      email: 'jane.wanjiku@uni.ac.ke',
+      password: 'SecurePass2025',
+      confirm: 'SecurePass2025',
+    })
+
+    expect(await screen.findByRole('heading', { name: /account created/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: /go to sign in/i }))
+
+    await user.type(await screen.findByLabelText('Staff number or email'), 'jane.wanjiku@uni.ac.ke')
+    await user.type(screen.getByLabelText('Password'), 'SecurePass2025')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument()
+  })
+
   it('sends the registration and tells the lecturer to check their email', async () => {
     let body: unknown
     server.use(

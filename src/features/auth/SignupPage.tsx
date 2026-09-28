@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { MailCheck } from 'lucide-react'
+import { Eye, EyeOff, MailCheck } from 'lucide-react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -45,20 +46,21 @@ export function SignupPage() {
 function LecturerSignup() {
   const { data: me } = useMe()
   const signup = useRegister()
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { register, handleSubmit, setError, formState: { errors } } = useForm<RegistrationInput>({ resolver: zodResolver(schema) })
 
   if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/'} replace />
 
   if (signup.isSuccess) {
     return (
-      <AuthShell title="Check your email">
+      <AuthShell title="Account created">
         <div className="space-y-5" role="status">
           <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><MailCheck className="size-7" aria-hidden /></div>
           <p className="text-sm leading-6 text-muted">
-            {signup.data.message} We sent a confirmation link to <strong className="text-navy-900">{signup.data.email}</strong>. After you
-            confirm it, an administrator will approve your account.
+            {signup.data.message} You can now sign in with your staff number or email and the password you created.
           </p>
-          <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Return to sign in</Link>
+          <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to sign in</Link>
         </div>
       </AuthShell>
     )
@@ -82,8 +84,57 @@ function LecturerSignup() {
         <Field label="Full name" error={errors.fullName?.message} hint="As it appears in your staff records"><input {...register('fullName')} autoComplete="name" placeholder="Dr. Peter Kamami" className="input" /></Field>
         <Field label="Staff number" error={errors.staffNumber?.message}><input {...register('staffNumber')} autoComplete="off" autoCapitalize="characters" placeholder="STF/0001" className="input" /></Field>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Password" error={errors.password?.message}><input {...register('password')} type="password" autoComplete="new-password" placeholder="At least 12 characters" className="input" /></Field>
-          <Field label="Confirm password" error={errors.confirmPassword?.message}><input {...register('confirmPassword')} type="password" autoComplete="new-password" placeholder="Repeat password" className="input" /></Field>
+          <div className="space-y-1.5 text-sm font-medium text-navy-900">
+            <label className="block space-y-1.5">
+              <span className="block">Password</span>
+              <div className="relative">
+                <input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="At least 12 characters"
+                  className="input pr-11"
+                  aria-invalid={errors.password ? true : undefined}
+                  aria-describedby={errors.password ? 'lecturer-password-error' : undefined}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+                >
+                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                </button>
+              </div>
+            </label>
+            {errors.password && <span id="lecturer-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.password.message}</span>}
+          </div>
+
+          <div className="space-y-1.5 text-sm font-medium text-navy-900">
+            <label className="block space-y-1.5">
+              <span className="block">Confirm password</span>
+              <div className="relative">
+                <input
+                  {...register('confirmPassword')}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Repeat password"
+                  className="input pr-11"
+                  aria-invalid={errors.confirmPassword ? true : undefined}
+                  aria-describedby={errors.confirmPassword ? 'lecturer-confirm-password-error' : undefined}
+                />
+                <button
+                  type="button"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  onClick={() => setShowConfirmPassword((value) => !value)}
+                  className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+                >
+                  {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                </button>
+              </div>
+            </label>
+            {errors.confirmPassword && <span id="lecturer-confirm-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.confirmPassword.message}</span>}
+          </div>
         </div>
         <p className="text-xs leading-5 text-muted">Use upper and lower case letters and a digit. Your staff number is checked against the university staff directory before the account is created.</p>
         <Button type="submit" loading={signup.isPending} className="h-12 w-full">Register account</Button>
@@ -122,6 +173,8 @@ const STUDENT_FIELDS = ['fullName', 'email', 'registrationNumber', 'password', '
 function StudentSignup() {
   const { data: me } = useMe()
   const signup = useStudentRegister()
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { register, handleSubmit, setError, formState: { errors } } = useForm<StudentRegistrationInput>({ resolver: zodResolver(studentSchema) })
 
   if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/'} replace />
@@ -158,8 +211,57 @@ function StudentSignup() {
         <Field label="Full name" error={errors.fullName?.message} hint="As it appears in your student records"><input {...register('fullName')} autoComplete="name" className="input" /></Field>
         <Field label="Email" error={errors.email?.message} hint="The email on your student record"><input {...register('email')} type="email" autoComplete="email" placeholder="you@students.tharaka.ac.ke" className="input" /></Field>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Password" error={errors.password?.message}><input {...register('password')} type="password" autoComplete="new-password" placeholder="At least 12 characters" className="input" /></Field>
-          <Field label="Confirm password" error={errors.confirmPassword?.message}><input {...register('confirmPassword')} type="password" autoComplete="new-password" placeholder="Repeat password" className="input" /></Field>
+          <div className="space-y-1.5 text-sm font-medium text-navy-900">
+            <label className="block space-y-1.5">
+              <span className="block">Password</span>
+              <div className="relative">
+                <input
+                  {...register('password')}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="At least 12 characters"
+                  className="input pr-11"
+                  aria-invalid={errors.password ? true : undefined}
+                  aria-describedby={errors.password ? 'student-password-error' : undefined}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+                >
+                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                </button>
+              </div>
+            </label>
+            {errors.password && <span id="student-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.password.message}</span>}
+          </div>
+
+          <div className="space-y-1.5 text-sm font-medium text-navy-900">
+            <label className="block space-y-1.5">
+              <span className="block">Confirm password</span>
+              <div className="relative">
+                <input
+                  {...register('confirmPassword')}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Repeat password"
+                  className="input pr-11"
+                  aria-invalid={errors.confirmPassword ? true : undefined}
+                  aria-describedby={errors.confirmPassword ? 'student-confirm-password-error' : undefined}
+                />
+                <button
+                  type="button"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  onClick={() => setShowConfirmPassword((value) => !value)}
+                  className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+                >
+                  {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                </button>
+              </div>
+            </label>
+            {errors.confirmPassword && <span id="student-confirm-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.confirmPassword.message}</span>}
+          </div>
         </div>
         <p className="text-xs leading-5 text-muted">Use upper and lower case letters and a digit. Your registration number, name and email are checked against the student records before the account is created.</p>
         <Button type="submit" loading={signup.isPending} className="h-12 w-full">Register as student</Button>
