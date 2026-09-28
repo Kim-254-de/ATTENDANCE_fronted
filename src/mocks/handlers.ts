@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Allocation, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, TaughtUnit, Unit, UnitSchedule } from '@/types'
+import type { Allocation, CheckInResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, TaughtUnit, Unit, UnitSchedule } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -85,8 +85,10 @@ let currentAccount: Lecturer = lecturer
 interface MockSession extends SessionSummary {
   /** Never sent to the client; only used to derive a stable-looking fake signature. */
   secret: string
-  /** No student-facing scan flow exists in this mock, so check-ins are simulated: a few more "arrive" on each poll. */
+  /** Simulated arrivals (a few more on each poll) plus real mock check-ins from /attendance/check-in. */
   checkedIn: number
+  /** Students who checked in through POST /attendance/check-in — one each, like the backend's unique index. */
+  checkedInStudents: Set<string>
 }
 
 /** Ticks the simulated check-in count up a little, capped at the unit's roster. Never goes down. */
@@ -114,16 +116,62 @@ const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data
 const fail = (status: number, code: string, message: string) => HttpResponse.json({ success: false, error: { code, message } }, { status })
 const unauthorized = () => fail(401, 'UNAUTHENTICATED', 'Not signed in')
 
+/** A stable-looking fake signature for one rotation window. Not crypto — the real backend uses HMAC-SHA256. */
+const mockSignature = (session: MockSession, counter: number) =>
+  `${session.secret}.${counter}`.split('').reduce((h, c) => ((h * 31 + c.charCodeAt(0)) >>> 0), 0).toString(36)
+
+const rotationCounter = (session: MockSession, at = Date.now()) => Math.floor(at / 1000 / session.rotationSeconds)
+
 /** Mimics the real HMAC-rotation shape closely enough for local UI work, without real crypto. */
 function currentToken(session: MockSession, at = Date.now()) {
-  const counter = Math.floor(at / 1000 / session.rotationSeconds)
+  const counter = rotationCounter(session, at)
   const windowStartMs = counter * session.rotationSeconds * 1000
   const rotatesAtMs = windowStartMs + session.rotationSeconds * 1000
-  const signature = `${session.secret}.${counter}`.split('').reduce((h, c) => ((h * 31 + c.charCodeAt(0)) >>> 0), 0).toString(36)
+  const signature = mockSignature(session, counter)
   return {
     payload: `v1.${session.id}.${counter}.${signature}`,
     expiresInSeconds: Math.max(1, Math.ceil((rotatesAtMs - at) / 1000)),
     rotatesAt: new Date(rotatesAtMs).toISOString(),
+  }
+}
+
+/** What the client may see of a session: never its secret or check-in bookkeeping. */
+function toSummary(session: MockSession): SessionSummary {
+  const { secret: _secret, checkedIn: _checkedIn, checkedInStudents: _students, ...summary } = session
+  return summary
+}
+
+/** The backend's QR messages (src/modules/session/session.token.ts VERIFICATION_MESSAGES). */
+const INVALID_CODE = 'This QR code is not a valid attendance code.'
+const EXPIRED_CODE = 'This QR code has expired. Please scan the code currently on screen.'
+const FUTURE_CODE = 'This QR code is not valid yet. Check your device clock and scan the code on screen.'
+
+/**
+ * Test and demo helper: opens a live session for a seeded unit and returns
+ * the code a student would scan now, plus one from two windows ago (expired).
+ */
+export function openMockSessionForScan(unitId = 'u1') {
+  const unit = units.find((u) => u.id === unitId) ?? units[0]!
+  const session: MockSession = {
+    id: crypto.randomUUID(),
+    unitId: unit.id,
+    unitCode: unit.code,
+    unitName: unit.name,
+    title: null,
+    status: 'OPEN',
+    opensAt: new Date(Date.now() - 60_000).toISOString(),
+    closesAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+    rotationSeconds: DEFAULT_ROTATION_SECONDS,
+    secret: crypto.randomUUID(),
+    checkedIn: 0,
+    checkedInStudents: new Set(),
+  }
+  sessions.set(session.id, session)
+  const expiredCounter = rotationCounter(session) - 2
+  return {
+    session,
+    payload: currentToken(session).payload,
+    expiredPayload: `v1.${session.id}.${expiredCounter}.${mockSignature(session, expiredCounter)}`,
   }
 }
 
@@ -446,9 +494,10 @@ export const liveHandlers = [
       rotationSeconds: input.rotationSeconds ?? DEFAULT_ROTATION_SECONDS,
       secret: crypto.randomUUID(),
       checkedIn: 0,
+      checkedInStudents: new Set(),
     }
     sessions.set(session.id, session)
-    const { secret: _secret, checkedIn: _checkedIn, ...summary } = session
+    const summary = toSummary(session)
     return ok(summary, 201)
   }),
 
@@ -461,10 +510,45 @@ export const liveHandlers = [
 
     const { payload, expiresInSeconds, rotatesAt } = currentToken(session)
     const checkedIn = simulateCheckIns(session)
-    const { secret: _secret, checkedIn: _checkedIn, ...summary } = session
+    const summary = toSummary(session)
     const enrolled = units.find((u) => u.id === session.unitId)?.studentCount ?? 0
     const body: CurrentQr = { session: summary, payload, expiresInSeconds, rotatesAt, checkedIn, enrolled }
     return ok(body)
+  }),
+
+  /**
+   * Student check-in, mirroring the backend's order of checks (session.service.ts
+   * verifyScan): a well-formed signed code, from the current or previous window,
+   * for a session accepting scans, once per student. The mock skips the roster
+   * check: its student is on every unit.
+   */
+  http.post(`${API}/attendance/check-in`, async ({ request }) => {
+    if (!store.get()) return unauthorized()
+    if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Only students can check in.')
+    const { payload = '' } = (await request.json()) as { payload?: string }
+    const [version, sessionId = '', counterText = '', signature = ''] = payload.trim().split('.')
+    const session = sessions.get(sessionId)
+    const counter = Number(counterText)
+    if (version !== 'v1' || !session || !Number.isInteger(counter) || signature !== mockSignature(session, counter)) {
+      return fail(400, 'VALIDATION_FAILED', INVALID_CODE)
+    }
+    const now = rotationCounter(session)
+    if (counter > now) return fail(410, 'VALIDATION_FAILED', FUTURE_CODE)
+    if (counter < now - 1) return fail(410, 'VALIDATION_FAILED', EXPIRED_CODE)
+    const blocked = assertAcceptingScans(session)
+    if (blocked) return blocked
+    if (session.checkedInStudents.has(currentAccount.id)) {
+      return fail(409, 'CONFLICT', 'Your attendance for this class has already been recorded.')
+    }
+    session.checkedInStudents.add(currentAccount.id)
+    session.checkedIn += 1
+    const result: CheckInResult = {
+      recordId: crypto.randomUUID(),
+      sessionId: session.id,
+      unitCode: session.unitCode,
+      recordedAt: new Date().toISOString(),
+    }
+    return ok(result, 201)
   }),
 
   http.patch(`${API}/sessions/:id/status`, async ({ params, request }) => {
@@ -477,7 +561,7 @@ export const liveHandlers = [
     }
     session.status = status
     sessions.set(session.id, session)
-    const { secret: _secret, checkedIn: _checkedIn, ...summary } = session
+    const summary = toSummary(session)
     return ok(summary)
   }),
 ]

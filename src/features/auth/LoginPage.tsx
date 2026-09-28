@@ -28,8 +28,9 @@ export function LoginPage() {
     formState: { errors },
   } = useForm<Values>({ resolver: zodResolver(schema) })
 
-  // Students only have the /student-* pages, so any other return path would bounce them anyway.
-  const landing = (r: string) => (r === 'student' && !from.startsWith('/student-') ? '/student-dashboard' : from)
+  // Students only have the /student-* pages and /scan, so any other return path would bounce them anyway.
+  // A student who opened /scan signed out goes straight back to the scanner after signing in.
+  const landing = (r: string) => (r === 'student' && !from.startsWith('/student-') && from !== '/scan' ? '/student-dashboard' : from)
 
   if (me) return <Navigate to={landing(me.role)} replace />
 

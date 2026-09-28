@@ -143,6 +143,15 @@ export interface CreateSessionInput {
   rotationSeconds?: number
 }
 
+/** A student's check-in, as POST /attendance/check-in returns it once a scanned code verifies. */
+export interface CheckInResult {
+  recordId: string
+  sessionId: string
+  /** The class checked in to, e.g. "COSC 103 GR A". */
+  unitCode: string
+  recordedAt: string
+}
+
 export interface ApiErrorBody {
   message: string
   code?: string

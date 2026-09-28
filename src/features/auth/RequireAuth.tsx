@@ -2,6 +2,9 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useMe } from './authApi'
 
+/** Pages only a student may open; every other signed-in page is the lecturer's. */
+const STUDENT_ROUTES = new Set(['/student-profile', '/student-dashboard', '/scan'])
+
 export function RequireAuth() {
   const location = useLocation()
   const { data: user, isPending, error, refetch } = useMe()
@@ -22,7 +25,7 @@ export function RequireAuth() {
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
-  const studentRoute = location.pathname === '/student-profile' || location.pathname === '/student-dashboard'
+  const studentRoute = STUDENT_ROUTES.has(location.pathname)
   const allowed = user.role === 'lecturer' ? !studentRoute : user.role === 'student' ? studentRoute : false
   if (!allowed) {
     return <Navigate to={user.role === 'student' ? '/student-dashboard' : '/'} replace />

@@ -34,6 +34,13 @@ Auth is an httpOnly session cookie (`withCredentials`), so no tokens live in JS.
 | POST | /sessions `{unitId, durationMinutes, verificationMethods}` | AttendanceSession |
 | POST | /sessions/:id/refresh | AttendanceSession (rotated qrToken) |
 | POST | /sessions/:id/close | AttendanceSession |
+| POST | /attendance/check-in `{payload}` (student) | CheckInResult `{recordId, sessionId, unitCode, recordedAt}` |
+
+**Student check-in (`/scan`).** The student opens `/scan` (or "Scan attendance QR code" on their dashboard),
+points the phone camera at the lecturer's projected code, and the page posts what it reads to
+`/attendance/check-in`. Decoding uses `qr-scanner` (loaded only on that page). Browsers only allow the camera
+over **https** (or `localhost`), so the deployed portal must be served over https. A code the server refuses
+(expired, already recorded) is not resent until a new one is on screen.
 
 Types live in `src/types/index.ts`. `qrToken` must be a server-signed, short-lived token; the client only renders it.
 
