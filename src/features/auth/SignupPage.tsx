@@ -75,7 +75,9 @@ function LecturerSignup() {
   )
 
   return (
-    <AuthShell title="Create account" subtitle={<>Already registered? <Link to="/login" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></>}>
+    // Named "lecturer" on purpose: a bare /signup lands here, and a student who
+    // did not notice would be typing their registration number into "Staff number".
+    <AuthShell title="Create a lecturer account" subtitle={<>Already registered? <Link to="/login?role=lecturer" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></>}>
       <form className="space-y-5" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
         <Field label="School email" error={errors.email?.message}><input {...register('email')} type="email" autoComplete="email" placeholder="p.kamami@uni.ac.ke" className="input" /></Field>
@@ -87,6 +89,9 @@ function LecturerSignup() {
         </div>
         <p className="text-xs leading-5 text-muted">Use upper and lower case letters and a digit. Your staff number is checked against the university staff directory before the account is created.</p>
         <Button type="submit" loading={signup.isPending} className="h-12 w-full">Register account</Button>
+        <p className="text-center text-sm text-muted">
+          Are you a student? <Link to="/signup?role=student" className="font-semibold text-navy-900 hover:underline">Register with your registration number</Link>
+        </p>
       </form>
     </AuthShell>
   )
