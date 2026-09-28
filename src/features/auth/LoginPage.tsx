@@ -53,27 +53,26 @@ export function LoginPage() {
           <input {...register('identifier')} autoComplete="username" className="input" />
         </Field>
         <div className="space-y-1.5 text-sm font-medium text-navy-900">
-          <label className="block space-y-1.5">
-            <span className="block">Password</span>
-            <div className="relative">
-              <input
-                {...register('password')}
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                className="input pr-11"
-                aria-invalid={errors.password ? true : undefined}
-                aria-describedby={errors.password ? 'login-password-error' : undefined}
-              />
-              <button
-                type="button"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                onClick={() => setShowPassword((value) => !value)}
-                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
-              >
-                {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-              </button>
-            </div>
-          </label>
+          <label htmlFor="login-password" className="block">Password</label>
+          <div className="relative">
+            <input
+              id="login-password"
+              {...register('password')}
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              className="input pr-11"
+              aria-invalid={errors.password ? true : undefined}
+              aria-describedby={errors.password ? 'login-password-error' : undefined}
+            />
+            <button
+              type="button"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              onClick={() => setShowPassword((value) => !value)}
+              className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+            >
+              {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+            </button>
+          </div>
           {errors.password && <span id="login-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.password.message}</span>}
         </div>
 

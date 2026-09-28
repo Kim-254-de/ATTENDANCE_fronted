@@ -51,7 +51,7 @@ export function QrCameraScanner({ onScan, paused = false }: Props) {
         }
         const instance = new QrScanner(
           videoRef.current,
-          (result) => { if (!pausedRef.current) onScanRef.current(result.data) },
+          (result: { data: string }) => { if (!pausedRef.current) onScanRef.current(result.data) },
           {
             preferredCamera: 'environment',
             highlightScanRegion: true,
@@ -59,7 +59,7 @@ export function QrCameraScanner({ onScan, paused = false }: Props) {
             maxScansPerSecond: 5,
             // qr-scanner only looks at the middle 2/3 by default, so a code that fills the
             // view (a student standing close to the screen) was never read. Use 90% of it.
-            calculateScanRegion: (video) => {
+            calculateScanRegion: (video: HTMLVideoElement) => {
               const size = Math.round(Math.min(video.videoWidth, video.videoHeight) * 0.9)
               return {
                 x: Math.round((video.videoWidth - size) / 2),

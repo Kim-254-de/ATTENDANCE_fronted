@@ -85,54 +85,52 @@ function LecturerSignup() {
         <Field label="Staff number" error={errors.staffNumber?.message}><input {...register('staffNumber')} autoComplete="off" autoCapitalize="characters" placeholder="STF/0001" className="input" /></Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-1.5 text-sm font-medium text-navy-900">
-            <label className="block space-y-1.5">
-              <span className="block">Password</span>
-              <div className="relative">
-                <input
-                  {...register('password')}
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="At least 12 characters"
-                  className="input pr-11"
-                  aria-invalid={errors.password ? true : undefined}
-                  aria-describedby={errors.password ? 'lecturer-password-error' : undefined}
-                />
-                <button
-                  type="button"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  onClick={() => setShowPassword((value) => !value)}
-                  className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
-                >
-                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                </button>
-              </div>
-            </label>
+            <label htmlFor="lecturer-password" className="block">Password</label>
+            <div className="relative">
+              <input
+                id="lecturer-password"
+                {...register('password')}
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder="At least 12 characters"
+                className="input pr-11"
+                aria-invalid={errors.password ? true : undefined}
+                aria-describedby={errors.password ? 'lecturer-password-error' : undefined}
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword((value) => !value)}
+                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+              >
+                {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+              </button>
+            </div>
             {errors.password && <span id="lecturer-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.password.message}</span>}
           </div>
 
           <div className="space-y-1.5 text-sm font-medium text-navy-900">
-            <label className="block space-y-1.5">
-              <span className="block">Confirm password</span>
-              <div className="relative">
-                <input
-                  {...register('confirmPassword')}
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Repeat password"
-                  className="input pr-11"
-                  aria-invalid={errors.confirmPassword ? true : undefined}
-                  aria-describedby={errors.confirmPassword ? 'lecturer-confirm-password-error' : undefined}
-                />
-                <button
-                  type="button"
-                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                  onClick={() => setShowConfirmPassword((value) => !value)}
-                  className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
-                >
-                  {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                </button>
-              </div>
-            </label>
+            <label htmlFor="lecturer-confirm-password" className="block">Confirm password</label>
+            <div className="relative">
+              <input
+                id="lecturer-confirm-password"
+                {...register('confirmPassword')}
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder="Repeat password"
+                className="input pr-11"
+                aria-invalid={errors.confirmPassword ? true : undefined}
+                aria-describedby={errors.confirmPassword ? 'lecturer-confirm-password-error' : undefined}
+              />
+              <button
+                type="button"
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                onClick={() => setShowConfirmPassword((value) => !value)}
+                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+              >
+                {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+              </button>
+            </div>
             {errors.confirmPassword && <span id="lecturer-confirm-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.confirmPassword.message}</span>}
           </div>
         </div>
@@ -212,54 +210,52 @@ function StudentSignup() {
         <Field label="Email" error={errors.email?.message} hint="The email on your student record"><input {...register('email')} type="email" autoComplete="email" placeholder="you@students.tharaka.ac.ke" className="input" /></Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-1.5 text-sm font-medium text-navy-900">
-            <label className="block space-y-1.5">
-              <span className="block">Password</span>
-              <div className="relative">
-                <input
-                  {...register('password')}
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="At least 12 characters"
-                  className="input pr-11"
-                  aria-invalid={errors.password ? true : undefined}
-                  aria-describedby={errors.password ? 'student-password-error' : undefined}
-                />
-                <button
-                  type="button"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  onClick={() => setShowPassword((value) => !value)}
-                  className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
-                >
-                  {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                </button>
-              </div>
-            </label>
+            <label htmlFor="student-password" className="block">Password</label>
+            <div className="relative">
+              <input
+                id="student-password"
+                {...register('password')}
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder="At least 12 characters"
+                className="input pr-11"
+                aria-invalid={errors.password ? true : undefined}
+                aria-describedby={errors.password ? 'student-password-error' : undefined}
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword((value) => !value)}
+                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+              >
+                {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+              </button>
+            </div>
             {errors.password && <span id="student-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.password.message}</span>}
           </div>
 
           <div className="space-y-1.5 text-sm font-medium text-navy-900">
-            <label className="block space-y-1.5">
-              <span className="block">Confirm password</span>
-              <div className="relative">
-                <input
-                  {...register('confirmPassword')}
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Repeat password"
-                  className="input pr-11"
-                  aria-invalid={errors.confirmPassword ? true : undefined}
-                  aria-describedby={errors.confirmPassword ? 'student-confirm-password-error' : undefined}
-                />
-                <button
-                  type="button"
-                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
-                  onClick={() => setShowConfirmPassword((value) => !value)}
-                  className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
-                >
-                  {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-                </button>
-              </div>
-            </label>
+            <label htmlFor="student-confirm-password" className="block">Confirm password</label>
+            <div className="relative">
+              <input
+                id="student-confirm-password"
+                {...register('confirmPassword')}
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder="Repeat password"
+                className="input pr-11"
+                aria-invalid={errors.confirmPassword ? true : undefined}
+                aria-describedby={errors.confirmPassword ? 'student-confirm-password-error' : undefined}
+              />
+              <button
+                type="button"
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                onClick={() => setShowConfirmPassword((value) => !value)}
+                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+              >
+                {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+              </button>
+            </div>
             {errors.confirmPassword && <span id="student-confirm-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.confirmPassword.message}</span>}
           </div>
         </div>
