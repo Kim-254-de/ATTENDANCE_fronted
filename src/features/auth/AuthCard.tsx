@@ -1,4 +1,3 @@
-import { GraduationCap } from 'lucide-react'
 import { cloneElement, useId, type InputHTMLAttributes, type ReactElement, type ReactNode } from 'react'
 
 /** The navy backdrop and white card shared by the sign-in, registration and verification screens. */
@@ -7,7 +6,7 @@ export function AuthCard({ title, subtitle, wide, children }: { title: string; s
     <main className="grid min-h-dvh place-items-center bg-navy-900 p-4">
       <div className={`w-full ${wide ? 'max-w-md' : 'max-w-sm'} space-y-5 rounded-2xl bg-white p-8 shadow-xl`}>
         <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-xl bg-gold-500 text-white"><GraduationCap className="size-6" aria-hidden /></span>
+          <div className="w-11" aria-hidden />
           <div>
             <h1 className="text-lg font-bold text-navy-900">{title}</h1>
             <p className="text-sm text-muted">{subtitle}</p>

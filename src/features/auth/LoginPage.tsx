@@ -1,4 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Eye, EyeOff } from 'lucide-react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -22,6 +24,7 @@ export function LoginPage() {
   const message = (location.state as { message?: string } | null)?.message
   const { data: me } = useMe()
   const login = useLogin()
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
@@ -49,16 +52,36 @@ export function LoginPage() {
         <Field label={role === 'student' ? 'Registration number or email' : 'Staff number or email'} error={errors.identifier?.message}>
           <input {...register('identifier')} autoComplete="username" className="input" />
         </Field>
-        <Field label="Password" error={errors.password?.message}>
-          <input {...register('password')} type="password" autoComplete="current-password" className="input" />
-        </Field>
+        <div className="space-y-1.5 text-sm font-medium text-navy-900">
+          <label className="block space-y-1.5">
+            <span className="block">Password</span>
+            <div className="relative">
+              <input
+                {...register('password')}
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                className="input pr-11"
+                aria-invalid={errors.password ? true : undefined}
+                aria-describedby={errors.password ? 'login-password-error' : undefined}
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword((value) => !value)}
+                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+              >
+                {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+              </button>
+            </div>
+          </label>
+          {errors.password && <span id="login-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.password.message}</span>}
+        </div>
 
         <div className="flex justify-end"><Link to="/forgot-password" className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
 
         <Button type="submit" loading={login.isPending} className="w-full">Sign in</Button>
         <p className="text-center text-sm text-muted">
           New to UniLearn? <Link to="/signup" className="font-semibold text-navy-900 hover:underline">Create an account</Link>
-          {' '}or <Link to="/signup?role=student" className="font-semibold text-navy-900 hover:underline">register as a student</Link>
         </p>
       </form>
     </AuthCard>

@@ -313,20 +313,47 @@ const authHandlers = [
 
   // Stand-in for the ERP gate: only staff numbers starting with STF/ "exist".
   http.post(`${API}/auth/lecturer/register`, async ({ request }) => {
-    const input = (await request.json()) as { fullName: string; email: string; staffNumber: string }
+    const input = (await request.json()) as { fullName: string; email: string; staffNumber: string; password: string }
     await delay(300)
     const staffNumber = input.staffNumber.trim().toUpperCase()
+    const email = input.email.trim().toLowerCase()
     if (!staffNumber.startsWith('STF/')) {
       return HttpResponse.json(
         { message: 'Registration was not completed. This staff number is not listed in the institutional staff records.', code: 'ERP_STAFF_NOT_FOUND' },
         { status: 403 },
       )
     }
+    if (accounts.has(staffNumber.toLowerCase()) || accounts.has(email)) {
+      return HttpResponse.json(
+        { message: 'An account already exists for these details. Try signing in, or reset your password.', code: 'ACCOUNT_ALREADY_EXISTS' },
+        { status: 409 },
+      )
+    }
+
+    const account: Lecturer = {
+      id: crypto.randomUUID(),
+      role: 'lecturer',
+      fullName: input.fullName.trim(),
+      email,
+      staffNumber,
+      title: '',
+      department: '',
+      status: 'ACTIVE',
+      avatarUrl: null,
+    }
+
+    accounts.set(staffNumber.toLowerCase(), { user: account, password: input.password })
+    accounts.set(email, { user: account, password: input.password })
+
     return HttpResponse.json(
       {
-        id: crypto.randomUUID(), fullName: input.fullName, email: input.email.trim().toLowerCase(), staffNumber,
-        status: 'PENDING_VERIFICATION', nextStep: 'VERIFY_EMAIL',
-        message: 'Your staff number was verified successfully. Check your email to confirm your address.',
+        id: account.id,
+        fullName: account.fullName,
+        email: account.email,
+        staffNumber: account.staffNumber,
+        status: 'ACTIVE',
+        nextStep: 'SIGN_IN',
+        message: 'Your staff number was verified successfully. You can sign in now.',
       },
       { status: 201 },
     )
