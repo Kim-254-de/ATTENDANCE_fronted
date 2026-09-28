@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { api } from '@/lib/api'
 import type { CheckInResult } from '@/types'
@@ -11,12 +11,19 @@ import type { CheckInResult } from '@/types'
  */
 export const looksLikeAttendanceCode = (text: string) => /^v\d+\.[0-9a-f-]{36}\.\d+\.\S+$/i.test(text.trim())
 
-/** A scanned code, submitted for check-in. The backend verifies everything; nothing is trusted here. */
-export const useCheckIn = () =>
-  useMutation({
+/**
+ * A scanned code, submitted for check-in. The backend verifies everything; nothing is trusted here.
+ * On success the student's units and history are refetched, so the dashboard shows the new
+ * attendance at once instead of a cached rate.
+ */
+export const useCheckIn = () => {
+  const qc = useQueryClient()
+  return useMutation({
     mutationFn: async (payload: string) =>
       (await api.post<CheckInResult>('/attendance/check-in', { payload: payload.trim() })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['students', 'me'] }),
   })
+}
 
 /**
  * How a failed check-in should be handled on screen:

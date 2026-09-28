@@ -1,20 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, isUnauthorized } from '@/lib/api'
-import type { EmailVerificationResult, Lecturer, RegistrationInput, RegistrationResult } from '@/types'
+import type {
+  Account,
+  EmailVerificationResult,
+  Lecturer,
+  RegistrationInput,
+  RegistrationResult,
+  StudentRegistrationInput,
+  StudentRegistrationResult,
+} from '@/types'
 
 export const ME_KEY = ['auth', 'me'] as const
 
 export interface LoginInput {
-  identifier: string // staff number or email
+  identifier: string // staff number (lecturer), registration number (student) or email
   password: string
-}
-
-export interface SignupInput {
-  email: string
-  fullName: string
-  staffNumber: string
-  password: string
-  role: 'lecturer' | 'student'
 }
 
 /**
@@ -32,9 +32,9 @@ export function useMe() {
     queryKey: ME_KEY,
     // 401 is an expected answer ("not signed in"), so it resolves to null rather
     // than an error — otherwise stale user data would survive an expired session.
-    queryFn: async (): Promise<Lecturer | null> => {
+    queryFn: async (): Promise<Account | null> => {
       try {
-        return (await api.get<Lecturer>('/auth/me')).data
+        return (await api.get<Account>('/auth/me')).data
       } catch (err) {
         if (isUnauthorized(err)) return null
         throw err
@@ -49,21 +49,30 @@ export function useLogin() {
   const qc = useQueryClient()
   return useMutation({
     mutationKey: ['login'],
-    mutationFn: async (input: LoginInput) => (await api.post<Lecturer>('/auth/login', input)).data,
+    mutationFn: async (input: LoginInput) => (await api.post<Account>('/auth/login', input)).data,
     onSuccess: (user) => qc.setQueryData(ME_KEY, user),
   })
 }
 
-export function useSignup() {
+/**
+ * Creates a student account. The backend checks the registration number, name
+ * and email against the student records (the timetable system) first; the
+ * account becomes active once the emailed link is opened.
+ */
+export function useStudentRegister() {
   return useMutation({
-    mutationKey: ['signup'],
-    mutationFn: async (input: SignupInput) => (await api.post<{ message: string }>('/auth/register', input)).data,
+    mutationKey: ['student-register'],
+    mutationFn: async (input: StudentRegistrationInput) =>
+      (await api.post<StudentRegistrationResult>('/auth/student/register', input)).data,
   })
 }
 
-/** Partial responses (title/department only, or just avatarUrl) merge into the cached user rather than replacing it. */
-const mergeMe = (qc: ReturnType<typeof useQueryClient>) => (patch: Partial<Lecturer>) =>
-  qc.setQueryData<Lecturer | null>(ME_KEY, (current) => (current ? { ...current, ...patch } : current))
+/**
+ * Partial responses (title/department only, or just avatarUrl) merge into the cached user
+ * rather than replacing it. Title/department patches only ever come from a lecturer.
+ */
+const mergeMe = (qc: ReturnType<typeof useQueryClient>) => (patch: Partial<Lecturer> | { avatarUrl: string | null }) =>
+  qc.setQueryData<Account | null>(ME_KEY, (current) => (current ? ({ ...current, ...patch } as Account) : current))
 
 export function useUpdateProfile() {
   const qc = useQueryClient()

@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Allocation, CheckInResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, TaughtUnit, Unit, UnitSchedule } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -18,24 +18,27 @@ const lecturer: Lecturer = {
   avatarUrl: null,
 }
 
-const student: Lecturer = {
+const student: Student = {
   id: 'stu-1',
   role: 'student',
   fullName: 'Ama Mensah',
   email: 'a.mensah@student.university.edu',
-  staffNumber: 'STU00042',
-  title: '',
-  department: 'BSc Computer Science',
+  registrationNumber: 'STU00042',
+  programme: 'BSc Computer Science',
+  yearOfStudy: 3,
   status: 'ACTIVE',
   avatarUrl: null,
 }
 
-const accounts = new Map<string, { user: Lecturer; password: string }>([
+const accounts = new Map<string, { user: Account; password: string }>([
   [lecturer.staffNumber.toLowerCase(), { user: lecturer, password: 'password' }],
-  [student.staffNumber.toLowerCase(), { user: student, password: 'password' }],
+  [student.registrationNumber.toLowerCase(), { user: student, password: 'password' }],
   [lecturer.email.toLowerCase(), { user: lecturer, password: 'password' }],
   [student.email.toLowerCase(), { user: student, password: 'password' }],
 ])
+
+/** The seeded accounts; accounts registered during a test are removed by resetMocks. */
+const BASE_ACCOUNT_KEYS = new Set(accounts.keys())
 
 const units: Unit[] = [
   { id: 'u1', code: 'CS301', name: 'Data Structures & Algorithms', studentCount: 87, creditHours: 3, attendanceRate: 90 },
@@ -79,7 +82,7 @@ const store = (() => {
   }
 })()
 
-let currentAccount: Lecturer = lecturer
+let currentAccount: Account = lecturer
 
 
 interface MockSession extends SessionSummary {
@@ -108,6 +111,7 @@ export const resetMocks = () => {
   store.set(false)
   currentAccount = lecturer
   sessions.clear()
+  for (const key of [...accounts.keys()]) if (!BASE_ACCOUNT_KEYS.has(key)) accounts.delete(key)
   for (const u of units.slice(BASE_UNIT_COUNT)) { schedules.delete(u.id); unitStatuses.delete(u.id); allocations.delete(u.id); timetableCounts.delete(u.id) }
   units.length = BASE_UNIT_COUNT
 }
@@ -145,6 +149,39 @@ function toSummary(session: MockSession): SessionSummary {
 const INVALID_CODE = 'This QR code is not a valid attendance code.'
 const EXPIRED_CODE = 'This QR code has expired. Please scan the code currently on screen.'
 const FUTURE_CODE = 'This QR code is not valid yet. Check your device clock and scan the code on screen.'
+
+/** Units the mock student is on. */
+const STUDENT_UNIT_IDS = ['u1', 'u2']
+
+/** Past classes for the mock student: attended all but one. */
+const PAST_CLASSES: { unitId: string; daysAgo: number; present: boolean; title: string }[] = [
+  { unitId: 'u1', daysAgo: 7, present: true, title: 'Week 3 - Lecture' },
+  { unitId: 'u2', daysAgo: 6, present: false, title: 'Week 3 - Lab' },
+  { unitId: 'u1', daysAgo: 14, present: true, title: 'Week 2 - Lecture' },
+]
+
+/** The mock student's classes, newest first: the seeded past ones plus any live mock sessions. */
+function mockStudentHistory(studentId: string): StudentAttendanceRecord[] {
+  const live = [...sessions.values()].filter((se) => STUDENT_UNIT_IDS.includes(se.unitId)).map((se): StudentAttendanceRecord => {
+    const present = se.checkedInStudents.has(studentId)
+    const open = se.status !== 'CLOSED' && new Date(se.closesAt) > new Date()
+    const mark: AttendanceMark = present ? 'PRESENT' : open ? 'OPEN' : 'ABSENT'
+    return {
+      sessionId: se.id, unitId: se.unitId, unitCode: se.unitCode, unitName: se.unitName, title: se.title,
+      opensAt: se.opensAt, closesAt: se.closesAt, mark, recordedAt: present ? new Date().toISOString() : null,
+    }
+  })
+  const past = PAST_CLASSES.map((c, i): StudentAttendanceRecord => {
+    const unit = units.find((u) => u.id === c.unitId)!
+    const opensAt = new Date(Date.now() - c.daysAgo * 86_400_000)
+    return {
+      sessionId: `past-${i}`, unitId: c.unitId, unitCode: unit.code, unitName: unit.name, title: c.title,
+      opensAt: opensAt.toISOString(), closesAt: new Date(opensAt.getTime() + 2 * 3_600_000).toISOString(),
+      mark: c.present ? 'PRESENT' : 'ABSENT', recordedAt: c.present ? opensAt.toISOString() : null,
+    }
+  })
+  return [...live, ...past].sort((a, b) => b.opensAt.localeCompare(a.opensAt))
+}
 
 /**
  * Test and demo helper: opens a live session for a seeded unit and returns
@@ -185,31 +222,32 @@ function assertAcceptingScans(session: MockSession) {
 }
 
 const authHandlers = [
-  http.post(`${API}/auth/register`, async ({ request }) => {
-    const input = (await request.json()) as { email: string; fullName: string; staffNumber: string; password: string; role?: string }
-    await delay(450)
-    const identifier = input.staffNumber.trim().toLowerCase()
+  // Stand-in for the student records check: registration numbers starting with EBT1/ or STU "exist",
+  // except EBT1/99999/23. Real mode: POST /auth/student/register checks SMARTTT (or the ERP).
+  http.post(`${API}/auth/student/register`, async ({ request }) => {
+    const input = (await request.json()) as StudentRegistrationInput
+    await delay(300)
+    const registrationNumber = input.registrationNumber.trim().toUpperCase()
     const email = input.email.trim().toLowerCase()
-    if (!input.email || !input.fullName || !input.staffNumber || input.password.length < 8) {
-      return HttpResponse.json({ message: 'Complete all required fields.' }, { status: 422 })
+    if (!/^(EBT1\/|STU)/.test(registrationNumber) || registrationNumber === 'EBT1/99999/23') {
+      return fail(403, 'STUDENT_RECORD_NOT_FOUND', 'Registration was not completed. This registration number is not in the student records. Check it, or contact the registrar.')
     }
-    if (accounts.has(identifier) || accounts.has(email)) {
-      return HttpResponse.json({ message: 'That email or ID is already registered.' }, { status: 409 })
+    if (accounts.has(registrationNumber.toLowerCase()) || accounts.has(email)) {
+      return fail(409, 'ACCOUNT_ALREADY_EXISTS', 'An account already exists for these details. Try signing in, or reset your password.')
     }
-    const account: Lecturer = {
-      id: `${input.role ?? 'lecturer'}-${crypto.randomUUID()}`,
-      role: input.role === 'student' ? 'student' : 'lecturer',
-      fullName: input.fullName.trim(),
-      email: input.email.trim(),
-      staffNumber: input.staffNumber.trim(),
-      title: input.role === 'student' ? '' : 'Lecturer',
-      department: input.role === 'student' ? 'Programme pending' : 'Department pending',
-      status: 'ACTIVE',
-      avatarUrl: null,
+    // The mock skips the emailed link: the account can sign in straight away.
+    const account: Student = {
+      id: `student-${crypto.randomUUID()}`, role: 'student', fullName: input.fullName.trim(), email,
+      registrationNumber, programme: 'BSc Computer Science', yearOfStudy: 1, status: 'ACTIVE', avatarUrl: null,
     }
-    accounts.set(identifier, { user: account, password: input.password })
+    accounts.set(registrationNumber.toLowerCase(), { user: account, password: input.password })
     accounts.set(email, { user: account, password: input.password })
-    return HttpResponse.json({ message: `${input.role === 'student' ? 'Student' : 'Lecturer'} account request submitted.` }, { status: 201 })
+    const result: StudentRegistrationResult = {
+      id: account.id, fullName: account.fullName, email, registrationNumber, status: 'PENDING_VERIFICATION',
+      nextStep: 'VERIFY_EMAIL', createdAt: new Date().toISOString(),
+      message: 'Your registration number was verified. Check your email to confirm your address, then sign in.',
+    }
+    return ok(result, 201)
   }),
   http.post(`${API}/auth/forgot-password`, async ({ request }) => {
     const { email } = (await request.json()) as { email: string }
@@ -225,7 +263,7 @@ const authHandlers = [
     const ok = Boolean(accountRecord) && accountRecord?.password === password
     if (!ok) return HttpResponse.json({ message: 'Invalid staff number/email or password' }, { status: 401 })
     store.set(true)
-    currentAccount = account as Lecturer
+    currentAccount = account as Account
     return HttpResponse.json(account)
   }),
   http.post(`${API}/auth/logout`, () => {
@@ -239,6 +277,7 @@ const authHandlers = [
   http.patch(`${API}/auth/me`, async ({ request }) => {
     if (!store.get()) return unauthorized()
     const input = (await request.json()) as { title?: string; department?: string }
+    if (currentAccount.role !== 'lecturer') return fail(403, 'FORBIDDEN', 'Forbidden')
     if (!input.department?.trim()) {
       return HttpResponse.json({ message: 'Enter your department.' }, { status: 422 })
     }
@@ -549,6 +588,38 @@ export const liveHandlers = [
       recordedAt: new Date().toISOString(),
     }
     return ok(result, 201)
+  }),
+
+  // The mock student is on the first two seeded units, with a few past classes recorded.
+  http.get(`${API}/students/me/units`, () => {
+    if (!store.get()) return unauthorized()
+    if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
+    const studentId = currentAccount.id
+    const result: StudentUnit[] = STUDENT_UNIT_IDS.map((id) => {
+      const unit = units.find((u) => u.id === id)!
+      const history = mockStudentHistory(studentId).filter((r) => r.unitId === id && r.mark !== 'OPEN')
+      const attended = history.filter((r) => r.mark === 'PRESENT').length
+      return {
+        id, code: unit.code, name: unit.name, baseCode: unit.code, group: null, lecturerName: lecturer.fullName,
+        schedule: schedules.get(id) ?? null, sessionsHeld: history.length, sessionsAttended: attended,
+        attendanceRate: history.length ? Math.round((attended / history.length) * 1000) / 10 : null,
+      }
+    })
+    return ok(result)
+  }),
+
+  http.get(`${API}/students/me/attendance`, ({ request }) => {
+    if (!store.get()) return unauthorized()
+    if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
+    const limit = Number(new URL(request.url).searchParams.get('limit') ?? 50)
+    const records = mockStudentHistory(currentAccount.id).slice(0, limit)
+    const counted = records.filter((r) => r.mark !== 'OPEN')
+    const attended = counted.filter((r) => r.mark === 'PRESENT').length
+    const body: StudentAttendance = {
+      summary: { sessionsHeld: counted.length, attended, attendanceRate: counted.length ? Math.round((attended / counted.length) * 1000) / 10 : null },
+      records,
+    }
+    return ok(body)
   }),
 
   http.patch(`${API}/sessions/:id/status`, async ({ params, request }) => {
