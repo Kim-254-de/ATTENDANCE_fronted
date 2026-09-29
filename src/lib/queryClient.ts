@@ -1,5 +1,5 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
-import { ME_KEY } from '@/features/auth/authApi'
+import { ME_KEY } from '@/auth/authApi'
 import { isUnauthorized } from './api'
 
 export function makeQueryClient() {

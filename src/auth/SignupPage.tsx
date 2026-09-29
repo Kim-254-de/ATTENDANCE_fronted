@@ -86,8 +86,8 @@ function LecturerSignup() {
   )
 
   return (
-    <AuthShell title="Create account" subtitle={<>Already registered? <Link to="/login" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></>}>
-      <form className="space-y-5" noValidate onSubmit={onSubmit}>
+    <AuthShell title="Create account">
+      <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
         <Field label="School email" error={errors.email?.message}><input {...register('email')} type="email" autoComplete="email" placeholder="p.kamami@uni.ac.ke" className="input" /></Field>
         <Field label="Full name" error={errors.fullName?.message} hint="As it appears in your staff records"><input {...register('fullName')} autoComplete="name" placeholder="Dr. Peter Kamami" className="input" /></Field>
@@ -110,7 +110,7 @@ function LecturerSignup() {
                 type="button"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPassword((value) => !value)}
-                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+                className="absolute inset-y-0 right-3 flex cursor-pointer items-center text-muted transition hover:text-navy-900"
               >
                 {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
               </button>
@@ -135,7 +135,7 @@ function LecturerSignup() {
                 type="button"
                 aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                 onClick={() => setShowConfirmPassword((value) => !value)}
-                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+                className="absolute inset-y-0 right-3 flex cursor-pointer items-center text-muted transition hover:text-navy-900"
               >
                 {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
               </button>
@@ -144,8 +144,9 @@ function LecturerSignup() {
           </div>
         </div>
         <p className="text-xs leading-5 text-muted">Use upper and lower case letters and a digit. Your staff number is checked against the university staff directory before the account is created.</p>
-        <Button type="submit" loading={signup.isPending} className="h-12 w-full">Register account</Button>
+        <Button type="submit" loading={signup.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">Register account</Button>
       </form>
+      <p className="mt-6 text-center text-base text-muted">Already registered? <Link to="/login" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></p>
     </AuthShell>
   )
 }
@@ -211,8 +212,8 @@ function StudentSignup() {
   )
 
   return (
-    <AuthShell title="Register as a student" subtitle={<>Already registered? <Link to="/login?role=student" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></>}>
-      <form className="space-y-5" noValidate onSubmit={onSubmit}>
+    <AuthShell title="Register as a student">
+      <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
         <Field label="Registration number" error={errors.registrationNumber?.message}><input {...register('registrationNumber')} autoComplete="off" autoCapitalize="characters" placeholder="EBT1/08223/23" className="input" /></Field>
         <Field label="Full name" error={errors.fullName?.message} hint="As it appears in your student records"><input {...register('fullName')} autoComplete="name" className="input" /></Field>
@@ -235,7 +236,7 @@ function StudentSignup() {
                 type="button"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPassword((value) => !value)}
-                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+                className="absolute inset-y-0 right-3 flex cursor-pointer items-center text-muted transition hover:text-navy-900"
               >
                 {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
               </button>
@@ -260,7 +261,7 @@ function StudentSignup() {
                 type="button"
                 aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                 onClick={() => setShowConfirmPassword((value) => !value)}
-                className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+                className="absolute inset-y-0 right-3 flex cursor-pointer items-center text-muted transition hover:text-navy-900"
               >
                 {showConfirmPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
               </button>
@@ -269,8 +270,9 @@ function StudentSignup() {
           </div>
         </div>
         <p className="text-xs leading-5 text-muted">Use upper and lower case letters and a digit. Your registration number, name and email are checked against the student records before the account is created.</p>
-        <Button type="submit" loading={signup.isPending} className="h-12 w-full">Register as student</Button>
+        <Button type="submit" loading={signup.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">Register as student</Button>
       </form>
+      <p className="mt-6 text-center text-base text-muted">Already registered? <Link to="/login?role=student" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></p>
     </AuthShell>
   )
 }

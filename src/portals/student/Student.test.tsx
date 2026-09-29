@@ -5,7 +5,7 @@ import { openMockSessionForScan } from '@/mocks/handlers'
 import { renderApp } from '@/test/renderApp'
 
 /** jsdom has no camera: the scanner "reads" whatever the test types (same stand-in as Scan.test.tsx). */
-vi.mock('@/features/attendance/QrCameraScanner', () => ({
+vi.mock('@/portals/student/QrCameraScanner', () => ({
   QrCameraScanner: ({ onScan, paused }: { onScan: (text: string) => void; paused?: boolean }) => (
     <form onSubmit={(e) => { e.preventDefault(); if (!paused) onScan(new FormData(e.currentTarget).get('code') as string) }}>
       <input name="code" aria-label="Code in view" />

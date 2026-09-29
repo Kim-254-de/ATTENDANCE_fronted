@@ -6,7 +6,8 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
-import { AuthCard, Field } from './AuthCard'
+import { Field } from './AuthCard'
+import { AuthShell } from './AuthShell'
 import { useLogin, useMe } from './authApi'
 
 const schema = z.object({
@@ -38,10 +39,10 @@ export function LoginPage() {
   if (me) return <Navigate to={landing(me.role)} replace />
 
   return (
-    <AuthCard title={role === 'student' ? 'Student sign in' : 'Lecturer Portal'} subtitle={role === 'student' ? 'Sign in to your student portal' : 'Sign in to manage attendance'}>
+    <AuthShell title={role === 'student' ? 'Student sign in' : 'Lecturer Portal'} subtitle={role === 'student' ? 'Sign in to your student portal' : 'Sign in to manage attendance'}>
       <form
         onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: (user) => navigate(landing(user.role), { replace: true }) }))}
-        className="space-y-5"
+        className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8"
         noValidate
       >
         {login.isError && (
@@ -68,7 +69,7 @@ export function LoginPage() {
               type="button"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               onClick={() => setShowPassword((value) => !value)}
-              className="absolute inset-y-0 right-3 flex items-center text-muted transition hover:text-navy-900"
+              className="absolute inset-y-0 right-3 flex cursor-pointer items-center text-muted transition hover:text-navy-900"
             >
               {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
             </button>
@@ -78,11 +79,11 @@ export function LoginPage() {
 
         <div className="flex justify-end"><Link to="/forgot-password" className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
 
-        <Button type="submit" loading={login.isPending} className="w-full">Sign in</Button>
-        <p className="text-center text-sm text-muted">
-          New to UniLearn? <Link to="/signup" className="font-semibold text-navy-900 hover:underline">Create an account</Link>
-        </p>
+        <Button type="submit" loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">Sign in</Button>
       </form>
-    </AuthCard>
+      <p className="mt-6 text-center text-base text-muted">
+        New to UniLearn? <Link to="/signup" className="font-semibold text-navy-900 hover:underline">Create an account</Link>
+      </p>
+    </AuthShell>
   )
 }
