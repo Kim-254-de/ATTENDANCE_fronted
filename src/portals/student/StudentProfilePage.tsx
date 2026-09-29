@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { initials } from '@/lib/format'
-import { useLogout, useMe } from './authApi'
-import { ChangePasswordCard } from './ProfilePage'
+import { ChangePasswordCard } from '@/auth/ChangePasswordCard'
+import { useLogout, useMe } from '@/auth/authApi'
 
 /**
  * A student's own details. Read-only: name, email and registration number are

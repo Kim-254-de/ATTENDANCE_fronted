@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
-import { useCurrentUnit } from '@/features/units/unitsApi'
+import { useCurrentUnit } from '@/portals/lecturer/units/unitsApi'
 import { useCreateSession, setActiveSessionId } from './sessionApi'
 
 /**
