@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeOff, MailCheck } from 'lucide-react'
+import { CircleCheck, Eye, EyeOff, MailCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
@@ -53,23 +53,15 @@ function LecturerSignup() {
   if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/'} replace />
 
   if (signup.isSuccess) {
-    // The real API asks lecturers to confirm their email first; only go straight to sign-in when it says so.
-    const mustVerify = signup.data.nextStep === 'VERIFY_EMAIL'
+    // The account is active as soon as the staff number checks out: no email confirmation, no approval.
     return (
-      <AuthShell title={mustVerify ? 'Check your email' : 'Account created'}>
+      <AuthShell title="Account created">
         <div className="space-y-5" role="status">
-          <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><MailCheck className="size-7" aria-hidden /></div>
+          <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><CircleCheck className="size-7" aria-hidden /></div>
           <p className="text-sm leading-6 text-muted">
-            {mustVerify ? (
-              <>
-                {signup.data.message} We sent a confirmation link to <strong className="text-navy-900">{signup.data.email}</strong>. After you
-                confirm it, an administrator will approve your account.
-              </>
-            ) : (
-              <>{signup.data.message} You can now sign in with your staff number or email and the password you created.</>
-            )}
+            {signup.data.message} Sign in with your staff number or email and the password you created.
           </p>
-          <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">{mustVerify ? 'Return to sign in' : 'Go to sign in'}</Link>
+          <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to sign in</Link>
         </div>
       </AuthShell>
     )

@@ -353,7 +353,7 @@ const authHandlers = [
         staffNumber: account.staffNumber,
         status: 'ACTIVE',
         nextStep: 'SIGN_IN',
-        message: 'Your staff number was verified successfully. You can sign in now.',
+        message: 'Your staff number was verified and your account is ready. You can now sign in.',
       },
       { status: 201 },
     )
@@ -362,7 +362,7 @@ const authHandlers = [
     const { token } = (await request.json()) as { token: string }
     return token === 'expired'
       ? HttpResponse.json({ message: 'This verification link is invalid or has expired.', code: 'INVALID_TOKEN' }, { status: 400 })
-      : HttpResponse.json({ status: 'PENDING_APPROVAL', nextStep: 'AWAIT_APPROVAL', message: 'Email confirmed. An administrator will review and approve your account.' })
+      : HttpResponse.json({ status: 'ACTIVE', nextStep: 'SIGN_IN', message: 'Email confirmed. You can now sign in.' })
   }),
 ]
 
