@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { BookOpen, ClipboardCheck, GraduationCap, LayoutGrid, LogOut, UserRound, Users } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useLogout } from '@/features/auth/authApi'
+import { useLogout } from '@/auth/authApi'
 
 const nav = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid, end: true },
