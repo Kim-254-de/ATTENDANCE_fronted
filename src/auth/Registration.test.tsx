@@ -20,7 +20,7 @@ describe('lecturer registration', () => {
     const user = userEvent.setup()
     renderApp('/login?role=lecturer')
     await user.click(await screen.findByRole('link', { name: /create an account/i }))
-    expect(await screen.findByRole('heading', { name: /^create account$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^create a lecturer account$/i })).toBeInTheDocument()
   })
 
   it('keeps the old /register link working', async () => {
@@ -73,10 +73,11 @@ describe('lecturer registration', () => {
     )
     renderApp('/signup?role=lecturer')
     await fillForm()
+    // nextStep is always SIGN_IN now, so the app signs them in with the details they just chose
+    // rather than showing a link to click through — there's no separate confirmation step.
     expect(await screen.findByRole('heading', { name: /account created/i })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(/account is ready/i)
     expect(screen.queryByText(/check your email|administrator/i)).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /go to sign in/i })).toHaveAttribute('href', '/login?role=lecturer')
     expect(body).toEqual({ fullName: 'Mary Atieno', staffNumber: 'stf/0002', email: 'Mary.Atieno@uni.ac.ke', password: 'Lecturer-Pass-2026', confirmPassword: 'Lecturer-Pass-2026' })
   })
 
