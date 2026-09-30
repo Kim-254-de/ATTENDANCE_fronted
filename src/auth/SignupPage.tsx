@@ -92,7 +92,7 @@ function LecturerSignup() {
       <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
         <Field label="School email" error={errors.email?.message}><input {...register('email')} type="email" autoComplete="email" placeholder="p.kamami@uni.ac.ke" className="input" /></Field>
-        <Field label="Full name" error={errors.fullName?.message} hint="As it appears in your staff records"><input {...register('fullName')} autoComplete="name" placeholder="Dr. Peter Kamami" className="input" /></Field>
+        <Field label="Full name" error={errors.fullName?.message}><input {...register('fullName')} autoComplete="name" placeholder="Dr. Peter Kamami" className="input" /></Field>
         <Field label="Staff number" error={errors.staffNumber?.message}><input {...register('staffNumber')} autoComplete="off" autoCapitalize="characters" placeholder="STF/0001" className="input" /></Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-1.5 text-sm font-medium text-navy-900">
@@ -227,9 +227,9 @@ function StudentSignup() {
       <StudentAuthTabs active="register" />
       <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
-        <IconField id="student-full-name" label="Full Name" icon={User} {...register('fullName')} autoComplete="name" error={errors.fullName?.message} hint="As it appears in your student records" />
+        <IconField id="student-full-name" label="Full Name" icon={User} {...register('fullName')} autoComplete="name" error={errors.fullName?.message} />
         <IconField id="student-registration-number" label="Student ID" icon={IdCard} {...register('registrationNumber')} autoComplete="off" autoCapitalize="characters" placeholder="EBT1/00000/23" error={errors.registrationNumber?.message} />
-        <IconField id="student-email" label="Email" icon={Mail} {...register('email')} type="email" autoComplete="email" placeholder="you@students.tharaka.ac.ke" error={errors.email?.message} hint="The email on your student record" />
+        <IconField id="student-email" label="Email" icon={Mail} {...register('email')} type="email" autoComplete="email" placeholder="you@students.tharaka.ac.ke" error={errors.email?.message} />
         <div className="grid gap-5 sm:grid-cols-2">
           <IconField
             id="student-password"
