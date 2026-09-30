@@ -23,52 +23,82 @@ async function signInAsStudent(path = '/student-dashboard') {
   return user
 }
 
-describe('student dashboard', () => {
-  it("shows the student's units, attendance rate and recent classes from the API", async () => {
+describe('student home', () => {
+  it("shows the overall attendance rate and a class open for check-in today", async () => {
+    openMockSessionForScan('u1')
     await signInAsStudent()
 
-    const unitsSection = await screen.findByRole('region', { name: 'My units' })
-    const cs301 = (await within(unitsSection).findByText('CS301')).closest('li')!
-    expect(within(cs301).getByText('100%')).toBeInTheDocument()
-    expect(within(cs301).getByText('2 of 2 classes')).toBeInTheDocument()
-    const cs405 = within(unitsSection).getByText('CS405').closest('li')!
-    expect(within(cs405).getByText('0%')).toBeInTheDocument()
+    // Overall rate is computed from the student's full history (seeded past classes).
+    expect(await screen.findByText('67%')).toBeInTheDocument()
 
-    // 2 of the 3 recent classes attended.
-    expect(screen.getByText('67%')).toBeInTheDocument()
-    expect(screen.getByText('2 / 3')).toBeInTheDocument()
-
-    const recent = screen.getByRole('region', { name: 'Recent classes' })
-    expect(within(recent).getAllByText('Present')).toHaveLength(2)
-    expect(within(recent).getByText('Absent')).toBeInTheDocument()
+    const todaysClasses = screen.getByRole('region', { name: "Today's Classes" })
+    expect(within(todaysClasses).getByText(/CS301/)).toBeInTheDocument()
+    expect(within(todaysClasses).getByRole('link', { name: /scan now/i })).toBeInTheDocument()
   })
 
-  it('offers "Scan now" for an open class, and shows it attended right after the scan', async () => {
+  it('marks a class present right after the scan, and drops it from "Scan now"', async () => {
     const { payload } = openMockSessionForScan('u1')
     const user = await signInAsStudent()
-    const recent = await screen.findByRole('region', { name: 'Recent classes' })
-    // Still open and not scanned: not counted against the student yet.
-    expect(within(await screen.findByRole('region', { name: 'My units' })).getByText('2 of 2 classes')).toBeInTheDocument()
-    await user.click(await within(recent).findByRole('link', { name: /scan now/i }))
+
+    const todaysClasses = await screen.findByRole('region', { name: "Today's Classes" })
+    await user.click(await within(todaysClasses).findByRole('link', { name: /scan now/i }))
 
     await user.type(await screen.findByLabelText('Code in view'), payload)
     await user.click(screen.getByRole('button', { name: 'Simulate scan' }))
     await user.click(await screen.findByRole('link', { name: 'Done' }))
 
-    // Units were cached for a minute before the scan; the check-in refetched them.
-    expect(await within(await screen.findByRole('region', { name: 'My units' })).findByText('3 of 3 classes')).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'Recent classes' })).queryByRole('link', { name: /scan now/i })).not.toBeInTheDocument()
+    const updated = await screen.findByRole('region', { name: "Today's Classes" })
+    expect(within(updated).getByText('Present')).toBeInTheDocument()
+    expect(within(updated).queryByRole('link', { name: /scan now/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('student units and history pages', () => {
+  it("shows each unit's cumulative attendance rate, and picks up a fresh count after a scan", async () => {
+    const { payload } = openMockSessionForScan('u1')
+    const user = await signInAsStudent('/student-units')
+
+    const cs301 = (await screen.findByText('CS301')).closest('li')!
+    expect(within(cs301).getByText('100%')).toBeInTheDocument()
+    expect(within(cs301).getByText('2 of 2 classes')).toBeInTheDocument()
+    const cs405 = screen.getByText('CS405').closest('li')!
+    expect(within(cs405).getByText('0%')).toBeInTheDocument()
+
+    // Check in from Home, then come back: units were cached for a minute, the check-in refetched them.
+    await user.click(screen.getByRole('link', { name: 'Home' }))
+    await user.click(await screen.findByRole('link', { name: /scan now/i }))
+    await user.type(await screen.findByLabelText('Code in view'), payload)
+    await user.click(screen.getByRole('button', { name: 'Simulate scan' }))
+    await user.click(await screen.findByRole('link', { name: 'Done' }))
+
+    await user.click(await screen.findByRole('link', { name: /my units/i }))
+    const refreshedCs301 = (await screen.findByText('CS301')).closest('li')!
+    expect(await within(refreshedCs301).findByText('3 of 3 classes')).toBeInTheDocument()
+  })
+
+  it('shows the full attendance history with overall rate, status counts and per-class results', async () => {
+    await signInAsStudent('/student-attendance')
+
+    expect(await screen.findByText('67%')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Total: 3' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Present: 2' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Late: 0' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Absent: 1' })).toBeInTheDocument()
+
+    const history = screen.getByRole('region', { name: 'Class history' })
+    expect(within(history).getAllByText('Present')).toHaveLength(2)
+    expect(within(history).getByText('Absent')).toBeInTheDocument()
   })
 })
 
 describe('student registration errors', () => {
   async function fillForm(user: ReturnType<typeof userEvent.setup>, reg: string) {
-    await user.type(await screen.findByLabelText(/registration number/i), reg)
+    await user.type(await screen.findByLabelText(/student id/i), reg)
     await user.type(screen.getByLabelText(/full name/i), 'Amina Kamau')
     await user.type(screen.getByLabelText(/^email/i), 'amina@students.tharaka.ac.ke')
     await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
     await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
-    await user.click(screen.getByRole('button', { name: /register as student/i }))
+    await user.click(screen.getByRole('button', { name: /create account/i }))
   }
 
   it('shows the records check refusal from the server', async () => {
@@ -81,12 +111,12 @@ describe('student registration errors', () => {
   it('catches a password containing the registration number before sending', async () => {
     const user = userEvent.setup()
     renderApp('/signup?role=student')
-    await user.type(await screen.findByLabelText(/registration number/i), 'EBT1/08223/23')
+    await user.type(await screen.findByLabelText(/student id/i), 'EBT1/08223/23')
     await user.type(screen.getByLabelText(/full name/i), 'Amina Kamau')
     await user.type(screen.getByLabelText(/^email/i), 'amina@students.tharaka.ac.ke')
     await user.type(screen.getByLabelText(/^password$/i), 'Ebt10822323xyZ')
     await user.type(screen.getByLabelText(/^confirm password$/i), 'Ebt10822323xyZ')
-    await user.click(screen.getByRole('button', { name: /register as student/i }))
+    await user.click(screen.getByRole('button', { name: /create account/i }))
     expect(await screen.findByText(/must not contain your registration number/i)).toBeInTheDocument()
   })
 })

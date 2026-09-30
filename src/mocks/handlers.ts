@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -406,6 +406,39 @@ export const dataHandlers = [
 ]
 
 /**
+ * `/lecturers/students` is real now (see lecturer.routes.ts on the backend) — deliberately NOT
+ * in dataHandlers, same reasoning as overviewHandler above. Attendance rates are fixed demo
+ * numbers (this mock doesn't track per-student check-ins the way the seeded `sessions` Map
+ * does), chosen to show a mix of Active and At Risk standing like the real page would.
+ */
+const DEMO_STUDENT_RATES = [94, 87, 72, 91, 65, 98, 83]
+const studentsHandler = http.get(`${API}/lecturers/students`, async () => {
+  if (!store.get()) return unauthorized()
+  await delay(200)
+  let i = 0
+  const rows: LecturerStudent[] = [...allocations.entries()].flatMap(([unitId, roster]) => {
+    const unit = units.find((u) => u.id === unitId)
+    if (!unit) return []
+    return roster.map((a): LecturerStudent => {
+      const rate = DEMO_STUDENT_RATES[i++ % DEMO_STUDENT_RATES.length]!
+      return {
+        id: a.id,
+        registrationNumber: a.registrationNumber,
+        studentUserId: a.studentUserId,
+        fullName: a.fullName,
+        unitId,
+        unitCode: unit.code,
+        unitName: unit.name,
+        sessionsHeld: 20,
+        sessionsAttended: Math.round((rate / 100) * 20),
+        attendanceRate: rate,
+      }
+    })
+  })
+  return ok(rows)
+})
+
+/**
  * Students on each mock unit, standing in for what the backend syncs from the
  * ERP's enrolment records. The roster sizes in `units` are just headline
  * numbers; these are the rows the roster page actually lists.
@@ -664,4 +697,4 @@ export const liveHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, overviewHandler, recentSessionsHandler, ...dataHandlers, ...liveHandlers]
+export const handlers = [...authHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...dataHandlers, ...liveHandlers]

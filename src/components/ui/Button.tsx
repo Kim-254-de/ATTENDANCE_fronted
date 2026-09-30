@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import type { ButtonHTMLAttributes } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'ghost'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'accent'
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
@@ -12,6 +12,8 @@ const styles: Record<Variant, string> = {
   primary: 'bg-gradient-to-b from-gold-500 to-gold-600 text-white shadow-sm hover:brightness-105',
   secondary: 'bg-white text-navy-900 border border-line hover:bg-surface',
   ghost: 'text-navy-900 hover:bg-surface',
+  // Used by the student portal, which favours blue over the site-wide gold accent.
+  accent: 'bg-gradient-to-b from-blue-600 to-blue-700 text-white shadow-sm hover:brightness-105',
 }
 
 export function Button({ variant = 'primary', loading, disabled, className, children, ...rest }: Props) {

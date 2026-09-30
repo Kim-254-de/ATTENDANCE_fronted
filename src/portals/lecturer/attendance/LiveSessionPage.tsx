@@ -78,7 +78,7 @@ export function LiveSessionPage() {
     <div className="flex min-h-dvh flex-col bg-navy-950 text-white">
       <header className="flex items-center gap-3 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/lecturer-dashboard')}
           className="rounded-lg p-2 hover:bg-white/10"
           aria-label="Back to dashboard (class stays live)"
         >
@@ -101,7 +101,7 @@ export function LiveSessionPage() {
 
       <main className="flex flex-1 flex-col items-center justify-center gap-6 p-6 text-center">
         {session?.status === 'CLOSED' ? (
-          <ClosedState onDone={() => navigate('/')} />
+          <ClosedState onDone={() => navigate('/lecturer-dashboard')} />
         ) : session?.status === 'PAUSED' ? (
           <PausedState />
         ) : qr.data ? (
@@ -115,7 +115,7 @@ export function LiveSessionPage() {
             </div>
           </>
         ) : qr.error ? (
-          <ErrorState message={errorMessage(qr.error, 'Could not load this session.')} onBack={() => navigate('/')} />
+          <ErrorState message={errorMessage(qr.error, 'Could not load this session.')} onBack={() => navigate('/lecturer-dashboard')} />
         ) : (
           <p className="text-sky-300" role="status">Starting session…</p>
         )}

@@ -1,4 +1,4 @@
-# Smart Attendance — Lecturer Portal
+# Smart Attendance — Frontend (Lecturer, Student & Admin Portals)
 
 React 19 + TypeScript + Vite + Tailwind v4. Server state via TanStack Query, forms via react-hook-form + zod, mock API via MSW.
 
@@ -46,4 +46,19 @@ Types live in `src/types/index.ts`. `qrToken` must be a server-signed, short-liv
 
 ## Structure
 
-`src/features/*` (auth, dashboard, attendance) own their API hooks and UI; `src/components` holds shared layout/UI; `src/mocks` mirrors the API.
+Code is organized by **portal** — each role's pages, layout and API hooks live in their own tree, with a shared
+`src/auth/` for what every role hits before landing in a portal:
+
+- `src/auth/` — login, signup, forgot/reset password, email verification, `RequireAuth` (the role-based route
+  guard), `authApi.ts`, and `ChangePasswordCard` (shared by both the lecturer and student profile pages).
+- `src/portals/lecturer/` — `layout/` (the sidebar + bottom-nav shell), `dashboard/`, `profile/`, `units/`,
+  `attendance/`.
+- `src/portals/student/` — `layout/` (the persistent shell + bottom nav), dashboard, units, attendance history,
+  profile, and the QR scan-to-check-in flow.
+- `src/portals/admin/` — placeholder only for now; the backend has no admin API yet (approvals are CLI scripts,
+  see the backend README), so this is just a reserved route and folder.
+- `src/components/` — shared UI primitives (`ui/`) and `RouteError`.
+- `src/lib/`, `src/mocks/`, `src/types/`, `src/test/` — shared across every portal.
+
+`RequireAuth.tsx` decides which portal a signed-in user lands in by role; its `STUDENT_ROUTES` allowlist must be
+kept in sync with every route added under `src/portals/student/`.

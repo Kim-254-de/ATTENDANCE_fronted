@@ -1,65 +1,97 @@
-import { ArrowLeft, BookOpen, GraduationCap, LogOut, Mail, ShieldCheck } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useRef, type ChangeEvent } from 'react'
+import { BookOpen, Camera, LogOut, Mail, ShieldCheck } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
+import { resizeImageFile } from '@/lib/image'
 import { ChangePasswordCard } from '@/auth/ChangePasswordCard'
-import { useLogout, useMe } from '@/auth/authApi'
+import { useLogout, useMe, useRemoveAvatar, useSetAvatar } from '@/auth/authApi'
 
 /**
  * A student's own details. Read-only: name, email and registration number are
  * what the student records check verified at registration, so they aren't
- * editable here (ask the registrar). The password can be changed.
+ * editable here (ask the registrar). The password and profile photo can be changed.
  */
 export function StudentProfilePage() {
   const { data: me } = useMe()
   const logout = useLogout()
   const navigate = useNavigate()
   const user = me?.role === 'student' ? me : undefined
+  const setAvatar = useSetAvatar()
+  const removeAvatar = useRemoveAvatar()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   if (!user) return null
 
   const signOut = () => logout.mutate(undefined, { onSettled: () => navigate('/login?role=student', { replace: true }) })
 
+  const onPickPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = '' // lets the same file be re-picked after an error
+    if (!file) return
+    const dataUrl = await resizeImageFile(file)
+    setAvatar.mutate(dataUrl)
+  }
+
   return (
-    <main className="min-h-dvh bg-surface p-4 sm:p-8">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <header className="flex items-center gap-3 rounded-2xl bg-navy-900 px-5 py-4 text-white shadow-lg sm:px-7">
-          <span className="grid size-11 place-items-center rounded-xl bg-gold-500"><GraduationCap className="size-6" aria-hidden /></span>
-          <div><p className="font-bold">Smart Attendance</p><p className="text-sm text-blue-200">Student Portal</p></div>
-          <span className="ml-auto font-mono text-sm text-blue-200">{user.registrationNumber}</span>
-        </header>
-        <Link to="/student-dashboard" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-navy-900">
-          <ArrowLeft className="size-4" aria-hidden /> Dashboard
-        </Link>
-        <div>
-          <p className="text-sm font-semibold text-gold-600">ACCOUNT</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Student profile</h1>
-          <p className="mt-2 text-sm text-muted">These details come from the student records. If something is wrong, contact the registrar.</p>
-        </div>
-        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <Card className="h-fit overflow-hidden">
-            <div className="bg-navy-900 px-6 pb-7 pt-6 text-white">
-              <div className="grid size-20 place-items-center rounded-2xl bg-gold-500 text-2xl font-bold">{initials(user.fullName)}</div>
-              <p className="mt-5 text-xl font-bold">{user.fullName}</p>
-              <p className="mt-1 text-sm text-blue-200">{user.programme ?? 'Programme not recorded'}</p>
-            </div>
-            <div className="space-y-4 p-6">
-              <Info icon={<Mail className="size-5" />} label="Email" value={user.email} />
-              <Info icon={<BookOpen className="size-5" />} label="Year of study" value={user.yearOfStudy ? `Year ${user.yearOfStudy}` : 'Not recorded'} />
-              <Info icon={<ShieldCheck className="size-5 text-success" />} label="Account status" value="Active and verified" valueClass="text-success" />
-              <div className="border-t border-line pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted">Registration number</p>
-                <p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.registrationNumber}</p>
-              </div>
-              <Button variant="secondary" className="w-full" loading={logout.isPending} onClick={signOut}>
-                <LogOut className="size-4" aria-hidden /> Sign out
-              </Button>
-            </div>
-          </Card>
-          <ChangePasswordCard />
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Student profile</h1>
+        <p className="mt-2 text-sm text-muted">These details come from the student records. If something is wrong, contact the registrar.</p>
       </div>
-    </main>
+      <div className="space-y-6">
+        <Card className="overflow-hidden">
+          <div className="bg-navy-900 px-6 pb-7 pt-6 text-white">
+            <div className="relative inline-block">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="size-20 rounded-2xl object-cover shadow-lg shadow-black/15" />
+              ) : (
+                <div className="grid size-20 place-items-center rounded-2xl bg-gradient-to-b from-blue-600 to-blue-700 text-2xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={setAvatar.isPending}
+                aria-label="Change photo"
+                className="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full bg-blue-700 text-white shadow-md hover:bg-blue-800"
+              >
+                <Camera className="size-4" aria-hidden />
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickPhoto} />
+            </div>
+            <p className="mt-5 text-xl font-bold">{user.fullName}</p>
+            <p className="mt-1 text-sm text-blue-200">{user.programme ?? 'Programme not recorded'}</p>
+            {(user.avatarUrl || setAvatar.isPending || removeAvatar.isPending) && (
+              <button
+                type="button"
+                onClick={() => removeAvatar.mutate()}
+                disabled={removeAvatar.isPending || setAvatar.isPending}
+                className="mt-2 text-xs font-medium text-blue-200 underline hover:text-white"
+              >
+                {setAvatar.isPending ? 'Uploading…' : removeAvatar.isPending ? 'Removing…' : 'Remove photo'}
+              </button>
+            )}
+            {(setAvatar.isError || removeAvatar.isError) && (
+              <p className="mt-2 text-xs text-red-300">{errorMessage(setAvatar.error ?? removeAvatar.error)}</p>
+            )}
+          </div>
+          <div className="space-y-4 p-6">
+            <Info icon={<Mail className="size-5" />} label="Email" value={user.email} />
+            <Info icon={<BookOpen className="size-5" />} label="Year of study" value={user.yearOfStudy ? `Year ${user.yearOfStudy}` : 'Not recorded'} />
+            <Info icon={<ShieldCheck className="size-5 text-success" />} label="Account status" value="Active and verified" valueClass="text-success" />
+            <div className="border-t border-line pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Registration number</p>
+              <p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.registrationNumber}</p>
+            </div>
+            <Button variant="secondary" className="w-full" loading={logout.isPending} onClick={signOut}>
+              <LogOut className="size-4" aria-hidden /> Sign out
+            </Button>
+          </div>
+        </Card>
+        <ChangePasswordCard />
+      </div>
+    </div>
   )
 }
 

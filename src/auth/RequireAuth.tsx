@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { useMe } from './authApi'
 
 /** Pages only a student may open; every other signed-in page is the lecturer's. */
-const STUDENT_ROUTES = new Set(['/student-profile', '/student-dashboard', '/scan'])
+const STUDENT_ROUTES = new Set(['/student-profile', '/student-dashboard', '/student-units', '/student-attendance', '/student-progress', '/scan'])
 
 export function RequireAuth() {
   const location = useLocation()
@@ -24,12 +24,12 @@ export function RequireAuth() {
   }
   if (!user) {
     // A student page sends them to the student sign-in form (registration number, not staff number).
-    return <Navigate to={STUDENT_ROUTES.has(location.pathname) ? '/login?role=student' : '/login'} replace state={{ from: location.pathname }} />
+    return <Navigate to={STUDENT_ROUTES.has(location.pathname) ? '/login?role=student' : '/login?role=lecturer'} replace state={{ from: location.pathname }} />
   }
   const studentRoute = STUDENT_ROUTES.has(location.pathname)
   const allowed = user.role === 'lecturer' ? !studentRoute : user.role === 'student' ? studentRoute : false
   if (!allowed) {
-    return <Navigate to={user.role === 'student' ? '/student-dashboard' : '/'} replace />
+    return <Navigate to={user.role === 'student' ? '/student-dashboard' : '/lecturer-dashboard'} replace />
   }
   return <Outlet />
 }

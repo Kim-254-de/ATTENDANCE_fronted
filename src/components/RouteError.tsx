@@ -16,7 +16,7 @@ export function RouteError() {
         </p>
         <div className="flex justify-center gap-3">
           {!notFound && <Button onClick={() => window.location.reload()}>Reload</Button>}
-          <Link to="/" className="inline-flex h-11 items-center rounded-xl border border-line bg-white px-5 text-sm font-semibold text-navy-900">Go to dashboard</Link>
+          <Link to="/" className="inline-flex h-11 items-center rounded-xl border border-line bg-white px-5 text-sm font-semibold text-navy-900">Go home</Link>
         </div>
       </div>
     </main>
