@@ -19,13 +19,15 @@ describe('lecturer registration', () => {
   it('is reachable from the sign-in page', async () => {
     const user = userEvent.setup()
     renderApp('/login')
-    await user.click(await screen.findByRole('link', { name: /create an account/i }))
-    expect(await screen.findByRole('heading', { name: /^create account$/i })).toBeInTheDocument()
+    // Signed out, the entry point asks who you are before showing either form.
+    await user.click(await screen.findByRole('link', { name: /i'm a lecturer/i }))
+    await user.click(await screen.findByRole('link', { name: /create a lecturer account/i }))
+    expect(await screen.findByRole('heading', { name: /^create a lecturer account$/i })).toBeInTheDocument()
   })
 
   it('keeps the old /register link working', async () => {
     renderApp('/register')
-    expect(await screen.findByRole('heading', { name: /^create account$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^create a lecturer account$/i })).toBeInTheDocument()
   })
 
   it('checks the password rules before sending anything', async () => {
@@ -82,7 +84,7 @@ describe('lecturer registration', () => {
     expect(await screen.findByRole('heading', { name: /account created/i })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(/account is ready/i)
     expect(screen.queryByText(/check your email|administrator/i)).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /go to sign in/i })).toHaveAttribute('href', '/login')
+    expect(screen.getByRole('link', { name: /go to sign in/i })).toHaveAttribute('href', '/login?role=lecturer')
     expect(body).toEqual({ fullName: 'Mary Atieno', staffNumber: 'stf/0002', email: 'Mary.Atieno@uni.ac.ke', password: 'Lecturer-Pass-2026', confirmPassword: 'Lecturer-Pass-2026' })
   })
 
