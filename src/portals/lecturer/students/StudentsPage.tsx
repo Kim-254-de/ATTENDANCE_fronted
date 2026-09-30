@@ -64,11 +64,7 @@ export function StudentsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <p className="text-sm font-semibold text-gold-600">TEACHING</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Allocated Students</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted">Every student registered on a unit you teach, with their attendance standing in that unit.</p>
-      </div>
+      <p className="max-w-2xl text-sm text-muted">Every student registered on a unit you teach, with their attendance standing in that unit.</p>
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="relative min-w-[240px] flex-1">

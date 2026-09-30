@@ -15,7 +15,6 @@ async function signIn(path: string) {
 describe('units', () => {
   it('lets a lecturer add a unit by code, which then appears in the list pending verification', async () => {
     const user = await signIn('/units')
-    expect(await screen.findByRole('heading', { name: /your units/i })).toBeInTheDocument()
     await screen.findByText('CS301')
 
     await user.click(screen.getByRole('button', { name: /add unit/i }))

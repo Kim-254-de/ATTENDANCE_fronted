@@ -10,6 +10,12 @@
   --color-gold-100: #fbf1d4;
   --color-gold-500: #c9971c;
   --color-gold-600: #b3850f;
+  /* Student portal's accent — matches the university's own student-portal blue, so both feel like one system. */
+  --color-blue-50: #ecf0fd;
+  --color-blue-200: #bcc9f5;
+  --color-blue-600: #3e60d0;
+  --color-blue-700: #294bb7;
+  --color-blue-800: #223d96;
   --color-surface: #f4f6fa;
   --color-ink: #16213a;
   --color-muted: #6b7690;
