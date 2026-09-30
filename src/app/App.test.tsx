@@ -6,13 +6,6 @@ import { server } from '@/test/setup'
 import { errorMessage } from '@/lib/api'
 import { formatCountdown, initials } from '@/lib/format'
 
-/**
- * Signed out, every non-student page lands on the "who are you" chooser rather than
- * assuming a lecturer, so the lecturer tests pick their side before the form exists.
- */
-const chooseLecturer = async (user: ReturnType<typeof userEvent.setup>) =>
-  user.click(await screen.findByRole('link', { name: /i'm a lecturer/i }))
-
 describe('lecturer portal', () => {
   it('redirects unauthenticated users to login and rejects bad credentials', async () => {
     const user = userEvent.setup()
@@ -50,7 +43,8 @@ describe('lecturer portal', () => {
   it('opens the profile and saves updated lecturer details', async () => {
     const user = userEvent.setup()
     renderApp('/profile')
-    await chooseLecturer(user)
+    // /profile is a lecturer-only route, so RequireAuth sends a signed-out visitor
+    // straight to the lecturer sign-in form — no role chooser to click through.
     await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
     await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
@@ -156,8 +150,8 @@ describe('lecturer portal', () => {
     const activate = await screen.findByRole('button', { name: /activate class/i })
     await waitFor(() => expect(activate).toBeEnabled())
     await user.click(activate)
-    // Signed out again, so back to the chooser — not straight into one side's form.
-    expect(await screen.findByRole('link', { name: /i'm a lecturer/i })).toBeInTheDocument()
+    // Signed out again, back to the lecturer sign-in form for this same lecturer-only route.
+    expect(await screen.findByRole('heading', { name: /lecturer portal/i })).toBeInTheDocument()
   })
 
   it('shows a friendly page for unknown routes', async () => {
