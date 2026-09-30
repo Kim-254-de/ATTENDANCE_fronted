@@ -9,7 +9,7 @@ import { server } from '@/test/setup'
  * jsdom has no camera, so the scanner is replaced by a stand-in that "reads"
  * whatever code the test types — the page under test is everything around it.
  */
-vi.mock('@/features/attendance/QrCameraScanner', () => ({
+vi.mock('@/portals/student/QrCameraScanner', () => ({
   QrCameraScanner: ({ onScan, paused }: { onScan: (text: string) => void; paused?: boolean }) => (
     <form onSubmit={(e) => { e.preventDefault(); if (!paused) onScan(new FormData(e.currentTarget).get('code') as string) }}>
       <input name="code" aria-label="Code in view" />
