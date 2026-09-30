@@ -25,7 +25,7 @@ describe('lecturer registration', () => {
 
   it('keeps the old /register link working', async () => {
     renderApp('/register')
-    expect(await screen.findByRole('heading', { name: /^create account$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^create a lecturer account$/i })).toBeInTheDocument()
   })
 
   it('checks the password rules before sending anything', async () => {
@@ -60,21 +60,23 @@ describe('lecturer registration', () => {
     expect(await screen.findByRole('heading', { name: /^good (morning|afternoon|evening)/i })).toBeInTheDocument()
   })
 
-  it('sends the registration and tells the lecturer to check their email', async () => {
+  it('sends the registration and sends the lecturer straight to sign in', async () => {
     let body: unknown
     server.use(
       http.post('/api/auth/lecturer/register', async ({ request }) => {
         body = await request.json()
         return HttpResponse.json(
-          { success: true, data: { id: '1', fullName: 'Mary Atieno', email: 'mary.atieno@uni.ac.ke', staffNumber: 'STF/0002', status: 'PENDING_VERIFICATION', nextStep: 'VERIFY_EMAIL', message: 'Your staff number was verified successfully.' } },
+          { success: true, data: { id: '1', fullName: 'Mary Atieno', email: 'mary.atieno@uni.ac.ke', staffNumber: 'STF/0002', status: 'ACTIVE', nextStep: 'SIGN_IN', message: 'Your staff number was verified and your account is ready.' } },
           { status: 201 },
         )
       }),
     )
     renderApp('/signup?role=lecturer')
     await fillForm()
-    expect(await screen.findByRole('heading', { name: /check your email/i })).toBeInTheDocument()
-    expect(screen.getByText('mary.atieno@uni.ac.ke')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /account created/i })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/account is ready/i)
+    expect(screen.queryByText(/check your email|administrator/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /go to sign in/i })).toHaveAttribute('href', '/login?role=lecturer')
     expect(body).toEqual({ fullName: 'Mary Atieno', staffNumber: 'stf/0002', email: 'Mary.Atieno@uni.ac.ke', password: 'Lecturer-Pass-2026', confirmPassword: 'Lecturer-Pass-2026' })
   })
 
@@ -90,7 +92,7 @@ describe('lecturer registration', () => {
     renderApp('/signup?role=lecturer')
     await fillForm({ staff: 'STF/9999' })
     expect(await screen.findByRole('alert')).toHaveTextContent(/not listed in the institutional staff records/i)
-    expect(screen.queryByRole('heading', { name: /check your email/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /account created/i })).not.toBeInTheDocument()
   })
 
   it('puts server-side validation errors on the matching field', async () => {
@@ -115,11 +117,11 @@ describe('email verification link', () => {
     server.use(
       http.post('/api/auth/verify-email', () => {
         calls += 1
-        return HttpResponse.json({ success: true, data: { status: 'PENDING_APPROVAL', nextStep: 'AWAIT_APPROVAL', message: 'Email confirmed. An administrator will review and approve your account.' } })
+        return HttpResponse.json({ success: true, data: { status: 'ACTIVE', nextStep: 'SIGN_IN', message: 'Email confirmed. You can now sign in.' } })
       }),
     )
     renderApp('/verify-email?token=abcdefghijklmnopqrstuvwxyz')
-    expect(await screen.findByText(/administrator will review/i)).toBeInTheDocument()
+    expect(await screen.findByText(/email confirmed\. you can now sign in/i)).toBeInTheDocument()
     expect(calls).toBe(1)
   })
 

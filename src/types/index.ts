@@ -260,14 +260,15 @@ export interface RegistrationResult {
   fullName: string
   email: string
   staffNumber: string
-  status: string
-  nextStep: string
+  /** Always ACTIVE: a lecturer signs in straight after registering. */
+  status: AccountStatus
+  nextStep: 'SIGN_IN'
   message: string
 }
 
 export interface EmailVerificationResult {
   status: string
-  nextStep: 'AWAIT_APPROVAL' | 'SIGN_IN' | string
+  nextStep: 'SIGN_IN'
   message: string
 }
 

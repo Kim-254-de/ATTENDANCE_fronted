@@ -5,6 +5,8 @@ import { renderApp } from '@/test/renderApp'
 async function signIn(path: string) {
   const user = userEvent.setup()
   renderApp(path)
+  // Signed out, a lecturer page lands on the "who are you" chooser first.
+  await user.click(await screen.findByRole('link', { name: /i'm a lecturer/i }))
   await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
   await user.type(screen.getByLabelText(/^password$/i), 'password')
   await user.click(screen.getByRole('button', { name: /sign in/i }))
