@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useMatches } from 'react-router-dom'
-import { useMe } from '@/features/auth/authApi'
+import { useMe } from '@/auth/authApi'
 import { formatLongDate, getGreeting, firstName, initials } from '@/lib/format'
 import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
