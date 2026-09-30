@@ -61,7 +61,7 @@ function LecturerSignup() {
           <p className="text-sm leading-6 text-muted">
             {signup.data.message} Sign in with your staff number or email and the password you created.
           </p>
-          <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to sign in</Link>
+          <Link to="/login?role=lecturer" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to sign in</Link>
         </div>
       </AuthShell>
     )
@@ -78,7 +78,9 @@ function LecturerSignup() {
   )
 
   return (
-    <AuthShell title="Create account">
+    // Named "lecturer" on purpose: a bare /signup lands here, and a student who
+    // did not notice would be typing their registration number into "Staff number".
+    <AuthShell title="Create a lecturer account" subtitle={<>Already registered? <Link to="/login?role=lecturer" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></>}>
       <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
         <Field label="School email" error={errors.email?.message}><input {...register('email')} type="email" autoComplete="email" placeholder="p.kamami@uni.ac.ke" className="input" /></Field>
@@ -137,8 +139,10 @@ function LecturerSignup() {
         </div>
         <p className="text-xs leading-5 text-muted">Use upper and lower case letters and a digit. Your staff number is checked against the university staff directory before the account is created.</p>
         <Button type="submit" loading={signup.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">Register account</Button>
+        <p className="text-center text-sm text-muted">
+          Are you a student? <Link to="/signup?role=student" className="font-semibold text-navy-900 hover:underline">Register with your registration number</Link>
+        </p>
       </form>
-      <p className="mt-6 text-center text-base text-muted">Already registered? <Link to="/login" className="font-semibold text-navy-900 hover:underline">Sign in instead</Link></p>
     </AuthShell>
   )
 }
