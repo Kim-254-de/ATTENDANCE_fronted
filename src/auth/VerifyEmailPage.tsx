@@ -12,7 +12,7 @@ export function VerifyEmailPage() {
 
   return (
     <AuthShell title="Email confirmation">
-      <div className="space-y-5">
+      <div className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8">
       {!token ? (
         <Notice ok={false}>This link is missing its confirmation token. Open the link from your email again.</Notice>
       ) : verify.isPending ? (

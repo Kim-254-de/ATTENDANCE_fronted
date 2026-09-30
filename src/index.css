@@ -64,6 +64,27 @@
 }
 
 @layer components {
+  @keyframes auth-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .auth-card-in {
+    animation: auth-card-in 320ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth-card-in {
+      animation: none;
+    }
+  }
+
   /* One rendering for text inputs and selects on every OS. */
   .input {
     @apply h-11 w-full appearance-none rounded-xl border border-line bg-white px-3 text-sm font-normal text-ink outline-none transition focus:border-gold-500 focus:ring-2 focus:ring-gold-500/30;
