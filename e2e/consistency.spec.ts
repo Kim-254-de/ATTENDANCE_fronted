@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 async function signIn(page: Page) {
-  await page.goto('/')
+  await page.goto('/login?role=lecturer')
   await page.getByLabel('Staff number or email').fill('LEC00123')
   await page.getByLabel('Password', { exact: true }).fill('password')
   await page.getByRole('button', { name: 'Sign in' }).click()
@@ -16,7 +16,7 @@ const noHorizontalScroll = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
 
 test('login page renders consistently', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/login?role=lecturer')
   await expect(page.getByRole('heading', { name: 'Lecturer Portal' })).toBeVisible()
   await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => document.fonts.check('16px "Inter Variable"'))).toBe(true)
@@ -25,7 +25,7 @@ test('login page renders consistently', async ({ page }) => {
 })
 
 test('inputs never trigger iOS zoom on touch devices', async ({ page, isMobile }) => {
-  await page.goto('/')
+  await page.goto('/login?role=lecturer')
   const size = await page.getByLabel('Password', { exact: true }).evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
   expect(size).toBeGreaterThanOrEqual(isMobile ? 16 : 14)
 })

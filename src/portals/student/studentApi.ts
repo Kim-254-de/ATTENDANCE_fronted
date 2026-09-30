@@ -13,9 +13,9 @@ export const useMyStudentUnits = () =>
     staleTime: 60_000,
   })
 
-/** The student's class sessions, newest first: PRESENT, ABSENT, or OPEN (still taking check-ins). */
-export const useMyAttendance = (limit = 50) =>
+/** The student's class sessions, newest first: PRESENT, ABSENT, or OPEN (still taking check-ins). Optionally one unit. */
+export const useMyAttendance = ({ unitId, limit = 50 }: { unitId?: string; limit?: number } = {}) =>
   useQuery({
-    queryKey: [...MY_ATTENDANCE_KEY, limit],
-    queryFn: async () => (await api.get<StudentAttendance>('/students/me/attendance', { params: { limit } })).data,
+    queryKey: [...MY_ATTENDANCE_KEY, unitId ?? null, limit],
+    queryFn: async () => (await api.get<StudentAttendance>('/students/me/attendance', { params: { unitId, limit } })).data,
   })

@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { BookOpen, Calendar, Camera, Check, ClipboardCheck, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react'
+import { Camera, Check, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Skeleton } from '@/components/ui/Skeleton'
-import { StatCard } from '@/components/ui/StatCard'
 import { ChangePasswordCard, Field } from '@/auth/ChangePasswordCard'
 import {
   useLogout,
@@ -14,9 +12,9 @@ import {
   useUpdateProfile,
   type UpdateProfileInput,
 } from '@/auth/authApi'
-import { useOverview } from '@/portals/lecturer/dashboard/dashboardApi'
 import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
+import { resizeImageFile } from '@/lib/image'
 import type { AccountStatus } from '@/types'
 
 const emptyForm: UpdateProfileInput = { title: '', department: '' }
@@ -27,21 +25,6 @@ const STATUS_STYLE: Record<AccountStatus, { label: string; className: string }> 
   PENDING_APPROVAL: { label: 'Pending administrator approval', className: 'text-gold-600' },
   SUSPENDED: { label: 'Suspended', className: 'text-red-600' },
   DEACTIVATED: { label: 'Deactivated', className: 'text-red-600' },
-}
-
-/** Downscales and re-compresses before upload, so payload size doesn't depend on the source photo. */
-async function resizeImageFile(file: File, maxDim = 320, quality = 0.82): Promise<string> {
-  const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
-  const width = Math.round(bitmap.width * scale)
-  const height = Math.round(bitmap.height * scale)
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas is not supported in this browser.')
-  ctx.drawImage(bitmap, 0, 0, width, height)
-  return canvas.toDataURL('image/jpeg', quality)
 }
 
 export function ProfilePage() {
@@ -142,7 +125,7 @@ export function ProfilePage() {
             <Button
               variant="ghost"
               className="w-full justify-center text-red-600 hover:bg-red-50"
-              onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login', { replace: true }) })}
+              onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login?role=lecturer', { replace: true }) })}
               loading={logout.isPending}
             >
               <LogOut className="size-4" aria-hidden /> Sign Out
@@ -176,35 +159,6 @@ export function ProfilePage() {
           <ChangePasswordCard />
         </div>
       </div>
-
-      <TeachingSummary />
-    </div>
-  )
-}
-
-function TeachingSummary() {
-  const { data, isPending, error, refetch } = useOverview()
-
-  return (
-    <div>
-      <p className="mb-3 text-sm font-semibold text-gold-600">TEACHING SUMMARY</p>
-      {error ? (
-        <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load your teaching summary.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
-        </Card>
-      ) : isPending || !data ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[104px]" />)}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard icon={UserRound} label="Total Students" value={data.totalStudents} hint="Across all units" />
-          <StatCard icon={ClipboardCheck} label="Avg. Attendance" value={`${data.avgAttendance.toFixed(1)}%`} hint={data.periodLabel} accent />
-          <StatCard icon={BookOpen} label="Units allocated" value={data.unitsTaught} hint="Currently teaching" />
-          <StatCard icon={Calendar} label="Sessions Held" value={data.sessionsHeld} hint={data.periodLabel} />
-        </div>
-      )}
     </div>
   )
 }

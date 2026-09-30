@@ -49,7 +49,7 @@ describe('units', () => {
     expect(within(students).getByText('Amina Wanjiku Kamau')).toBeInTheDocument()
     // Registered for the unit but without an account yet, so they cannot check in.
     expect(within(students).getByText(/hasn't registered yet/i)).toBeInTheDocument()
-    expect(screen.getByText(/students registered for this unit on the timetable/i)).toBeInTheDocument()
+    expect(screen.getByText(/registered for this unit on the timetable/i)).toBeInTheDocument()
 
     expect(screen.queryByLabelText(/add students/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /approve|decline|^remove$|restore/i })).not.toBeInTheDocument()

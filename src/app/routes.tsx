@@ -6,13 +6,15 @@ import { SignupPage } from '@/auth/SignupPage'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { VerifyEmailPage } from '@/auth/VerifyEmailPage'
 import { AppLayout } from '@/portals/lecturer/layout/AppLayout'
-import { ComingSoon } from '@/pages/ComingSoon'
+import { StudentLayout } from '@/portals/student/layout/StudentLayout'
+import { LandingPage } from '@/pages/LandingPage'
 
 // Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
+  { path: '/', element: <LandingPage />, errorElement: <RouteError /> },
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
   { path: '/signup', element: <SignupPage />, errorElement: <RouteError /> },
-  { path: '/register', element: <Navigate to="/signup" replace /> },
+  { path: '/register', element: <Navigate to="/signup?role=lecturer" replace /> },
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <RouteError /> },
   { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteError /> },
   {
@@ -25,27 +27,48 @@ export const routes = [
     errorElement: <RouteError />,
     children: [
       {
-        path: 'student-profile',
-        lazy: async () => ({ Component: (await import('@/portals/student/StudentProfilePage')).StudentProfilePage }),
-        handle: { title: 'Student Profile' },
-      },
-      {
-        path: 'student-dashboard',
-        lazy: async () => ({ Component: (await import('@/portals/student/StudentDashboardPage')).StudentDashboardPage }),
-        handle: { title: 'Student Dashboard' },
-      },
-      {
-        // Student check-in: scan the lecturer's projected QR code with the phone camera.
+        // Full-bleed: no shell chrome, same reasoning as the lecturer's session/:sessionId below.
         path: 'scan',
         lazy: async () => ({ Component: (await import('@/portals/student/ScanPage')).ScanPage }),
         handle: { title: 'Scan to check in' },
+      },
+      {
+        element: <StudentLayout />,
+        errorElement: <RouteError />,
+        children: [
+          {
+            path: 'student-dashboard',
+            lazy: async () => ({ Component: (await import('@/portals/student/StudentDashboardPage')).StudentDashboardPage }),
+            handle: { title: 'Student Dashboard' },
+          },
+          {
+            path: 'student-units',
+            lazy: async () => ({ Component: (await import('@/portals/student/StudentUnitsPage')).StudentUnitsPage }),
+            handle: { title: 'My Units' },
+          },
+          {
+            path: 'student-attendance',
+            lazy: async () => ({ Component: (await import('@/portals/student/StudentAttendanceHistoryPage')).StudentAttendanceHistoryPage }),
+            handle: { title: 'Attendance History' },
+          },
+          {
+            path: 'student-progress',
+            lazy: async () => ({ Component: (await import('@/portals/student/StudentProgressPage')).StudentProgressPage }),
+            handle: { title: 'Progress' },
+          },
+          {
+            path: 'student-profile',
+            lazy: async () => ({ Component: (await import('@/portals/student/StudentProfilePage')).StudentProfilePage }),
+            handle: { title: 'Student Profile' },
+          },
+        ],
       },
       {
         element: <AppLayout />,
         errorElement: <RouteError />,
         children: [
           {
-            index: true,
+            path: 'lecturer-dashboard',
             lazy: async () => ({ Component: (await import('@/portals/lecturer/dashboard/OverviewPage')).OverviewPage }),
           },
           {
@@ -58,7 +81,11 @@ export const routes = [
             lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/AttendanceReportsPage')).AttendanceReportsPage }),
             handle: { title: 'Attendance Reports' },
           },
-          { path: 'students', element: <ComingSoon name="Students" />, handle: { title: 'Students' } },
+          {
+            path: 'students',
+            lazy: async () => ({ Component: (await import('@/portals/lecturer/students/StudentsPage')).StudentsPage }),
+            handle: { title: 'Students' },
+          },
           {
             path: 'units',
             lazy: async () => ({ Component: (await import('@/portals/lecturer/units/UnitsPage')).UnitsPage }),
