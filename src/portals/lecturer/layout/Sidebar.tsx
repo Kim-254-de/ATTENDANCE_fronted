@@ -4,7 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useLogout } from '@/auth/authApi'
 
 const nav = [
-  { to: '/', label: 'Dashboard', icon: LayoutGrid, end: true },
+  { to: '/lecturer-dashboard', label: 'Dashboard', icon: LayoutGrid, end: true },
   { to: '/profile', label: 'My Profile', icon: UserRound },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { to: '/students', label: 'Students', icon: Users },
@@ -57,7 +57,7 @@ export function Sidebar() {
 
       <div className="mt-auto">
         <button
-          onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login', { replace: true }) })}
+          onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login?role=lecturer', { replace: true }) })}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-blue-100 hover:bg-white/5"
         >
           <LogOut className="size-[18px]" aria-hidden /> Sign Out

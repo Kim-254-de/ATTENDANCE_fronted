@@ -1,11 +1,13 @@
 import { Link, Outlet, useLocation, useMatches } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
 import { formatLongDate, getGreeting, firstName, initials } from '@/lib/format'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
 
 export function AppLayout() {
   const title = [...useMatches()].reverse().map((m) => (m.handle as { title?: string } | undefined)?.title).find(Boolean)
+  useDocumentTitle(title ?? 'Lecturer Dashboard')
   const { data: user } = useMe()
   const onProfilePage = useLocation().pathname === '/profile'
 
