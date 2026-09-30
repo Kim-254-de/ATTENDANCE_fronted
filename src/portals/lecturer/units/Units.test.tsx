@@ -5,8 +5,7 @@ import { renderApp } from '@/test/renderApp'
 async function signIn(path: string) {
   const user = userEvent.setup()
   renderApp(path)
-  // Signed out, a lecturer page lands on the "who are you" chooser first.
-  await user.click(await screen.findByRole('link', { name: /i'm a lecturer/i }))
+  // path is a lecturer-only route, so RequireAuth already knows which role's sign-in form to send them to.
   await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
   await user.type(screen.getByLabelText(/^password$/i), 'password')
   await user.click(screen.getByRole('button', { name: /sign in/i }))

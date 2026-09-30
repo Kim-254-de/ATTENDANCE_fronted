@@ -57,8 +57,9 @@ function LecturerSignup() {
 
   if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/lecturer-dashboard'} replace />
 
-  // No email to confirm: sign the lecturer in with the details they just chose and take them straight in.
-  if (signup.isSuccess && signup.data.nextStep !== 'VERIFY_EMAIL') {
+  // A lecturer's staff number is verified against the staff directory before the account is
+  // created, so there's no email to confirm — sign them in with the details they just chose.
+  if (signup.isSuccess) {
     return (
       <AuthShell title="Account created">
         <div className="space-y-5 text-center" role="status">
@@ -69,30 +70,12 @@ function LecturerSignup() {
     )
   }
 
-  if (signup.isSuccess) {
-    return (
-      <AuthShell title="Check your email">
-        <div className="space-y-5" role="status">
-          <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><CircleCheck className="size-7" aria-hidden /></div>
-          <p className="text-sm leading-6 text-muted">
-            {signup.data.message} We sent a confirmation link to <strong className="text-navy-900">{signup.data.email}</strong>. After you
-            confirm it, an administrator will approve your account.
-          </p>
-          <Link to="/login?role=lecturer" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Return to sign in</Link>
-        </div>
-      </AuthShell>
-    )
-  }
-
   const onSubmit = handleSubmit((values) =>
     signup.mutate(values, {
-      onSuccess: (result) => {
-        // Matches how the real API might one day skip verification — the mock's default lecturer register already does.
-        if (result.nextStep !== 'VERIFY_EMAIL') {
-          login.mutate({ identifier: values.email, password: values.password }, {
-            onSuccess: () => navigate('/lecturer-dashboard', { replace: true }),
-          })
-        }
+      onSuccess: () => {
+        login.mutate({ identifier: values.email, password: values.password }, {
+          onSuccess: () => navigate('/lecturer-dashboard', { replace: true }),
+        })
       },
       onError: (err) => {
         for (const [field, message] of Object.entries(fieldErrors(err))) {
