@@ -235,7 +235,7 @@ const authHandlers = [
     if (accounts.has(registrationNumber.toLowerCase()) || accounts.has(email)) {
       return fail(409, 'ACCOUNT_ALREADY_EXISTS', 'An account already exists for these details. Try signing in, or reset your password.')
     }
-    // The mock skips the emailed link: the account can sign in straight away.
+    // No emailed link and no approval: the account can sign in straight away.
     const account: Student = {
       id: `student-${crypto.randomUUID()}`, role: 'student', fullName: input.fullName.trim(), email,
       registrationNumber, programme: 'BSc Computer Science', yearOfStudy: 1, status: 'ACTIVE', avatarUrl: null,
@@ -243,9 +243,9 @@ const authHandlers = [
     accounts.set(registrationNumber.toLowerCase(), { user: account, password: input.password })
     accounts.set(email, { user: account, password: input.password })
     const result: StudentRegistrationResult = {
-      id: account.id, fullName: account.fullName, email, registrationNumber, status: 'PENDING_VERIFICATION',
-      nextStep: 'VERIFY_EMAIL', createdAt: new Date().toISOString(),
-      message: 'Your registration number was verified. Check your email to confirm your address, then sign in.',
+      id: account.id, fullName: account.fullName, email, registrationNumber, status: 'ACTIVE',
+      nextStep: 'SIGN_IN', createdAt: new Date().toISOString(),
+      message: 'Your registration number was verified and your account is ready. You can now sign in.',
     }
     return ok(result, 201)
   }),

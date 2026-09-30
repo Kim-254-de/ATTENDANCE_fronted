@@ -195,7 +195,7 @@ function StudentSignup() {
   if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/lecturer-dashboard'} replace />
 
   // No email to confirm: sign the student in with the details they just chose and take them straight in.
-  if (signup.isSuccess && (signup.data.nextStep as string) !== 'VERIFY_EMAIL') {
+  if (signup.isSuccess) {
     return (
       <AuthShell title="Account created">
         <div className="space-y-5 text-center" role="status">
@@ -206,29 +206,13 @@ function StudentSignup() {
     )
   }
 
-  if (signup.isSuccess) {
-    return (
-      <AuthShell title="Check your email">
-        <div className="space-y-5" role="status">
-          <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><MailCheck className="size-7" aria-hidden /></div>
-          <p className="text-sm leading-6 text-muted">
-            {signup.data.message} We sent a confirmation link to <strong className="text-navy-900">{signup.data.email}</strong>.
-          </p>
-          <Link to="/login?role=student" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to student sign in</Link>
-        </div>
-      </AuthShell>
-    )
-  }
-
   const onSubmit = handleSubmit((values) =>
     signup.mutate(values, {
-      onSuccess: (result) => {
-        // Currently the backend always requires email verification for students; this mirrors the lecturer flow for when that changes.
-        if ((result.nextStep as string) !== 'VERIFY_EMAIL') {
-          login.mutate({ identifier: values.registrationNumber, password: values.password }, {
-            onSuccess: () => navigate('/student-dashboard', { replace: true }),
-          })
-        }
+      onSuccess: () => {
+        // Active at once, like lecturers: sign straight in with the details they just chose.
+        login.mutate({ identifier: values.registrationNumber, password: values.password }, {
+          onSuccess: () => navigate('/student-dashboard', { replace: true }),
+        })
       },
       onError: (err) => {
         for (const [field, message] of Object.entries(fieldErrors(err))) {
