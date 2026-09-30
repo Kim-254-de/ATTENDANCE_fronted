@@ -40,7 +40,7 @@ describe('student QR check-in', () => {
     const { payload } = openMockSessionForScan('u1')
     const user = await signIn('STU00042', '/student-dashboard')
 
-    await user.click(await screen.findByRole('link', { name: /scan attendance qr code/i }))
+    await user.click(await screen.findByRole('link', { name: /start qr scan/i }))
     expect(await screen.findByRole('heading', { name: /scan the class qr code/i })).toBeInTheDocument()
 
     await scan(user, payload)
@@ -55,7 +55,7 @@ describe('student QR check-in', () => {
     await screen.findByText("You're marked present")
 
     await user.click(screen.getByRole('link', { name: 'Done' }))
-    await user.click(await screen.findByRole('link', { name: /scan attendance qr code/i }))
+    await user.click(await screen.findByRole('link', { name: /start qr scan/i }))
     await scan(user, payload)
     expect(await screen.findByText('Already checked in')).toBeInTheDocument()
     expect(screen.getByText(/already been recorded/i)).toBeInTheDocument()

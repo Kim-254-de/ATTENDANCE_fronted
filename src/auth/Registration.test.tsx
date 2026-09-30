@@ -18,7 +18,7 @@ async function fillForm(values: Partial<Record<'name' | 'staff' | 'email' | 'pas
 describe('lecturer registration', () => {
   it('is reachable from the sign-in page', async () => {
     const user = userEvent.setup()
-    renderApp('/login')
+    renderApp('/login?role=lecturer')
     await user.click(await screen.findByRole('link', { name: /create an account/i }))
     expect(await screen.findByRole('heading', { name: /^create account$/i })).toBeInTheDocument()
   })
@@ -31,7 +31,7 @@ describe('lecturer registration', () => {
   it('checks the password rules before sending anything', async () => {
     let calls = 0
     server.use(http.post('/api/auth/lecturer/register', () => { calls += 1; return HttpResponse.json({}) }))
-    renderApp('/signup')
+    renderApp('/signup?role=lecturer')
     await fillForm({ password: 'short', confirm: 'different' })
     expect(await screen.findByText('Password must be at least 12 characters.')).toBeInTheDocument()
     expect(screen.getByText('Passwords do not match.')).toBeInTheDocument()
@@ -40,14 +40,13 @@ describe('lecturer registration', () => {
   })
 
   it('rejects a password containing the staff number', async () => {
-    renderApp('/signup')
+    renderApp('/signup?role=lecturer')
     await fillForm({ password: 'Stf/0002-Password1' })
     expect(await screen.findByText(/must not contain your staff number/i)).toBeInTheDocument()
   })
 
-  it('allows a newly created lecturer account to sign in immediately with the same details', async () => {
-    const user = userEvent.setup()
-    renderApp('/signup')
+  it('signs a newly created lecturer account straight in when no email confirmation is required', async () => {
+    renderApp('/signup?role=lecturer')
     await fillForm({
       name: 'Jane Wanjiku',
       staff: 'STF/9099',
@@ -56,13 +55,8 @@ describe('lecturer registration', () => {
       confirm: 'SecurePass2025',
     })
 
-    expect(await screen.findByRole('heading', { name: /account created/i })).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: /go to sign in/i }))
-
-    await user.type(await screen.findByLabelText('Staff number or email'), 'jane.wanjiku@uni.ac.ke')
-    await user.type(screen.getByLabelText('Password'), 'SecurePass2025')
-    await user.click(screen.getByRole('button', { name: /sign in/i }))
-
+    // The mock's default lecturer register response is immediately ACTIVE (nextStep: SIGN_IN),
+    // so the app signs them in with the details they just chose and lands on the dashboard.
     expect(await screen.findByRole('heading', { name: /^good (morning|afternoon|evening)/i })).toBeInTheDocument()
   })
 
@@ -77,7 +71,7 @@ describe('lecturer registration', () => {
         )
       }),
     )
-    renderApp('/signup')
+    renderApp('/signup?role=lecturer')
     await fillForm()
     expect(await screen.findByRole('heading', { name: /check your email/i })).toBeInTheDocument()
     expect(screen.getByText('mary.atieno@uni.ac.ke')).toBeInTheDocument()
@@ -93,7 +87,7 @@ describe('lecturer registration', () => {
         ),
       ),
     )
-    renderApp('/signup')
+    renderApp('/signup?role=lecturer')
     await fillForm({ staff: 'STF/9999' })
     expect(await screen.findByRole('alert')).toHaveTextContent(/not listed in the institutional staff records/i)
     expect(screen.queryByRole('heading', { name: /check your email/i })).not.toBeInTheDocument()
@@ -108,7 +102,7 @@ describe('lecturer registration', () => {
         ),
       ),
     )
-    renderApp('/signup')
+    renderApp('/signup?role=lecturer')
     await fillForm()
     expect(await screen.findByText('Email domain is not allowed.')).toBeInTheDocument()
     expect(screen.getByLabelText('School email')).toHaveAttribute('aria-invalid', 'true')

@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { renderApp } from '@/test/renderApp'
@@ -9,7 +9,7 @@ import { formatCountdown, initials } from '@/lib/format'
 describe('lecturer portal', () => {
   it('redirects unauthenticated users to login and rejects bad credentials', async () => {
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/login?role=lecturer')
     await screen.findByRole('heading', { name: /lecturer portal/i })
 
     await user.type(screen.getByLabelText(/staff number or email/i), 'LEC00123')
@@ -20,7 +20,7 @@ describe('lecturer portal', () => {
 
   it('signs in, shows stats and activates a class', async () => {
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/login?role=lecturer')
     await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
     await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
@@ -59,6 +59,38 @@ describe('lecturer portal', () => {
     expect(screen.getAllByText(/Software Engineering/).length).toBeGreaterThan(0)
   })
 
+  it("lists every student across the lecturer's units, searchable, sortable and filterable by unit", async () => {
+    const user = userEvent.setup()
+    renderApp('/students')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    expect(await screen.findByText('Amina Wanjiku Kamau')).toBeInTheDocument()
+    expect(screen.getByText('5 students')).toBeInTheDocument()
+    expect(screen.getAllByText('At Risk')).toHaveLength(2)
+    expect(screen.getAllByText('Active')).toHaveLength(3)
+
+    // Search narrows across name, ID and unit.
+    await user.type(screen.getByLabelText(/search name, id or unit/i), 'CS405')
+    expect(await screen.findByText('2 students')).toBeInTheDocument()
+    expect(screen.getByText('Cynthia Achieng Ouma')).toBeInTheDocument()
+    expect(screen.queryByText('Amina Wanjiku Kamau')).not.toBeInTheDocument()
+    await user.clear(screen.getByLabelText(/search name, id or unit/i))
+    expect(await screen.findByText('5 students')).toBeInTheDocument()
+
+    // The unit filter narrows the same way.
+    await user.selectOptions(screen.getByLabelText(/filter by unit/i), 'CS301')
+    expect(await screen.findByText('3 students')).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText(/filter by unit/i), '')
+    expect(await screen.findByText('5 students')).toBeInTheDocument()
+
+    // Sorting by attendance ascending puts the lowest rate first.
+    await user.click(screen.getByRole('button', { name: /attendance/i }))
+    const dataRows = screen.getAllByRole('row').slice(1)
+    expect(within(dataRows[0]!).getByText('David Mwangi Njoroge')).toBeInTheDocument()
+  })
+
   it('opens the student profile with a student account', async () => {
     const user = userEvent.setup()
     renderApp('/student-profile')
@@ -68,7 +100,8 @@ describe('lecturer portal', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     expect(await screen.findByRole('heading', { name: /student profile/i })).toBeInTheDocument()
-    expect(screen.getByText('Ama Mensah')).toBeInTheDocument()
+    // "Ama Mensah" also appears in the shared header's greeting now, so there are two matches.
+    expect(screen.getAllByText('Ama Mensah').length).toBeGreaterThan(0)
     expect(screen.getAllByText('STU00042').length).toBeGreaterThan(0)
     expect(screen.getByText('BSc Computer Science')).toBeInTheDocument()
     // Name and email are from the student records, so they're shown, not editable.
@@ -78,30 +111,30 @@ describe('lecturer portal', () => {
   it('registers a student and routes the new account to its dashboard and profile', async () => {
     const user = userEvent.setup()
     renderApp('/signup?role=student')
-    await user.type(await screen.findByLabelText(/registration number/i), 'EBT1/00999/23')
+    await user.type(await screen.findByLabelText(/student id/i), 'EBT1/00999/23')
     await user.type(screen.getByLabelText(/full name/i), 'New Student')
     await user.type(screen.getByLabelText(/^email/i), 'new.student@university.edu')
     await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
     await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
-    await user.click(screen.getByRole('button', { name: /register as student/i }))
+    await user.click(screen.getByRole('button', { name: /create account/i }))
 
     // The account is created pending the emailed link (the mock skips that step).
     expect(await screen.findByRole('heading', { name: /check your email/i })).toBeInTheDocument()
     expect(screen.getByText('new.student@university.edu')).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: /go to student sign in/i }))
 
-    expect(await screen.findByRole('heading', { name: /student sign in/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /student portal/i })).toBeInTheDocument()
     await user.type(screen.getByLabelText(/registration number or email/i), 'ebt1/00999/23')
     await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByRole('heading', { name: /good (morning|afternoon|evening), new/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: "Today's Classes" })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /my profile/i })).toHaveAttribute('href', '/student-profile')
   })
 
   it('sends the user back to login when the session expires mid-use', async () => {
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/login?role=lecturer')
     await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
     await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))

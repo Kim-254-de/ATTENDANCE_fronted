@@ -209,6 +209,21 @@ export interface Allocation {
   createdAt: string
 }
 
+/** GET /lecturers/students — one row per (student, unit): a student on two of the lecturer's units appears twice. */
+export interface LecturerStudent {
+  id: string
+  registrationNumber: string | null
+  studentUserId: string | null
+  fullName: string | null
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  sessionsHeld: number
+  sessionsAttended: number
+  /** 0–100, one decimal; null until a session has been held for this unit. */
+  attendanceRate: number | null
+}
+
 export interface CreateSessionInput {
   unitId: string
   title?: string

@@ -83,20 +83,6 @@ export function useUpdateProfile() {
   })
 }
 
-export interface ChangePasswordInput {
-  currentPassword: string
-  newPassword: string
-  confirmNewPassword: string
-}
-
-export function useChangePassword() {
-  return useMutation({
-    mutationKey: ['change-password'],
-    mutationFn: async (input: ChangePasswordInput) =>
-      (await api.post<{ message: string }>('/auth/change-password', input)).data,
-  })
-}
-
 export function useSetAvatar() {
   const qc = useQueryClient()
   return useMutation({
