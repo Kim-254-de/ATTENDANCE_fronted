@@ -120,16 +120,7 @@ describe('lecturer portal', () => {
     await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
     await user.click(screen.getByRole('button', { name: /create account/i }))
 
-    // The account is created pending the emailed link (the mock skips that step).
-    expect(await screen.findByRole('heading', { name: /check your email/i })).toBeInTheDocument()
-    expect(screen.getByText('new.student@university.edu')).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: /go to student sign in/i }))
-
-    expect(await screen.findByRole('heading', { name: /student portal/i })).toBeInTheDocument()
-    await user.type(screen.getByLabelText(/registration number or email/i), 'ebt1/00999/23')
-    await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
-    await user.click(screen.getByRole('button', { name: /sign in/i }))
-
+    // Active at once: no email to confirm, the app signs them straight in.
     expect(await screen.findByRole('heading', { name: "Today's Classes" })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /my profile/i })).toHaveAttribute('href', '/student-profile')
   })

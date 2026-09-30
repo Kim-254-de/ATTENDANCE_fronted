@@ -45,7 +45,7 @@ export interface StudentRegistrationResult {
   email: string
   registrationNumber: string
   status: AccountStatus
-  nextStep: 'VERIFY_EMAIL'
+  nextStep: 'SIGN_IN'
   createdAt: string
   message: string
 }
