@@ -82,6 +82,29 @@ export function LoginPage() {
     </div>
   )
 
+  // Without ?role= we don't know who this is. The two sides sign in with different
+  // credentials (registration number vs staff number) and land on different apps, so
+  // ask rather than guess — showing one side's branding to the other was confusing.
+  if (roleParam !== 'student' && roleParam !== 'lecturer') {
+    return (
+      <AuthShell title="Smart Attendance" subtitle="Sign in to continue">
+        <div className="space-y-3 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8">
+          {message && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-success">{message}</p>}
+          <RoleChoice to="/login?role=student" state={location.state} label="I'm a student" hint="Scan the code in class to be marked present" />
+          <RoleChoice to="/login?role=lecturer" state={location.state} label="I'm a lecturer" hint="Run a class and track attendance" />
+          {/* Both spelled out: on this screen we don't know which they are, and a single
+              "Create an account" here used to land students on the staff-number form. */}
+          <p className="pt-2 text-center text-sm text-muted">
+            New to UniLearn? Register as a{' '}
+            <Link to="/signup?role=student" className="font-semibold text-navy-900 hover:underline">student</Link>
+            {' '}or a{' '}
+            <Link to="/signup?role=lecturer" className="font-semibold text-navy-900 hover:underline">lecturer</Link>
+          </p>
+        </div>
+      </AuthShell>
+    )
+  }
+
   return (
     <AuthShell title={isStudent ? 'STUDENT PORTAL' : 'Lecturer Portal'} subtitle={isStudent ? 'Sign in to access your attendance dashboard.' : 'Sign in to manage attendance'}>
       {isStudent && <StudentAuthTabs active="signin" />}
@@ -122,5 +145,22 @@ export function LoginPage() {
         </p>
       )}
     </AuthShell>
+  )
+}
+
+/** One side of the "who are you" choice. A link, not a button: it is navigation. */
+function RoleChoice({ to, state, label, hint }: { to: string; state: unknown; label: string; hint: string }) {
+  return (
+    <Link
+      to={to}
+      state={state}
+      className="flex items-center gap-3 rounded-xl border border-line px-4 py-3 text-left transition hover:border-navy-900 hover:bg-surface"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-navy-900">{label}</span>
+        <span className="block text-xs text-muted">{hint}</span>
+      </span>
+      <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+    </Link>
   )
 }
