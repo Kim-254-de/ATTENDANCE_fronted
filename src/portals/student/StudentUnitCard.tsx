@@ -23,10 +23,16 @@ export function UnitCard({ unit }: { unit: StudentUnit }) {
           {unit.schedule && <p className="text-xs text-muted">{DAYS[unit.schedule.dayOfWeek]} {unit.schedule.startTime}–{unit.schedule.endTime}</p>}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
-          <span className="flex items-center gap-1"><UserRound className="size-3.5" aria-hidden />{unit.lecturerName}</span>
-          <span className="text-xs">{unit.sessionsAttended} of {unit.sessionsHeld} classes</span>
+          <span className="flex items-center gap-1"><UserRound className="size-3.5" aria-hidden />{unit.lecturerName ?? 'Lecturer to be confirmed'}</span>
+          {unit.onRoster && <span className="text-xs">{unit.sessionsAttended} of {unit.sessionsHeld} classes</span>}
         </div>
-        <Link to={`/student-attendance?unitId=${unit.id}`} className="block text-sm font-semibold text-navy-900 hover:underline">View attendance →</Link>
+        {unit.id ? (
+          <Link to={`/student-attendance?unitId=${unit.id}`} className="block text-sm font-semibold text-navy-900 hover:underline">View attendance →</Link>
+        ) : unit.groupRequired ? (
+          <p className="text-sm text-gold-600">Pick your group for this unit on the timetable app to be added to a class list.</p>
+        ) : (
+          <p className="text-sm text-muted">Attendance starts once your lecturer sets this unit up here.</p>
+        )}
       </Card>
     </li>
   )

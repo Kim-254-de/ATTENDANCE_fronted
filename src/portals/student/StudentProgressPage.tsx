@@ -21,6 +21,8 @@ const SUBJECT_FALLBACK_COLOR = '#6b7690' // muted
 /** Overall rate, streak and a per-unit/weekly/monthly breakdown — the "Progress" tab. */
 export function StudentProgressPage() {
   const units = useMyStudentUnits()
+  // Only units with a class list here have attendance to show progress for.
+  const tracked = units.data?.filter((u) => u.onRoster) ?? []
   const attendance = useMyAttendance({ limit: PROGRESS_ATTENDANCE_LIMIT })
   const summary = attendance.data?.summary
   const records = attendance.data?.records ?? []
@@ -61,10 +63,10 @@ export function StudentProgressPage() {
           <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(units.error, 'Could not load your units.')}</Card>
         ) : units.isPending ? (
           <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
-        ) : units.data.length === 0 ? (
+        ) : tracked.length === 0 ? (
           <Card className="p-6 text-sm text-muted">No units to show progress for yet.</Card>
         ) : (
-          <Card className="divide-y divide-line">{units.data.map((u, i) => <SubjectRow key={u.id} unit={u} color={SUBJECT_COLORS[i] ?? SUBJECT_FALLBACK_COLOR} animate={animate} />)}</Card>
+          <Card className="divide-y divide-line">{tracked.map((u, i) => <SubjectRow key={u.id ?? u.code} unit={u} color={SUBJECT_COLORS[i] ?? SUBJECT_FALLBACK_COLOR} animate={animate} />)}</Card>
         )}
       </section>
 

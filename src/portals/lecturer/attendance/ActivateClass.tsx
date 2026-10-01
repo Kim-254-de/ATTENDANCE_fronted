@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
 import { useCurrentUnit } from '@/portals/lecturer/units/unitsApi'
-import { useCreateSession, setActiveSessionId } from './sessionApi'
+import { useCreateSession } from './sessionApi'
 
 /**
  * The one action a lecturer needs fastest: whatever class the issued
@@ -24,7 +24,6 @@ export function ActivateClass() {
       { unitId: unit.id },
       {
         onSuccess: (session) => {
-          setActiveSessionId(session.id)
           navigate(`/session/${session.id}`, { state: { session } })
         },
       },

@@ -1,4 +1,4 @@
-import { ArrowLeft, Pause, PictureInPicture2, Play, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, LocateFixed, Pause, PictureInPicture2, Play, Smartphone, TriangleAlert } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
@@ -6,8 +6,9 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
 import { formatElapsed } from '@/lib/format'
+import { bestPosition } from '@/lib/geolocation'
 import type { SessionAttendance, SessionStatus, SessionSummary } from '@/types'
-import { clearActiveSessionId, useSessionAttendance, useSessionQr, useSetSessionStatus } from './sessionApi'
+import { useSessionAttendance, useSessionQr, useSetGeofence, useSetSessionStatus } from './sessionApi'
 
 /**
  * Experimental, Chrome/Edge 116+ only — not yet in the standard DOM lib types.
@@ -52,13 +53,12 @@ export function LiveSessionPage() {
   const qr = useSessionQr(sessionId, canPoll)
   const setStatus = useSetSessionStatus(sessionId)
   const session = override ?? qr.data?.session ?? null
+  // The fence changes on another device (the lecturer's phone), so the poll is the source of truth for it.
+  const awaitingLocation = (qr.data?.session.geofence ?? session?.geofence)?.mode === 'AWAITING_LOCATION'
 
   const changeStatus = (status: SessionStatus) => {
     setStatus.mutate(status, {
-      onSuccess: (updated) => {
-        setOverride(updated)
-        if (status === 'CLOSED') clearActiveSessionId()
-      },
+      onSuccess: (updated) => setOverride(updated),
     })
   }
 
@@ -104,6 +104,8 @@ export function LiveSessionPage() {
           <ClosedState onDone={() => navigate('/lecturer-dashboard')} />
         ) : session?.status === 'PAUSED' ? (
           <PausedState />
+        ) : qr.data && awaitingLocation ? (
+          <AwaitingLocation session={qr.data.session} />
         ) : qr.data ? (
           <>
             <QrPanel payload={qr.data.payload} />
@@ -133,7 +135,7 @@ export function LiveSessionPage() {
               {session.status === 'PAUSED' ? 'Resume' : 'Pause'}
             </Button>
             <FloatButton
-              payload={session.status === 'OPEN' ? qr.data?.payload : undefined}
+              payload={session.status === 'OPEN' && !awaitingLocation ? qr.data?.payload : undefined}
               refreshLabel={secondsLeft !== null ? `Refreshes in ${secondsLeft}s` : undefined}
             />
             <Button variant="ghost" onClick={endClass} disabled={setStatus.isPending} className="text-red-300 hover:bg-red-500/10">
@@ -184,6 +186,81 @@ function Attendees({ attendees }: { attendees: SessionAttendance['attendees'] })
       </ul>
       {attendees.length > SHOWN && <p className="mt-1 text-center text-xs text-sky-400">and {attendees.length - SHOWN} more</p>}
     </section>
+  )
+}
+
+/**
+ * A laptop has no GPS, so a class activated from one in a room nobody has
+ * surveyed waits here, with no code showing, until the lecturer's phone
+ * (signed in to the same account) sends where the room is. The QR poll
+ * notices within a few seconds and the code replaces this panel.
+ */
+function AwaitingLocation({ session }: { session: SessionSummary }) {
+  const setGeofence = useSetGeofence(session.id)
+  const [locating, setLocating] = useState(false)
+  const [locateError, setLocateError] = useState<string | null>(null)
+  const phoneLink = `${window.location.origin}/session/${session.id}/locate`
+  const room = session.geofence.roomCode
+
+  const useThisDevice = async () => {
+    setLocateError(null)
+    setLocating(true)
+    try {
+      setGeofence.mutate({ mode: 'ON', location: await bestPosition({ timeoutMs: 10_000 }) })
+    } catch (error) {
+      setLocateError(error instanceof Error ? error.message : 'Could not get this device\'s location.')
+    } finally {
+      setLocating(false)
+    }
+  }
+
+  const skip = () => {
+    if (window.confirm('Open this class without checking where students are? Anyone with the code could check in from anywhere.')) {
+      setGeofence.mutate({ mode: 'OFF' })
+    }
+  }
+
+  const busy = locating || setGeofence.isPending
+
+  return (
+    <div className="w-full max-w-md space-y-5">
+      <div className="space-y-2">
+        <Smartphone className="mx-auto size-8 text-sky-300" aria-hidden />
+        <p className="text-lg font-semibold">Share the room's location from your phone</p>
+        <p className="text-sm text-sky-200">
+          {room ? `Room ${room} hasn't` : "This room hasn't"} been mapped yet, and a laptop can't tell where it is precisely.
+          The QR code appears here as soon as your phone sends it.
+        </p>
+      </div>
+
+      <ol className="space-y-2 rounded-2xl bg-white/5 p-4 text-left text-sm">
+        <li><b>1.</b> On your phone, sign in to this site with the same account.</li>
+        <li><b>2.</b> Standing in the room, open the dashboard and tap <b>Share location</b>, or scan this:</li>
+      </ol>
+
+      <div className="mx-auto w-fit rounded-2xl bg-white p-3">
+        <QRCodeCanvas value={phoneLink} size={148} level="M" marginSize={1} />
+      </div>
+
+      <p className="flex items-center justify-center gap-2 text-sm text-sky-300" role="status">
+        <span className="size-2 animate-pulse rounded-full bg-amber-300" aria-hidden /> Waiting for your phone…
+      </p>
+
+      {(locateError || setGeofence.error) && (
+        <p role="alert" className="text-sm text-amber-200">
+          {locateError ?? errorMessage(setGeofence.error, 'Could not set the location.')}
+        </p>
+      )}
+
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button variant="secondary" onClick={useThisDevice} loading={locating} disabled={busy}>
+          <LocateFixed className="size-4" aria-hidden /> Use this device's location
+        </Button>
+        <Button variant="ghost" onClick={skip} disabled={busy} className="text-sky-200 hover:bg-white/10">
+          Open without a location check
+        </Button>
+      </div>
+    </div>
   )
 }
 

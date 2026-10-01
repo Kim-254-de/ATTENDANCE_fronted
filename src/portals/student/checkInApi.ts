@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { api } from '@/lib/api'
 import type { CheckInResult } from '@/types'
+import type { CheckInLocation } from './useCheckInLocation'
 
 /**
  * The lecturer's projected QR code carries `v1.<sessionId>.<counter>.<signature>`
@@ -19,15 +20,17 @@ export const looksLikeAttendanceCode = (text: string) => /^v\d+\.[0-9a-f-]{36}\.
 export const useCheckIn = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: string) =>
-      (await api.post<CheckInResult>('/attendance/check-in', { payload: payload.trim() })).data,
+    // `location` is omitted, not sent empty, when there is no reading (docs/student-app-checkin.md).
+    mutationFn: async ({ payload, location }: { payload: string; location: CheckInLocation | null }) =>
+      (await api.post<CheckInResult>('/attendance/check-in', { payload: payload.trim(), ...(location ? { location } : {}) })).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['students', 'me'] }),
   })
 }
 
 /**
  * How a failed check-in should be handled on screen:
- * - `rescan`: the code was stale or not quite right — scanning the screen again fixes it.
+ * - `rescan`: the code was stale or not quite right, or the location fix was too old or too vague
+ *   (the phone keeps improving it) — scanning the screen again fixes it.
  * - `done`: already recorded — nothing more to do.
  * - `stop`: scanning again won't help (not on the unit, class closed or paused, signed out ...).
  */
@@ -36,8 +39,12 @@ export type CheckInFailureKind = 'rescan' | 'done' | 'stop'
 export function checkInFailureKind(error: unknown): CheckInFailureKind {
   if (!(error instanceof AxiosError) || !error.response) return 'rescan' // network blip: try again
   const { status } = error.response
-  const message = (error.response.data as { message?: string } | undefined)?.message ?? ''
+  const body = error.response.data as { message?: string; code?: string } | undefined
+  const message = body?.message ?? ''
   if (status === 410 || status === 400) return 'rescan' // expired, not yet valid, or not a valid code
+  // The lecturer's phone hasn't sent the room's location yet: it will in a moment.
+  if (body?.code === 'GEOFENCE_AWAITING_LOCATION') return 'rescan'
+  if (body?.code === 'LOCATION_STALE' || body?.code === 'LOCATION_TOO_IMPRECISE') return 'rescan'
   if (status === 409 && /already been recorded/i.test(message)) return 'done'
   return 'stop'
 }

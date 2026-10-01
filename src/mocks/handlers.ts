@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInResult, CreateSessionInput, CreateUnitInput, CurrentQr, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInResult, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -106,6 +106,9 @@ function simulateCheckIns(session: MockSession): number {
 
 const sessions = new Map<string, MockSession>()
 
+/** Mock classes are in a surveyed room, so they never wait for the lecturer's phone. */
+const mockFence = (): GeofenceStatus => ({ mode: 'ROOM', radiusMetres: 20, roomCode: 'LH1', anchorAccuracyMetres: 4, hasCentre: true })
+
 /** Test helper: back to a signed-out server with only the seeded units and their rosters. */
 export const resetMocks = () => {
   store.set(false)
@@ -199,6 +202,7 @@ export function openMockSessionForScan(unitId = 'u1') {
     opensAt: new Date(Date.now() - 60_000).toISOString(),
     closesAt: new Date(Date.now() + 60 * 60_000).toISOString(),
     rotationSeconds: DEFAULT_ROTATION_SECONDS,
+    geofence: mockFence(),
     secret: crypto.randomUUID(),
     checkedIn: 0,
     checkedInStudents: new Set(),
@@ -591,6 +595,7 @@ export const liveHandlers = [
       opensAt: new Date().toISOString(),
       closesAt: closesAt.toISOString(),
       rotationSeconds: input.rotationSeconds ?? DEFAULT_ROTATION_SECONDS,
+      geofence: mockFence(),
       secret: crypto.randomUUID(),
       checkedIn: 0,
       checkedInStudents: new Set(),
@@ -624,7 +629,7 @@ export const liveHandlers = [
   http.post(`${API}/attendance/check-in`, async ({ request }) => {
     if (!store.get()) return unauthorized()
     if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Only students can check in.')
-    const { payload = '' } = (await request.json()) as { payload?: string }
+    const { payload = '', location } = (await request.json()) as { payload?: string; location?: { accuracy: number; capturedAt: number } }
     const [version, sessionId = '', counterText = '', signature = ''] = payload.trim().split('.')
     const session = sessions.get(sessionId)
     const counter = Number(counterText)
@@ -636,6 +641,14 @@ export const liveHandlers = [
     if (counter < now - 1) return fail(410, 'VALIDATION_FAILED', EXPIRED_CODE)
     const blocked = assertAcceptingScans(session)
     if (blocked) return blocked
+    // Mirrors session.geofence.ts checkReading, short of the distance: the mock has no room to measure from.
+    if (session.geofence.mode !== 'OFF') {
+      if (!location) return fail(422, 'LOCATION_REQUIRED', 'This class checks where you are. Allow location access and scan again.')
+      if (Math.abs(Date.now() - location.capturedAt) > 60_000) return fail(422, 'LOCATION_STALE', 'Your location reading is out of date. Scan again.')
+      if (location.accuracy > 50) {
+        return fail(422, 'LOCATION_TOO_IMPRECISE', `Your location is only accurate to about ${Math.round(location.accuracy)} m. Turn on precise location and scan again.`)
+      }
+    }
     if (session.checkedInStudents.has(currentAccount.id)) {
       return fail(409, 'CONFLICT', 'Your attendance for this class has already been recorded.')
     }
@@ -663,7 +676,13 @@ export const liveHandlers = [
         id, code: unit.code, name: unit.name, baseCode: unit.code, group: null, lecturerName: lecturer.fullName,
         schedule: schedules.get(id) ?? null, sessionsHeld: history.length, sessionsAttended: attended,
         attendanceRate: history.length ? Math.round((attended / history.length) * 1000) / 10 : null,
+        onRoster: true, groupRequired: false,
       }
+    })
+    // Registered for on the timetable app, but its lecturer hasn't set it up here yet.
+    result.push({
+      id: null, code: 'CS410', name: 'Distributed Systems', baseCode: 'CS410', group: null, lecturerName: 'Dr. Mary Wambui',
+      schedule: null, sessionsHeld: 0, sessionsAttended: 0, attendanceRate: null, onRoster: false, groupRequired: false,
     })
     return ok(result)
   }),
@@ -680,6 +699,31 @@ export const liveHandlers = [
       records,
     }
     return ok(body)
+  }),
+
+  http.get(`${API}/sessions/live`, () => {
+    if (!store.get()) return unauthorized()
+    const live = [...sessions.values()].filter((se) => se.status !== 'CLOSED' && new Date(se.closesAt).getTime() > Date.now())
+    return ok(live.map(toSummary))
+  }),
+
+  /** Mirrors session.service.ts setSessionGeofence: a surveyed room's point always wins. */
+  http.patch(`${API}/sessions/:id/geofence`, async ({ params, request }) => {
+    if (!store.get()) return unauthorized()
+    const session = sessions.get(params.id as string)
+    if (!session) return fail(404, 'NOT_FOUND', 'Session not found.')
+    if (session.status === 'CLOSED') return fail(409, 'CONFLICT', 'This class session has been closed.')
+    const input = (await request.json()) as { mode: 'ON' | 'OFF'; location?: { accuracy: number } }
+    if (input.mode === 'OFF') {
+      session.geofence = { ...session.geofence, mode: 'OFF' }
+    } else if (session.geofence.roomCode && session.geofence.anchorAccuracyMetres !== null && session.geofence.mode !== 'AWAITING_LOCATION') {
+      session.geofence = { ...session.geofence, mode: 'ROOM' }
+    } else if (!input.location || input.location.accuracy > 30) {
+      return fail(422, 'GEOFENCE_ANCHOR_UNAVAILABLE', 'Your device\'s location is not precise enough. Try again from a phone.')
+    } else {
+      session.geofence = { ...session.geofence, mode: 'LECTURER_DEVICE', radiusMetres: 20, anchorAccuracyMetres: input.location.accuracy, hasCentre: true }
+    }
+    return ok(toSummary(session))
   }),
 
   http.patch(`${API}/sessions/:id/status`, async ({ params, request }) => {

@@ -52,18 +52,27 @@ export interface StudentRegistrationResult {
 
 /** GET /students/me/units: a unit the student is on, with their attendance in it. */
 export interface StudentUnit {
-  id: string
+  /** Null for a unit known only from the timetable app (onRoster false). */
+  id: string | null
   /** The class: "COSC 103 GR A", or "COSC 103" when not split into groups. */
   code: string
   name: string | null
   baseCode: string | null
   group: string | null
-  lecturerName: string
+  /** Null when the timetable names no lecturer yet. */
+  lecturerName: string | null
   schedule: UnitSchedule | null
   sessionsHeld: number
   sessionsAttended: number
   /** 0–100, one decimal; null until a session has been held. */
   attendanceRate: number | null
+  /**
+   * True when the student is on the unit's class list here, so can check in. False for a unit
+   * they're registered for on the timetable app that their lecturer hasn't set up here yet.
+   */
+  onRoster: boolean
+  /** A split unit they haven't picked a group for on the timetable app yet. */
+  groupRequired: boolean
 }
 
 /** PRESENT: checked in. OPEN: still taking check-ins (not an absence yet). ABSENT: over, no check-in. */
@@ -106,6 +115,31 @@ export interface Overview {
 
 export type SessionStatus = 'OPEN' | 'PAUSED' | 'CLOSED'
 
+/**
+ * Where a session's location check is centred. AWAITING_LOCATION: activated
+ * from a laptop in a room nobody has surveyed, so scans are held until the
+ * lecturer sends the room's position from their phone.
+ */
+export type GeofenceMode = 'ROOM' | 'LECTURER_DEVICE' | 'AWAITING_LOCATION' | 'OFF'
+
+/** The fence as the lecturer's screens see it. Never its coordinates. */
+export interface GeofenceStatus {
+  mode: GeofenceMode
+  radiusMetres: number | null
+  /** The room the timetable puts the class in; null when it names none. */
+  roomCode: string | null
+  anchorAccuracyMetres: number | null
+  hasCentre: boolean
+}
+
+/** A device's position, as the browser's Geolocation API reports it. */
+export interface DeviceLocation {
+  latitude: number
+  longitude: number
+  /** Metres, 68% confidence. */
+  accuracy: number
+}
+
 /** A class meeting. One row for the whole class, however long it runs — the QR rotates without writing anything new. */
 export interface SessionSummary {
   id: string
@@ -117,6 +151,7 @@ export interface SessionSummary {
   opensAt: string
   closesAt: string
   rotationSeconds: number
+  geofence: GeofenceStatus
 }
 
 /** The code to show right now, plus when it next changes. */
