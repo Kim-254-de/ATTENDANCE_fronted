@@ -54,7 +54,7 @@ export function StudentProgressPage() {
 
       <section aria-labelledby="by-subject" className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 id="by-subject" className="text-lg font-bold text-navy-900">By Subject</h2>
+          <h2 id="by-subject" className="text-lg font-bold text-navy-900">By Units</h2>
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold text-muted">Min {MIN_REQUIRED_ATTENDANCE}%</span>
             <Link to="/student-units" className="text-sm font-semibold text-navy-900 hover:underline">
