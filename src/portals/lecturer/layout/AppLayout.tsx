@@ -27,7 +27,7 @@ export function AppLayout() {
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="size-10 rounded-full object-cover" />
               ) : (
-                <span className="grid size-10 place-items-center rounded-full bg-navy-900 text-sm font-bold text-white">{initials(user.fullName)}</span>
+                <span className="grid size-10 place-items-center rounded-full bg-blue-700 text-sm font-bold text-white">{initials(user.fullName)}</span>
               )}
             </Link>
           )}

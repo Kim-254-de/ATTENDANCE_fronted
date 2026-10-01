@@ -135,7 +135,7 @@ function StudentRow({ student }: { student: LecturerStudent }) {
       <td className="px-5 py-3 font-mono text-xs text-muted">{student.registrationNumber ?? '—'}</td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-900 text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-blue-700 text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
           <span className="font-medium text-navy-900">{student.fullName ?? 'Unnamed student'}</span>
         </div>
       </td>
@@ -143,13 +143,13 @@ function StudentRow({ student }: { student: LecturerStudent }) {
       <td className="px-5 py-3">
         <div className="flex items-center gap-2">
           <div className="h-1.5 w-20 overflow-hidden rounded-full bg-line">
-            <div className={`h-full rounded-full ${atRisk ? 'bg-gold-500' : 'bg-success'}`} style={{ width: `${student.attendanceRate ?? 0}%` }} />
+            <div className={`h-full rounded-full ${atRisk ? 'bg-orange-500' : 'bg-success'}`} style={{ width: `${student.attendanceRate ?? 0}%` }} />
           </div>
-          <span className={`text-xs font-semibold ${atRisk ? 'text-gold-600' : 'text-success'}`}>{formatRate(student.attendanceRate)}</span>
+          <span className={`text-xs font-semibold ${atRisk ? 'text-orange-600' : 'text-success'}`}>{formatRate(student.attendanceRate)}</span>
         </div>
       </td>
       <td className="px-5 py-3">
-        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${atRisk ? 'bg-gold-100 text-gold-600' : 'bg-emerald-50 text-success'}`}>
+        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${atRisk ? 'bg-orange-100 text-orange-600' : 'bg-emerald-50 text-success'}`}>
           {atRisk ? 'At Risk' : 'Active'}
         </span>
       </td>

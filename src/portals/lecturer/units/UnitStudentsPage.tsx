@@ -28,15 +28,15 @@ export function UnitStudentsPage() {
         <Link to="/units" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-navy-900">
           <ArrowLeft className="size-4" aria-hidden /> All units
         </Link>
-        <p className="mt-3 text-sm font-semibold text-gold-600">{unit?.code ?? 'UNIT'}</p>
+        <p className="mt-3 text-sm font-semibold text-orange-600">{unit?.code ?? 'UNIT'}</p>
         <h2 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">{unit?.name ?? unit?.code ?? 'Students'}</h2>
         {students && <p className="mt-2 text-sm text-muted">{active.length} {active.length === 1 ? 'student' : 'students'} can check in</p>}
         <p className="mt-2 text-xs text-muted">Registered for this unit on the timetable, refreshed each time you open this page. Speak to your department if someone is missing or shouldn't be here.</p>
       </div>
 
       {ungrouped && (
-        <Card className="flex items-start gap-3 border border-gold-500/40 bg-gold-100/50 p-4" role="status">
-          <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-gold-500 text-white"><Users className="size-3.5" aria-hidden /></span>
+        <Card className="flex items-start gap-3 border border-orange-500/40 bg-orange-100/50 p-4" role="status">
+          <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-orange-500 text-white"><Users className="size-3.5" aria-hidden /></span>
           <p className="text-sm">
             <span className="font-semibold text-navy-900">{ungrouped}.</span>{' '}
             <span className="text-muted">They aren't on any group's list, so they can't check in until they pick their group on the timetable app.</span>

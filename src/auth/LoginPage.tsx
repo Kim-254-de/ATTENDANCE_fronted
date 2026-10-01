@@ -113,7 +113,7 @@ export function LoginPage() {
 
         <div className="flex justify-end"><Link to={isStudent ? '/forgot-password?role=student' : '/forgot-password'} className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
 
-        <Button type="submit" variant={isStudent ? 'accent' : 'primary'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
+        <Button type="submit" variant={isStudent ? 'accent' : 'lecturer'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
         {isStudent && <SocialSignIn />}
       </form>
       {!isStudent && (

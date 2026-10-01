@@ -15,8 +15,8 @@ export function ChangePasswordCard() {
   const forgotPassword = useForgotPassword()
 
   if (!me) return null
-  // The student portal uses blue as its accent, gold everywhere else (lecturer portal).
-  const variant = me.role === 'student' ? 'accent' : 'primary'
+  // The student portal uses blue as its accent, the lecturer portal green.
+  const variant = me.role === 'student' ? 'accent' : 'lecturer'
 
   return (
     <Card className="p-6 sm:p-8">

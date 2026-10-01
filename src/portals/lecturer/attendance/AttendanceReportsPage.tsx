@@ -114,7 +114,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${active ? 'bg-navy-900 text-white' : 'bg-white text-navy-900 hover:bg-navy-900/5'}`}
+      className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-navy-900 hover:bg-navy-900/5'}`}
     >
       {children}
     </button>

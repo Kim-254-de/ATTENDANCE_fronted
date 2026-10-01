@@ -36,7 +36,7 @@ export function UnitsPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <p className="max-w-2xl text-sm text-muted">Units you are timetabled to teach this semester appear here automatically, with how many students are registered for each. Only students on a unit can check in to its classes.</p>
         {!adding && (
-          <Button onClick={() => setAdding(true)}>
+          <Button variant="lecturer" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden /> Add unit
           </Button>
         )}
@@ -81,7 +81,7 @@ function UnitCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number | un
         <div className="flex items-start justify-between gap-3">
           <span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{unit.code}</span>
           {pending ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-semibold text-gold-600">
+            <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-600">
               <Clock className="size-3.5" aria-hidden /> Pending verification
             </span>
           ) : rate !== undefined ? (
@@ -95,7 +95,7 @@ function UnitCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number | un
           <h3 className="truncate font-semibold text-navy-900">{unit.name ?? unit.code}</h3>
           {formatSchedule(unit.schedule) && <p className="text-xs text-muted">{formatSchedule(unit.schedule)}</p>}
           {ungrouped && (
-            <p className="mt-2 text-xs font-medium text-gold-600" title="They are on no group's roster until they pick their group on the timetable">
+            <p className="mt-2 text-xs font-medium text-orange-600" title="They are on no group's roster until they pick their group on the timetable">
               {ungrouped}
             </p>
           )}
@@ -139,7 +139,7 @@ function AddUnitForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <Card className="border border-gold-500/30 p-5">
+    <Card className="border border-orange-500/30 p-5">
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
           <h3 className="font-semibold text-navy-900">Add a unit</h3>
@@ -168,7 +168,7 @@ function AddUnitForm({ onDone }: { onDone: () => void }) {
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
-          <Button type="submit" loading={create.isPending} disabled={!code.trim()}>
+          <Button type="submit" variant="lecturer" loading={create.isPending} disabled={!code.trim()}>
             Add unit
           </Button>
         </div>
