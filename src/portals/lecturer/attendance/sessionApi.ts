@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { CreateSessionInput, CurrentQr, SessionAttendance, SessionStatus, SessionSummary } from '@/types'
+import type { CreateSessionInput, CurrentQr, DeviceLocation, SessionAttendance, SessionStatus, SessionSummary } from '@/types'
 
 export const useCreateSession = () =>
   useMutation({
@@ -18,7 +18,14 @@ export const useSessionQr = (sessionId: string | undefined, enabled = true) =>
     queryKey: ['sessions', sessionId, 'qr'],
     queryFn: async () => (await api.get<CurrentQr>(`/sessions/${sessionId}/qr`)).data,
     enabled: enabled && !!sessionId,
-    refetchInterval: (query) => (query.state.data ? query.state.data.expiresInSeconds * 1000 : 5_000),
+    // While the class waits for the lecturer's phone to send its location, ask
+    // every few seconds so the code appears as soon as it arrives.
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return 5_000
+      if (data.session.geofence.mode === 'AWAITING_LOCATION') return 3_000
+      return data.expiresInSeconds * 1000
+    },
     refetchOnWindowFocus: false,
     retry: false,
   })
@@ -43,12 +50,27 @@ export const useSetSessionStatus = (sessionId: string | undefined) => {
 }
 
 /**
- * The dashboard has no "list my open sessions" endpoint to check against, so
- * remembering the last activated session locally is what lets a lecturer who
- * navigated away find their way back to a still-running class.
+ * The lecturer's classes still open, on whichever device activated them. This
+ * is how their phone finds the class their laptop is showing, and how any
+ * device finds its way back to a running class.
  */
-const ACTIVE_SESSION_KEY = 'attendance:activeSessionId'
+export const useLiveSessions = (poll = true) =>
+  useQuery({
+    queryKey: ['sessions', 'live'],
+    queryFn: async () => (await api.get<SessionSummary[]>('/sessions/live')).data,
+    refetchInterval: poll ? 10_000 : false,
+  })
 
-export const getActiveSessionId = () => (typeof localStorage === 'undefined' ? null : localStorage.getItem(ACTIVE_SESSION_KEY))
-export const setActiveSessionId = (id: string) => localStorage.setItem(ACTIVE_SESSION_KEY, id)
-export const clearActiveSessionId = () => localStorage.removeItem(ACTIVE_SESSION_KEY)
+/**
+ * Centres the class's location check on this device's position, or switches
+ * the check off. A phone uses this for a class its laptop opened
+ * AWAITING_LOCATION; it also re-centres a running class.
+ */
+export const useSetGeofence = (sessionId: string | undefined) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { mode: 'ON'; location?: DeviceLocation } | { mode: 'OFF' }) =>
+      (await api.patch<SessionSummary>(`/sessions/${sessionId}/geofence`, input)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
+  })
+}

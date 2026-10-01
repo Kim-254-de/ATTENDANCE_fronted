@@ -79,7 +79,7 @@ function UnitCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number | un
     <li>
       <Card className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{unit.code}</span>
+          <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{unit.code}</span>
           {pending ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-600">
               <Clock className="size-3.5" aria-hidden /> Pending verification
@@ -93,7 +93,11 @@ function UnitCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number | un
 
         <div>
           <h3 className="truncate font-semibold text-navy-900">{unit.name ?? unit.code}</h3>
-          {formatSchedule(unit.schedule) && <p className="text-xs text-muted">{formatSchedule(unit.schedule)}</p>}
+          {unit.slots && unit.slots.length > 0 ? (
+            <p className="text-xs text-muted">{unit.slots.map(formatSchedule).join(' · ')}</p>
+          ) : (
+            formatSchedule(unit.schedule) && <p className="text-xs text-muted">{formatSchedule(unit.schedule)}</p>
+          )}
           {ungrouped && (
             <p className="mt-2 text-xs font-medium text-orange-600" title="They are on no group's roster until they pick their group on the timetable">
               {ungrouped}
@@ -119,8 +123,8 @@ function UnitCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number | un
         </div>
 
         <div className="flex items-center gap-4 border-t border-line pt-3 text-sm font-semibold">
-          <Link to={`/units/${unit.id}`} className="text-navy-900 hover:underline">Roster</Link>
-          <Link to={`/attendance?unit=${unit.id}`} className="text-navy-900 hover:underline">Attendance</Link>
+          <Link to={`/units/${unit.id}`} className="text-blue-700 hover:underline">Roster</Link>
+          <Link to={`/attendance?unit=${unit.id}`} className="text-blue-700 hover:underline">Attendance</Link>
         </div>
       </Card>
     </li>

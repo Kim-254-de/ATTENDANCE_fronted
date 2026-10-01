@@ -61,7 +61,7 @@ function LecturerSignup() {
   // created, so there's no email to confirm — sign them in with the details they just chose.
   if (signup.isSuccess) {
     return (
-      <AuthShell title="Account created">
+      <AuthShell student title="Account created">
         <div className="space-y-5 text-center" role="status">
           <div className="mx-auto grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><MailCheck className="size-7" aria-hidden /></div>
           <p className="text-sm leading-6 text-muted">{signup.data.message} Signing you in…</p>
@@ -92,7 +92,7 @@ function LecturerSignup() {
       <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
         <Field label="School email" error={errors.email?.message}><input {...register('email')} type="email" autoComplete="email" placeholder="p.kamami@uni.ac.ke" className="input" /></Field>
-        <Field label="Full name" error={errors.fullName?.message} hint="As it appears in your staff records"><input {...register('fullName')} autoComplete="name" placeholder="Dr. Peter Kamami" className="input" /></Field>
+        <Field label="Full name" error={errors.fullName?.message}><input {...register('fullName')} autoComplete="name" placeholder="Dr. Peter Kamami" className="input" /></Field>
         <Field label="Staff number" error={errors.staffNumber?.message}><input {...register('staffNumber')} autoComplete="off" autoCapitalize="characters" placeholder="STF/0001" className="input" /></Field>
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-1.5 text-sm font-medium text-navy-900">
@@ -195,7 +195,7 @@ function StudentSignup() {
   if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/lecturer-dashboard'} replace />
 
   // No email to confirm: sign the student in with the details they just chose and take them straight in.
-  if (signup.isSuccess && (signup.data.nextStep as string) !== 'VERIFY_EMAIL') {
+  if (signup.isSuccess) {
     return (
       <AuthShell title="Account created">
         <div className="space-y-5 text-center" role="status">
@@ -206,29 +206,13 @@ function StudentSignup() {
     )
   }
 
-  if (signup.isSuccess) {
-    return (
-      <AuthShell title="Check your email">
-        <div className="space-y-5" role="status">
-          <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><MailCheck className="size-7" aria-hidden /></div>
-          <p className="text-sm leading-6 text-muted">
-            {signup.data.message} We sent a confirmation link to <strong className="text-navy-900">{signup.data.email}</strong>.
-          </p>
-          <Link to="/login?role=student" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to student sign in</Link>
-        </div>
-      </AuthShell>
-    )
-  }
-
   const onSubmit = handleSubmit((values) =>
     signup.mutate(values, {
-      onSuccess: (result) => {
-        // Currently the backend always requires email verification for students; this mirrors the lecturer flow for when that changes.
-        if ((result.nextStep as string) !== 'VERIFY_EMAIL') {
-          login.mutate({ identifier: values.registrationNumber, password: values.password }, {
-            onSuccess: () => navigate('/student-dashboard', { replace: true }),
-          })
-        }
+      onSuccess: () => {
+        // Active at once, like lecturers: sign straight in with the details they just chose.
+        login.mutate({ identifier: values.registrationNumber, password: values.password }, {
+          onSuccess: () => navigate('/student-dashboard', { replace: true }),
+        })
       },
       onError: (err) => {
         for (const [field, message] of Object.entries(fieldErrors(err))) {
@@ -239,13 +223,13 @@ function StudentSignup() {
   )
 
   return (
-    <AuthShell title="STUDENT PORTAL" subtitle="Register to start tracking your attendance.">
+    <AuthShell student title="STUDENT PORTAL" subtitle="Register to start tracking your attendance.">
       <StudentAuthTabs active="register" />
       <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}
-        <IconField id="student-full-name" label="Full Name" icon={User} {...register('fullName')} autoComplete="name" error={errors.fullName?.message} hint="As it appears in your student records" />
+        <IconField id="student-full-name" label="Full Name" icon={User} {...register('fullName')} autoComplete="name" error={errors.fullName?.message} />
         <IconField id="student-registration-number" label="Student ID" icon={IdCard} {...register('registrationNumber')} autoComplete="off" autoCapitalize="characters" placeholder="EBT1/00000/23" error={errors.registrationNumber?.message} />
-        <IconField id="student-email" label="Email" icon={Mail} {...register('email')} type="email" autoComplete="email" placeholder="you@students.tharaka.ac.ke" error={errors.email?.message} hint="The email on your student record" />
+        <IconField id="student-email" label="Email" icon={Mail} {...register('email')} type="email" autoComplete="email" placeholder="you@students.tharaka.ac.ke" error={errors.email?.message} />
         <div className="grid gap-5 sm:grid-cols-2">
           <IconField
             id="student-password"

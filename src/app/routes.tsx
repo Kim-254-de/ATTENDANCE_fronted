@@ -92,6 +92,12 @@ export const routes = [
             handle: { title: 'Units' },
           },
           {
+            // Opened on the lecturer's phone to send the room's location to a class their laptop is showing.
+            path: 'session/:sessionId/locate',
+            lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/ShareLocationPage')).ShareLocationPage }),
+            handle: { title: 'Share Location' },
+          },
+          {
             path: 'units/:unitId',
             lazy: async () => ({ Component: (await import('@/portals/lecturer/units/UnitStudentsPage')).UnitStudentsPage }),
             handle: { title: 'Unit Students' },

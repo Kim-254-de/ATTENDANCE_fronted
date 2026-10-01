@@ -1,8 +1,7 @@
-import { BookOpen, ClipboardCheck, Plus, Radio, UserRound } from 'lucide-react'
-import { useState } from 'react'
+import { BookOpen, ClipboardCheck, MapPin, Plus, Radio, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { ActivateClass } from '@/portals/lecturer/attendance/ActivateClass'
-import { getActiveSessionId, useSessionQr } from '@/portals/lecturer/attendance/sessionApi'
+import { useLiveSessions, useSessionQr } from '@/portals/lecturer/attendance/sessionApi'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { StatCard } from '@/components/ui/StatCard'
@@ -17,11 +16,16 @@ import { useOverview } from './dashboardApi'
  */
 export function OverviewPage() {
   const { data, isPending, error, refetch } = useOverview()
-  const [activeSessionId] = useState(getActiveSessionId)
+  // Classes running on any device signed in to this account, e.g. the laptop in the lecture hall.
+  const live = useLiveSessions()
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      {activeSessionId && <ActiveSessionBanner sessionId={activeSessionId} />}
+      {live.data?.map((session) =>
+        session.geofence.mode === 'AWAITING_LOCATION'
+          ? <AwaitingLocationBanner key={session.id} sessionId={session.id} unitCode={session.unitCode} />
+          : <ActiveSessionBanner key={session.id} sessionId={session.id} />,
+      )}
 
       <ActivateClass />
 
@@ -54,14 +58,30 @@ export function OverviewPage() {
   )
 }
 
+/** On the lecturer's phone: the class their laptop opened is waiting for this phone's location. */
+function AwaitingLocationBanner({ sessionId, unitCode }: { sessionId: string; unitCode: string }) {
+  return (
+    <Link to={`/session/${sessionId}/locate`} className="block">
+      <Card className="flex items-center gap-3 border border-amber-200 bg-amber-50 p-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-amber-600"><MapPin className="size-5" aria-hidden /></span>
+        <span className="flex-1 leading-tight">
+          <span className="block font-semibold text-navy-900">{unitCode} is waiting for its location</span>
+          <span className="text-sm text-muted">Tap to share location from this phone, standing in the room</span>
+        </span>
+        <span className="text-muted" aria-hidden>›</span>
+      </Card>
+    </Link>
+  )
+}
+
 function ActiveSessionBanner({ sessionId }: { sessionId: string }) {
   const qr = useSessionQr(sessionId)
   const capacity = qr.data?.enrolled
 
   return (
     <Link to={`/session/${sessionId}`} className="block">
-      <Card className="flex items-center gap-3 border border-emerald-200 bg-emerald-50 p-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-success"><Radio className="size-5" aria-hidden /></span>
+      <Card className="flex items-center gap-3 border border-blue-200 bg-blue-50 p-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-blue-700"><Radio className="size-5" aria-hidden /></span>
         <span className="flex-1 leading-tight">
           <span className="block font-semibold text-navy-900">Class in progress</span>
           <span className="text-sm text-muted">
@@ -78,7 +98,7 @@ function QuickAction({ to, icon: Icon, label }: { to: string; icon: typeof Plus;
   return (
     <Link to={to} className="block">
       <Card className="flex flex-col items-center gap-2 p-4 text-center transition hover:shadow-md">
-        <span className="grid size-11 place-items-center rounded-xl bg-navy-900/5 text-navy-800"><Icon className="size-5" aria-hidden /></span>
+        <span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-800"><Icon className="size-5" aria-hidden /></span>
         <span className="text-sm font-medium text-navy-900">{label}</span>
       </Card>
     </Link>

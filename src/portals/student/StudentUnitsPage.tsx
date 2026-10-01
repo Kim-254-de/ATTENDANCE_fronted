@@ -11,7 +11,7 @@ export function StudentUnitsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold text-gold-600">STUDENT WORKSPACE</p>
+        <p className="text-sm font-semibold tracking-wide text-blue-700">STUDENT WORKSPACE</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">My units</h1>
         <p className="mt-2 text-sm text-muted">Every unit you're registered for, with your attendance rate in each.</p>
       </div>
@@ -25,11 +25,11 @@ export function StudentUnitsPage() {
         <div className="grid gap-4 sm:grid-cols-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[150px]" />)}</div>
       ) : units.data.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted">
-          You aren't on any unit's class list yet. Units appear here once you're registered for them on the timetable app
-          (and, for a unit split into groups, have picked your group).
+          You aren't registered for any units this term yet. Units appear here once you're registered for them on the
+          timetable app.
         </Card>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">{units.data.map((u) => <UnitCard key={u.id} unit={u} />)}</ul>
+        <ul className="grid gap-4 sm:grid-cols-2">{units.data.map((u) => <UnitCard key={u.id ?? u.code} unit={u} />)}</ul>
       )}
     </div>
   )

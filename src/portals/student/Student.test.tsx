@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { openMockSessionForScan } from '@/mocks/handlers'
+import { fakeGeolocation } from '@/test/fakeGeolocation'
 import { renderApp } from '@/test/renderApp'
 
 /** jsdom has no camera: the scanner "reads" whatever the test types (same stand-in as Scan.test.tsx). */
@@ -13,6 +14,9 @@ vi.mock('@/portals/student/QrCameraScanner', () => ({
     </form>
   ),
 }))
+
+// The scanner sends the phone's position; mock classes check it's there.
+beforeEach(() => fakeGeolocation([8]))
 
 async function signInAsStudent(path = '/student-dashboard') {
   const user = userEvent.setup()
@@ -71,9 +75,20 @@ describe('student units and history pages', () => {
     await user.click(screen.getByRole('button', { name: 'Simulate scan' }))
     await user.click(await screen.findByRole('link', { name: 'Done' }))
 
+    await user.click(await screen.findByRole('link', { name: /progress/i }))
     await user.click(await screen.findByRole('link', { name: /my units/i }))
     const refreshedCs301 = (await screen.findByText('CS301')).closest('li')!
     expect(await within(refreshedCs301).findByText('3 of 3 classes')).toBeInTheDocument()
+  })
+
+  it('lists units from the timetable app that have no class list here yet, without an attendance link', async () => {
+    await signInAsStudent('/student-units')
+
+    const cs410 = (await screen.findByText('CS410')).closest('li')!
+    expect(within(cs410).getByText('Dr. Mary Wambui')).toBeInTheDocument()
+    expect(within(cs410).getByText(/attendance starts once your lecturer sets this unit up/i)).toBeInTheDocument()
+    expect(within(cs410).queryByRole('link', { name: /view attendance/i })).not.toBeInTheDocument()
+    expect(within(cs410).queryByText(/classes$/)).not.toBeInTheDocument()
   })
 
   it('shows the full attendance history with overall rate, status counts and per-class results', async () => {

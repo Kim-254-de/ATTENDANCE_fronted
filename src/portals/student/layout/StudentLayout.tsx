@@ -44,7 +44,7 @@ export function StudentLayout() {
   }
 
   return (
-    <div className="min-h-dvh bg-surface sm:bg-line/60">
+    <div className="student-portal min-h-dvh bg-surface sm:bg-line/60">
       <div onClick={onDoubleTapArea} className="mx-auto min-h-dvh max-w-md space-y-6 bg-surface p-4 pb-20 sm:border-x sm:border-line sm:p-8 sm:pb-20 sm:shadow-xl">
         {!onProfilePage && (
           <header

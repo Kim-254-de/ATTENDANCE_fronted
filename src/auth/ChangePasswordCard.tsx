@@ -21,7 +21,7 @@ export function ChangePasswordCard() {
   return (
     <Card className="p-6 sm:p-8">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-navy-900/5 text-navy-900"><ShieldCheck className="size-5" aria-hidden /></span>
+        <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${me.role === 'student' ? 'bg-blue-50 text-blue-700' : 'bg-navy-900/5 text-navy-900'}`}><ShieldCheck className="size-5" aria-hidden /></span>
         <div><h3 className="font-bold text-navy-900">Change password</h3><p className="mt-1 text-sm text-muted">We'll email a secure reset link to {me.email}. Signs you out on every other device once used.</p></div>
       </div>
       {forgotPassword.isSuccess ? (

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
 import { useCurrentUnit } from '@/portals/lecturer/units/unitsApi'
-import { useCreateSession, setActiveSessionId } from './sessionApi'
+import { useCreateSession } from './sessionApi'
 
 /**
  * The one action a lecturer needs fastest: whatever class the issued
@@ -24,7 +24,6 @@ export function ActivateClass() {
       { unitId: unit.id },
       {
         onSuccess: (session) => {
-          setActiveSessionId(session.id)
           navigate(`/session/${session.id}`, { state: { session } })
         },
       },
@@ -54,7 +53,7 @@ export function ActivateClass() {
             No class scheduled right now. <Link to="/units" className="font-semibold text-navy-900 underline">View your units</Link>.
           </p>
         ) : (
-          <div className="rounded-xl bg-navy-900/5 px-4 py-3">
+          <div className="rounded-xl bg-blue-50 px-4 py-3 ring-1 ring-inset ring-blue-100">
             <p className="font-semibold text-navy-900">{unit.name ? `${unit.code} — ${unit.name}` : unit.code}</p>
             {unit.schedule && (
               <p className="text-sm text-muted">{unit.schedule.startTime}–{unit.schedule.endTime} today</p>

@@ -12,10 +12,10 @@ export function AppLayout() {
   const onProfilePage = useLocation().pathname === '/profile'
 
   return (
-    <div className="flex min-h-dvh bg-surface">
+    <div className="lecturer-portal flex min-h-dvh bg-blue-50/70">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-line bg-white px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))] sm:px-10">
+        <header className="flex items-center gap-3 border-b border-blue-100 bg-white px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))] sm:px-10">
           <div className="flex-1">
             <h1 className="text-xl font-bold tracking-tight text-navy-900">
               {title ?? (user ? `${getGreeting()}, ${firstName(user.fullName)}` : 'Dashboard')}
@@ -23,7 +23,7 @@ export function AppLayout() {
             <p className="mt-0.5 text-sm text-muted">{formatLongDate()}</p>
           </div>
           {user && !onProfilePage && (
-            <Link to="/profile" aria-label="View profile" className="border-l border-line pl-4">
+            <Link to="/profile" aria-label="View Profile" className="border-l border-line pl-4">
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="size-10 rounded-full object-cover" />
               ) : (
@@ -32,7 +32,7 @@ export function AppLayout() {
             </Link>
           )}
         </header>
-        <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8 lg:px-10 lg:py-9">
+        <main className="flex-1 bg-blue-50/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8 lg:px-10 lg:py-9">
           <Outlet />
           <div className="h-16 lg:hidden" aria-hidden />
         </main>

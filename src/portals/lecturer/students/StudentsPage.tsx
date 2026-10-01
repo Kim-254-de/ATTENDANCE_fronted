@@ -139,7 +139,7 @@ function StudentRow({ student }: { student: LecturerStudent }) {
           <span className="font-medium text-navy-900">{student.fullName ?? 'Unnamed student'}</span>
         </div>
       </td>
-      <td className="px-5 py-3"><span className="rounded-md bg-navy-900/5 px-2 py-1 text-xs font-semibold text-navy-900">{student.unitCode}</span></td>
+      <td className="px-5 py-3"><span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{student.unitCode}</span></td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2">
           <div className="h-1.5 w-20 overflow-hidden rounded-full bg-line">

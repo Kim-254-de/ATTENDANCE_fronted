@@ -1,4 +1,5 @@
 import { Star } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
@@ -21,6 +22,8 @@ const SUBJECT_FALLBACK_COLOR = '#6b7690' // muted
 /** Overall rate, streak and a per-unit/weekly/monthly breakdown — the "Progress" tab. */
 export function StudentProgressPage() {
   const units = useMyStudentUnits()
+  // Only units with a class list here have attendance to show progress for.
+  const tracked = units.data?.filter((u) => u.onRoster) ?? []
   const attendance = useMyAttendance({ limit: PROGRESS_ATTENDANCE_LIMIT })
   const summary = attendance.data?.summary
   const records = attendance.data?.records ?? []
@@ -54,17 +57,22 @@ export function StudentProgressPage() {
 
       <section aria-labelledby="by-subject" className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 id="by-subject" className="text-lg font-bold text-navy-900">By Subject</h2>
-          <span className="text-xs font-semibold text-muted">Min {MIN_REQUIRED_ATTENDANCE}%</span>
+          <h2 id="by-subject" className="text-lg font-bold text-navy-900">By Units</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-muted">Min {MIN_REQUIRED_ATTENDANCE}%</span>
+            <Link to="/student-units" className="text-sm font-semibold text-navy-900 hover:underline">
+              My units →
+            </Link>
+          </div>
         </div>
         {units.error ? (
           <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(units.error, 'Could not load your units.')}</Card>
         ) : units.isPending ? (
           <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
-        ) : units.data.length === 0 ? (
+        ) : tracked.length === 0 ? (
           <Card className="p-6 text-sm text-muted">No units to show progress for yet.</Card>
         ) : (
-          <Card className="divide-y divide-line">{units.data.map((u, i) => <SubjectRow key={u.id} unit={u} color={SUBJECT_COLORS[i] ?? SUBJECT_FALLBACK_COLOR} animate={animate} />)}</Card>
+          <Card className="divide-y divide-line">{tracked.map((u, i) => <SubjectRow key={u.id ?? u.code} unit={u} color={SUBJECT_COLORS[i] ?? SUBJECT_FALLBACK_COLOR} animate={animate} />)}</Card>
         )}
       </section>
 
@@ -89,8 +97,8 @@ export function StudentProgressPage() {
       </section>
 
       {streak > 0 && (
-        <Card className="flex items-center gap-3 border border-gold-500/30 bg-gold-100/60 p-5">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gold-500 text-white"><Star className="size-5 fill-current" aria-hidden /></span>
+        <Card className="flex items-center gap-3 border border-blue-100 bg-blue-50/70 p-5">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-blue-700 text-white"><Star className="size-5 fill-current" aria-hidden /></span>
           <div>
             <p className="font-bold text-navy-900">{streak}-Day Streak!</p>
             <p className="text-sm text-muted">You're on a roll — keep it going!</p>
@@ -126,7 +134,7 @@ function OverallRing({ rate, loading, animate }: { rate: number | null; loading:
         <defs>
           <linearGradient id="overallRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#2563eb" />
-            <stop offset="100%" stopColor="#c9971c" />
+            <stop offset="100%" stopColor="#60a5fa" />
           </linearGradient>
         </defs>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e6eaf2" strokeWidth={strokeWidth} />

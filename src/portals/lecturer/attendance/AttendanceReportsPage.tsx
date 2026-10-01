@@ -91,9 +91,9 @@ function UnitReportCard({ unit, rate, animate }: { unit: TaughtUnit; rate: numbe
   const { text, bar } = rateColour(rate)
   const animatedRate = useAnimated(rate, animate)
   return (
-    <Card className="w-64 shrink-0 space-y-3 p-5">
+    <Card className="w-64 shrink-0 space-y-3 p-5 transition-shadow hover:shadow-md">
       <div className="flex items-center justify-between gap-3">
-        <span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{unit.code}</span>
+        <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{unit.code}</span>
         <span className={`text-lg font-bold ${text}`}>{rate.toFixed(0)}%</span>
       </div>
       <h3 className="truncate font-semibold text-navy-900">{unit.name ?? unit.code}</h3>
@@ -126,7 +126,7 @@ function SessionRow({ session }: { session: RecentSession }) {
   return (
     <tr>
       <td className="whitespace-nowrap px-5 py-4 text-muted">{formatShortDate(session.date)}</td>
-      <td className="px-5 py-4"><span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{session.unitCode}</span></td>
+      <td className="px-5 py-4"><span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{session.unitCode}</span></td>
       <td className="px-5 py-4 font-semibold text-navy-900">{session.present}</td>
       <td className="px-5 py-4 text-red-600">{session.absent}</td>
       <td className="px-5 py-4">
@@ -141,7 +141,7 @@ function SessionRow({ session }: { session: RecentSession }) {
       <td className="px-5 py-4">
         <a
           href={sessionExportUrl(session.id)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-900 hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:underline"
         >
           <Download className="size-3.5" aria-hidden /> Download
         </a>
