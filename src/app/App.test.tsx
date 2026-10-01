@@ -101,11 +101,10 @@ describe('lecturer portal', () => {
     await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByRole('heading', { name: /student profile/i })).toBeInTheDocument()
+    expect(await screen.findByText('BSc Computer Science')).toBeInTheDocument()
     // "Ama Mensah" also appears in the shared header's greeting now, so there are two matches.
     expect(screen.getAllByText('Ama Mensah').length).toBeGreaterThan(0)
     expect(screen.getAllByText('STU00042').length).toBeGreaterThan(0)
-    expect(screen.getByText('BSc Computer Science')).toBeInTheDocument()
     // Name and email are from the student records, so they're shown, not editable.
     expect(screen.queryByRole('textbox', { name: /full name/i })).not.toBeInTheDocument()
   })

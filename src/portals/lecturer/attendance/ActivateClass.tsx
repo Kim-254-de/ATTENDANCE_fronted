@@ -31,9 +31,9 @@ export function ActivateClass() {
   }
 
   return (
-    <Card className="overflow-hidden border border-blue-100">
+    <Card className="overflow-hidden border border-orange-500/30">
       <div className="flex items-center gap-3 border-b border-line p-5">
-        <span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-700"><Zap className="size-5" aria-hidden /></span>
+        <span className="grid size-11 place-items-center rounded-xl bg-orange-100 text-orange-600"><Zap className="size-5" aria-hidden /></span>
         <div className="leading-tight">
           <h2 className="font-semibold text-navy-900">Activate Class</h2>
           <p className="text-sm text-muted">Per your timetable — start a session so students can check in</p>
@@ -63,7 +63,7 @@ export function ActivateClass() {
 
         <VerificationMethods />
 
-        <Button className="w-full" onClick={activate} disabled={!unit} loading={create.isPending}>
+        <Button variant="lecturer" className="w-full" onClick={activate} disabled={!unit} loading={create.isPending}>
           <Zap className="size-4" aria-hidden /> Activate Class
         </Button>
         {create.error && <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>}
@@ -94,10 +94,10 @@ function VerificationMethods() {
             key={label}
             title={active ? undefined : 'Coming soon'}
             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-              active ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-line text-muted opacity-60'
+              active ? 'border-orange-500/40 bg-orange-50 text-navy-900' : 'border-line text-muted opacity-60'
             }`}
           >
-            <input type="checkbox" checked={active} disabled={!active} readOnly className="accent-blue-600" />
+            <input type="checkbox" checked={active} disabled={!active} readOnly className="accent-orange-500" />
             <Icon className="size-4 shrink-0" aria-hidden />
             <span className="flex-1 truncate">{label}</span>
             {!active && <span className="shrink-0 text-xs">Soon</span>}

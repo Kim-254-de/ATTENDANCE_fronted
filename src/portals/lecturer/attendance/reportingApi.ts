@@ -12,10 +12,10 @@ export const useSessionReports = (unitId?: string) =>
     refetchInterval: 60_000,
   })
 
-/** Text/bar colour for an attendance rate, from red (low) through gold to green (high). */
+/** Text/bar colour for an attendance rate, from red (low) through orange to green (high). */
 export function rateColour(rate: number) {
   if (rate >= 90) return { text: 'text-success', bar: 'bg-success' }
-  if (rate >= 70) return { text: 'text-gold-500', bar: 'bg-gold-500' }
+  if (rate >= 70) return { text: 'text-orange-500', bar: 'bg-orange-500' }
   return { text: 'text-red-600', bar: 'bg-red-600' }
 }
 

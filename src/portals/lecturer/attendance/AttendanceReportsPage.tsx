@@ -8,6 +8,7 @@ import { useMyUnits } from '@/portals/lecturer/units/unitsApi'
 import { errorMessage } from '@/lib/api'
 import { formatShortDate } from '@/lib/format'
 import type { RecentSession, TaughtUnit } from '@/types'
+import { useAnimated, useFirstVisit } from '@/portals/lecturer/useAnimated'
 import { rateColour, sessionExportUrl, useSessionReports, useUnitAttendanceRates } from './reportingApi'
 
 /**
@@ -26,16 +27,12 @@ export function AttendanceReportsPage() {
   // Lets the Units page's "Attendance" link open this page pre-filtered to one unit.
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(searchParams.get('unit'))
   const rateByUnit = useUnitAttendanceRates()
+  const animate = useFirstVisit('lecturer-attendance-reports')
 
   const filteredSessions = selectedUnitId ? (sessions ?? []).filter((s) => s.unitId === selectedUnitId) : sessions
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      <div>
-        <p className="text-sm font-semibold tracking-wide text-blue-700">TEACHING</p>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Attendance Reports</h2>
-      </div>
-
       {unitsError ? (
         <Card className="flex items-center justify-between p-5" role="alert">
           <p className="text-sm text-red-700">{errorMessage(unitsError, 'Could not load your units.')}</p>
@@ -48,7 +45,7 @@ export function AttendanceReportsPage() {
       ) : (
         <>
           <div className="flex gap-4 overflow-x-auto pb-1">
-            {units.map((unit) => <UnitReportCard key={unit.id} unit={unit} rate={rateByUnit.get(unit.id) ?? 0} />)}
+            {units.map((unit) => <UnitReportCard key={unit.id} unit={unit} rate={rateByUnit.get(unit.id) ?? 0} animate={animate} />)}
           </div>
 
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter by unit">
@@ -90,8 +87,9 @@ export function AttendanceReportsPage() {
   )
 }
 
-function UnitReportCard({ unit, rate }: { unit: TaughtUnit; rate: number }) {
+function UnitReportCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number; animate: boolean }) {
   const { text, bar } = rateColour(rate)
+  const animatedRate = useAnimated(rate, animate)
   return (
     <Card className="w-64 shrink-0 space-y-3 p-5 transition-shadow hover:shadow-md">
       <div className="flex items-center justify-between gap-3">
@@ -100,7 +98,10 @@ function UnitReportCard({ unit, rate }: { unit: TaughtUnit; rate: number }) {
       </div>
       <h3 className="truncate font-semibold text-navy-900">{unit.name ?? unit.code}</h3>
       <div className="h-1.5 w-full rounded-full bg-line" role="img" aria-label={`${rate.toFixed(0)}% average attendance`}>
-        <div className={`h-full rounded-full ${bar}`} style={{ width: `${rate}%` }} />
+        <div
+          className={`h-full rounded-full transition-[width] duration-1000 ease-out motion-reduce:transition-none ${bar}`}
+          style={{ width: `${animatedRate}%` }}
+        />
       </div>
       <p className="text-sm text-muted" title={unitStudentCount(unit).title}>{unitStudentCount(unit).label}</p>
     </Card>
@@ -113,7 +114,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${active ? 'bg-blue-700 text-white shadow-sm' : 'bg-white text-navy-900 ring-1 ring-inset ring-blue-100 hover:bg-blue-50'}`}
+      className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-navy-900 hover:bg-navy-900/5'}`}
     >
       {children}
     </button>

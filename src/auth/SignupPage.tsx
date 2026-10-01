@@ -146,7 +146,7 @@ function LecturerSignup() {
           </div>
         </div>
         <p className="text-xs leading-5 text-muted">Use upper and lower case letters and a digit. Your staff number is checked against the university staff directory before the account is created.</p>
-        <Button type="submit" loading={signup.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">Register account</Button>
+        <Button type="submit" variant="lecturer" loading={signup.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">Register account</Button>
         <p className="text-center text-sm text-muted">
           Are you a student? <Link to="/signup?role=student" className="font-semibold text-navy-900 hover:underline">Register with your registration number</Link>
         </p>
