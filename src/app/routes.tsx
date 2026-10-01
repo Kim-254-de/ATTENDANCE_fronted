@@ -12,6 +12,11 @@ import { LandingPage } from '@/pages/LandingPage'
 // Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
   { path: '/', element: <LandingPage />, errorElement: <RouteError /> },
+  {
+    path: '/terms',
+    lazy: async () => ({ Component: (await import('@/pages/TermsAndConditionsPage')).TermsAndConditionsPage }),
+    errorElement: <RouteError />,
+  },
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
   { path: '/signup', element: <SignupPage />, errorElement: <RouteError /> },
   { path: '/register', element: <Navigate to="/signup?role=lecturer" replace /> },
