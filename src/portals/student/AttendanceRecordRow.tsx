@@ -7,7 +7,7 @@ export const MARKS: Record<DisplayMark, { label: string; tone: string; square: s
   PRESENT: { label: 'Present', tone: 'text-success', square: 'bg-emerald-50 text-success' },
   LATE: { label: 'Late', tone: 'text-orange-600', square: 'bg-orange-50 text-orange-600' },
   ABSENT: { label: 'Absent', tone: 'text-red-700', square: 'bg-red-50 text-red-700' },
-  OPEN: { label: 'Open now', tone: 'text-gold-600', square: 'bg-gold-100 text-gold-600' },
+  OPEN: { label: 'Open now', tone: 'text-blue-700', square: 'bg-blue-50 text-blue-700' },
 }
 
 const formatTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

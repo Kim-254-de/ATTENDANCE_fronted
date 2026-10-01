@@ -83,7 +83,7 @@ export function LoginPage() {
   )
 
   return (
-    <AuthShell title={isStudent ? 'STUDENT PORTAL' : 'Lecturer Portal'} subtitle={isStudent ? 'Sign in to access your attendance dashboard.' : 'Sign in to manage attendance'}>
+    <AuthShell student={isStudent} title={isStudent ? 'STUDENT PORTAL' : 'Lecturer Portal'} subtitle={isStudent ? 'Sign in to access your attendance dashboard.' : 'Sign in to manage attendance'}>
       {isStudent && <StudentAuthTabs active="signin" />}
       <form
         onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: (user) => navigate(landing(user.role), { replace: true }) }))}

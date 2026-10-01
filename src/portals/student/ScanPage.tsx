@@ -78,14 +78,14 @@ export function ScanPage() {
   const cameraOn = state.step === 'scanning' || state.step === 'checking'
 
   return (
-    <main className="min-h-dvh bg-surface p-4 sm:p-8">
+    <main className="student-portal min-h-dvh bg-blue-50 p-4 sm:p-8">
       <div className="mx-auto max-w-md space-y-5">
         <Link to="/student-dashboard" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-navy-900">
           <ArrowLeft className="size-4" aria-hidden /> Dashboard
         </Link>
 
         <div>
-          <p className="text-sm font-semibold text-gold-600">CHECK IN</p>
+          <p className="text-sm font-semibold tracking-wide text-blue-700">CHECK IN</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy-900">Scan the class QR code</h1>
           <p className="mt-2 text-sm text-muted">Point your camera at the code your lecturer is showing. It changes every minute, so scan it live in class.</p>
         </div>
