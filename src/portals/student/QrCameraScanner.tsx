@@ -93,7 +93,7 @@ export function QrCameraScanner({ onScan, paused = false }: Props) {
   if (problem) {
     return (
       <div role="alert" className="flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-2xl bg-navy-900 p-6 text-center text-white">
-        <CameraOff className="size-8 text-gold-300" aria-hidden />
+        <CameraOff className="size-8 text-blue-200" aria-hidden />
         <p className="text-sm leading-6">{PROBLEM_TEXT[problem]}</p>
       </div>
     )

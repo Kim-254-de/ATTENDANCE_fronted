@@ -37,17 +37,25 @@ export function StudentProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Student profile</h1>
-        <p className="mt-2 text-sm text-muted">These details come from the student records. If something is wrong, contact the registrar.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Student Profile</h1>
       </div>
       <div className="space-y-6">
-        <Card className="overflow-hidden">
-          <div className="bg-navy-900 px-6 pb-7 pt-6 text-white">
+        <Card className="space-y-4 p-6">
+          <div className="border-b border-line pb-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Registration number</p>
+            <p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.registrationNumber}</p>
+          </div>
+          <Info icon={<Mail className="size-5" />} label="Email" value={user.email} />
+          <Info icon={<BookOpen className="size-5" />} label="Year of study" value={user.yearOfStudy ? `Year ${user.yearOfStudy}` : 'Not recorded'} />
+          <Info icon={<ShieldCheck className="size-5 text-success" />} label="Account status" value="Active and verified" valueClass="text-success" />
+        </Card>
+        <Card className="overflow-hidden ring-1 ring-blue-100">
+          <div className="bg-linear-to-br from-blue-700 to-navy-900 px-6 pb-7 pt-6 text-white">
             <div className="relative inline-block">
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="size-20 rounded-2xl object-cover shadow-lg shadow-black/15" />
               ) : (
-                <div className="grid size-20 place-items-center rounded-2xl bg-gradient-to-b from-blue-600 to-blue-700 text-2xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
+                <div className="grid size-20 place-items-center rounded-2xl bg-linear-to-b from-blue-600 to-blue-700 text-2xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
               )}
               <button
                 type="button"
@@ -76,20 +84,11 @@ export function StudentProfilePage() {
               <p className="mt-2 text-xs text-red-300">{errorMessage(setAvatar.error ?? removeAvatar.error)}</p>
             )}
           </div>
-          <div className="space-y-4 p-6">
-            <Info icon={<Mail className="size-5" />} label="Email" value={user.email} />
-            <Info icon={<BookOpen className="size-5" />} label="Year of study" value={user.yearOfStudy ? `Year ${user.yearOfStudy}` : 'Not recorded'} />
-            <Info icon={<ShieldCheck className="size-5 text-success" />} label="Account status" value="Active and verified" valueClass="text-success" />
-            <div className="border-t border-line pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Registration number</p>
-              <p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.registrationNumber}</p>
-            </div>
-            <Button variant="secondary" className="w-full" loading={logout.isPending} onClick={signOut}>
-              <LogOut className="size-4" aria-hidden /> Sign out
-            </Button>
-          </div>
         </Card>
         <ChangePasswordCard />
+        <Button variant="secondary" className="w-full" loading={logout.isPending} onClick={signOut}>
+          <LogOut className="size-4" aria-hidden /> Sign out
+        </Button>
       </div>
     </div>
   )

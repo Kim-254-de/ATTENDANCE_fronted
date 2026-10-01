@@ -75,6 +75,7 @@ describe('student units and history pages', () => {
     await user.click(screen.getByRole('button', { name: 'Simulate scan' }))
     await user.click(await screen.findByRole('link', { name: 'Done' }))
 
+    await user.click(await screen.findByRole('link', { name: /progress/i }))
     await user.click(await screen.findByRole('link', { name: /my units/i }))
     const refreshedCs301 = (await screen.findByText('CS301')).closest('li')!
     expect(await within(refreshedCs301).findByText('3 of 3 classes')).toBeInTheDocument()

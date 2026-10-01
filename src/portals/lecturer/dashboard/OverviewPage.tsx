@@ -80,8 +80,8 @@ function ActiveSessionBanner({ sessionId }: { sessionId: string }) {
 
   return (
     <Link to={`/session/${sessionId}`} className="block">
-      <Card className="flex items-center gap-3 border border-emerald-200 bg-emerald-50 p-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-success"><Radio className="size-5" aria-hidden /></span>
+      <Card className="flex items-center gap-3 border border-blue-200 bg-blue-50 p-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-blue-700"><Radio className="size-5" aria-hidden /></span>
         <span className="flex-1 leading-tight">
           <span className="block font-semibold text-navy-900">Class in progress</span>
           <span className="text-sm text-muted">
@@ -98,7 +98,7 @@ function QuickAction({ to, icon: Icon, label }: { to: string; icon: typeof Plus;
   return (
     <Link to={to} className="block">
       <Card className="flex flex-col items-center gap-2 p-4 text-center transition hover:shadow-md">
-        <span className="grid size-11 place-items-center rounded-xl bg-navy-900/5 text-navy-800"><Icon className="size-5" aria-hidden /></span>
+        <span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-800"><Icon className="size-5" aria-hidden /></span>
         <span className="text-sm font-medium text-navy-900">{label}</span>
       </Card>
     </Link>

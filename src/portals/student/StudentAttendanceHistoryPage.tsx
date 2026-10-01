@@ -66,7 +66,6 @@ export function StudentAttendanceHistoryPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Attendance Report</h1>
-        <p className="mt-2 text-sm text-muted">Your complete attendance history</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -83,7 +82,7 @@ export function StudentAttendanceHistoryPage() {
         </div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-blue-600 to-gold-500 transition-[width] duration-1000 ease-out motion-reduce:transition-none"
+            className="h-full rounded-full bg-linear-to-r from-blue-600 to-blue-400 transition-[width] duration-1000 ease-out motion-reduce:transition-none"
             style={{ width: `${animatedRate}%` }}
           />
         </div>
@@ -100,7 +99,7 @@ export function StudentAttendanceHistoryPage() {
             role="tab"
             aria-selected={status === f.value}
             onClick={() => setStatus(f.value)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${status === f.value ? 'bg-blue-700 text-white' : 'bg-white text-navy-900 hover:bg-navy-900/5'}`}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${status === f.value ? 'bg-blue-700 text-white shadow-sm' : 'bg-white text-navy-900 ring-1 ring-blue-100 hover:bg-blue-50'}`}
           >
             {f.label}
           </button>

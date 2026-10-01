@@ -31,9 +31,9 @@ export function ActivateClass() {
   }
 
   return (
-    <Card className="overflow-hidden border border-gold-500/30">
+    <Card className="overflow-hidden border border-blue-100">
       <div className="flex items-center gap-3 border-b border-line p-5">
-        <span className="grid size-11 place-items-center rounded-xl bg-gold-100 text-gold-600"><Zap className="size-5" aria-hidden /></span>
+        <span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-700"><Zap className="size-5" aria-hidden /></span>
         <div className="leading-tight">
           <h2 className="font-semibold text-navy-900">Activate Class</h2>
           <p className="text-sm text-muted">Per your timetable — start a session so students can check in</p>
@@ -53,7 +53,7 @@ export function ActivateClass() {
             No class scheduled right now. <Link to="/units" className="font-semibold text-navy-900 underline">View your units</Link>.
           </p>
         ) : (
-          <div className="rounded-xl bg-navy-900/5 px-4 py-3">
+          <div className="rounded-xl bg-blue-50 px-4 py-3 ring-1 ring-inset ring-blue-100">
             <p className="font-semibold text-navy-900">{unit.name ? `${unit.code} — ${unit.name}` : unit.code}</p>
             {unit.schedule && (
               <p className="text-sm text-muted">{unit.schedule.startTime}–{unit.schedule.endTime} today</p>
@@ -94,10 +94,10 @@ function VerificationMethods() {
             key={label}
             title={active ? undefined : 'Coming soon'}
             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-              active ? 'border-gold-500/40 bg-gold-50 text-navy-900' : 'border-line text-muted opacity-60'
+              active ? 'border-blue-300 bg-blue-50 text-blue-900' : 'border-line text-muted opacity-60'
             }`}
           >
-            <input type="checkbox" checked={active} disabled={!active} readOnly className="accent-gold-500" />
+            <input type="checkbox" checked={active} disabled={!active} readOnly className="accent-blue-600" />
             <Icon className="size-4 shrink-0" aria-hidden />
             <span className="flex-1 truncate">{label}</span>
             {!active && <span className="shrink-0 text-xs">Soon</span>}

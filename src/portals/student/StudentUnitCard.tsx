@@ -15,7 +15,7 @@ export function UnitCard({ unit }: { unit: StudentUnit }) {
     <li>
       <Card className="space-y-3 p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{unit.code}</span>
+          <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{unit.code}</span>
           <span className={`text-lg font-bold ${rateTone(unit.attendanceRate)}`}>{formatRate(unit.attendanceRate)}</span>
         </div>
         <div>
@@ -29,7 +29,7 @@ export function UnitCard({ unit }: { unit: StudentUnit }) {
         {unit.id ? (
           <Link to={`/student-attendance?unitId=${unit.id}`} className="block text-sm font-semibold text-navy-900 hover:underline">View attendance →</Link>
         ) : unit.groupRequired ? (
-          <p className="text-sm text-gold-600">Pick your group for this unit on the timetable app to be added to a class list.</p>
+          <p className="text-sm text-blue-700">Pick your group for this unit on the timetable app to be added to a class list.</p>
         ) : (
           <p className="text-sm text-muted">Attendance starts once your lecturer sets this unit up here.</p>
         )}

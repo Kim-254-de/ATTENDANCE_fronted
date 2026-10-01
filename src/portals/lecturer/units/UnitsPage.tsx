@@ -33,7 +33,7 @@ export function UnitsPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-gold-600">TEACHING</p>
+          <p className="text-sm font-semibold tracking-wide text-blue-700">TEACHING</p>
           <h2 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Your units</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted">Units you are timetabled to teach this semester appear here automatically, with how many students are registered for each. Only students on a unit can check in to its classes.</p>
         </div>
@@ -80,7 +80,7 @@ function UnitCard({ unit, rate }: { unit: TaughtUnit; rate: number | undefined }
     <li>
       <Card className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{unit.code}</span>
+          <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{unit.code}</span>
           {pending ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-semibold text-gold-600">
               <Clock className="size-3.5" aria-hidden /> Pending verification
@@ -115,8 +115,8 @@ function UnitCard({ unit, rate }: { unit: TaughtUnit; rate: number | undefined }
         </div>
 
         <div className="flex items-center gap-4 border-t border-line pt-3 text-sm font-semibold">
-          <Link to={`/units/${unit.id}`} className="text-navy-900 hover:underline">Roster</Link>
-          <Link to={`/attendance?unit=${unit.id}`} className="text-navy-900 hover:underline">Attendance</Link>
+          <Link to={`/units/${unit.id}`} className="text-blue-700 hover:underline">Roster</Link>
+          <Link to={`/attendance?unit=${unit.id}`} className="text-blue-700 hover:underline">Attendance</Link>
         </div>
       </Card>
     </li>
@@ -135,7 +135,7 @@ function AddUnitForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <Card className="border border-gold-500/30 p-5">
+    <Card className="border border-blue-200 bg-white p-5">
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
           <h3 className="font-semibold text-navy-900">Add a unit</h3>
