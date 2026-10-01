@@ -7,7 +7,7 @@ import { attendanceStreak, MIN_REQUIRED_ATTENDANCE, thisMonthsWeeks, thisWeeksDa
 import { formatRate, rateTone } from './StudentUnitCard'
 import { useMyAttendance, useMyStudentUnits } from './studentApi'
 import { useAnimated, useFirstVisit } from './useAnimated'
-
+import { Link } from 'react-router-dom'
 // Deep enough for a meaningful streak, weekly/monthly breakdown and overall rate, unlike the
 // Home page's short preview fetch.
 const PROGRESS_ATTENDANCE_LIMIT = 200
@@ -55,7 +55,12 @@ export function StudentProgressPage() {
       <section aria-labelledby="by-subject" className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 id="by-subject" className="text-lg font-bold text-navy-900">By Subject</h2>
-          <span className="text-xs font-semibold text-muted">Min {MIN_REQUIRED_ATTENDANCE}%</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-muted">Min {MIN_REQUIRED_ATTENDANCE}%</span>
+            <Link to="/student-units" className="text-sm font-semibold text-navy-900 hover:underline">
+              My units →
+            </Link>
+          </div>
         </div>
         {units.error ? (
           <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(units.error, 'Could not load your units.')}</Card>
