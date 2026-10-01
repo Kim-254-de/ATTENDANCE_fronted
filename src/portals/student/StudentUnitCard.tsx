@@ -15,7 +15,7 @@ export function UnitCard({ unit }: { unit: StudentUnit }) {
     <li>
       <Card className="space-y-3 p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{unit.code}</span>
+          <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{unit.code}</span>
           <span className={`text-lg font-bold ${rateTone(unit.attendanceRate)}`}>{formatRate(unit.attendanceRate)}</span>
         </div>
         <div>

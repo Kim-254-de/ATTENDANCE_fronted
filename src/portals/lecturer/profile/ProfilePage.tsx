@@ -72,25 +72,40 @@ export function ProfilePage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <p className="text-sm font-semibold text-gold-600">ACCOUNT SETTINGS</p>
+        <p className="text-sm font-semibold tracking-wide text-blue-700">ACCOUNT SETTINGS</p>
         <p className="mt-1 max-w-2xl text-sm text-muted">Keep your lecturer details current so attendance records and ERP reports identify you correctly.</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
-        <Card className="h-fit overflow-hidden">
-          <div className="bg-navy-900 px-6 pb-7 pt-6 text-white">
+      <div className="space-y-6">
+        <Card className="space-y-4 p-6 sm:p-8">
+          <div className="border-b border-line pb-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Staff number</p>
+            <p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.staffNumber}</p>
+          </div>
+          <div className="flex items-start gap-3">
+            <Mail className="mt-0.5 size-5 text-blue-700" aria-hidden />
+            <div><p className="text-xs font-semibold uppercase tracking-wider text-muted">Email</p><p className="mt-1 break-all text-sm font-medium text-ink">{user.email}</p></div>
+          </div>
+          <div className="flex items-start gap-3">
+            <ShieldCheck className={`mt-0.5 size-5 ${status.className}`} aria-hidden />
+            <div><p className="text-xs font-semibold uppercase tracking-wider text-muted">Account status</p><p className={`mt-1 text-sm font-medium ${status.className}`}>{status.label}</p></div>
+          </div>
+        </Card>
+
+        <Card className="overflow-hidden ring-1 ring-blue-100">
+          <div className="bg-linear-to-br from-blue-600 to-blue-800 px-6 pb-7 pt-6 text-white">
             <div className="relative inline-block">
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="size-20 rounded-2xl object-cover shadow-lg shadow-black/15" />
               ) : (
-                <div className="grid size-20 place-items-center rounded-2xl bg-gold-500 text-2xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
+                <div className="grid size-20 place-items-center rounded-2xl bg-blue-500 text-2xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
               )}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={setAvatar.isPending}
                 aria-label="Change photo"
-                className="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full bg-gold-500 text-navy-900 shadow-md hover:bg-gold-600"
+                className="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700"
               >
                 <Camera className="size-4" aria-hidden />
               </button>
@@ -112,31 +127,11 @@ export function ProfilePage() {
               <p className="mt-2 text-xs text-red-300">{errorMessage(setAvatar.error ?? removeAvatar.error)}</p>
             )}
           </div>
-          <div className="space-y-4 p-6">
-            <div className="flex items-start gap-3">
-              <Mail className="mt-0.5 size-5 text-muted" aria-hidden />
-              <div><p className="text-xs font-semibold uppercase tracking-wider text-muted">Email</p><p className="mt-1 break-all text-sm font-medium text-ink">{user.email}</p></div>
-            </div>
-            <div className="flex items-start gap-3">
-              <ShieldCheck className={`mt-0.5 size-5 ${status.className}`} aria-hidden />
-              <div><p className="text-xs font-semibold uppercase tracking-wider text-muted">Account status</p><p className={`mt-1 text-sm font-medium ${status.className}`}>{status.label}</p></div>
-            </div>
-            <div className="border-t border-line pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Staff number</p><p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.staffNumber}</p></div>
-            <Button
-              variant="ghost"
-              className="w-full justify-center text-red-600 hover:bg-red-50"
-              onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login?role=lecturer', { replace: true }) })}
-              loading={logout.isPending}
-            >
-              <LogOut className="size-4" aria-hidden /> Sign Out
-            </Button>
-          </div>
         </Card>
 
-        <div className="space-y-6">
-          <Card className="p-6 sm:p-8">
+        <Card className="p-6 sm:p-8">
             <div className="flex items-start gap-3 border-b border-line pb-5">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold-100 text-gold-600"><UserRound className="size-5" aria-hidden /></span>
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><UserRound className="size-5" aria-hidden /></span>
               <div><h3 className="font-bold text-navy-900">Personal details</h3></div>
             </div>
             <form className="mt-6 space-y-5" onSubmit={submit}>
@@ -154,10 +149,17 @@ export function ProfilePage() {
                 <Button type="submit" loading={updateProfile.isPending}>Save changes</Button>
               </div>
             </form>
-          </Card>
+        </Card>
 
-          <ChangePasswordCard />
-        </div>
+        <ChangePasswordCard />
+        <Button
+          variant="ghost"
+          className="w-full justify-center text-red-600 hover:bg-red-50"
+          onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login?role=lecturer', { replace: true }) })}
+          loading={logout.isPending}
+        >
+          <LogOut className="size-4" aria-hidden /> Sign Out
+        </Button>
       </div>
     </div>
   )

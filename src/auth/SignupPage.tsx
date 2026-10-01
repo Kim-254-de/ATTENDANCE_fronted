@@ -61,7 +61,7 @@ function LecturerSignup() {
   // created, so there's no email to confirm — sign them in with the details they just chose.
   if (signup.isSuccess) {
     return (
-      <AuthShell title="Account created">
+      <AuthShell student title="Account created">
         <div className="space-y-5 text-center" role="status">
           <div className="mx-auto grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><MailCheck className="size-7" aria-hidden /></div>
           <p className="text-sm leading-6 text-muted">{signup.data.message} Signing you in…</p>
@@ -223,7 +223,7 @@ function StudentSignup() {
   )
 
   return (
-    <AuthShell title="STUDENT PORTAL" subtitle="Register to start tracking your attendance.">
+    <AuthShell student title="STUDENT PORTAL" subtitle="Register to start tracking your attendance.">
       <StudentAuthTabs active="register" />
       <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={onSubmit}>
         {signup.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(signup.error, 'We could not create your account.')}</p>}

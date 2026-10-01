@@ -9,7 +9,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const styles: Record<Variant, string> = {
-  primary: 'bg-gradient-to-b from-gold-500 to-gold-600 text-white shadow-sm hover:brightness-105',
+  primary: 'bg-linear-to-b from-blue-600 to-blue-700 text-white shadow-sm shadow-blue-900/15 hover:brightness-105',
   secondary: 'bg-white text-navy-900 border border-line hover:bg-surface',
   ghost: 'text-navy-900 hover:bg-surface',
   // Used by the student portal, which favours blue over the site-wide gold accent.

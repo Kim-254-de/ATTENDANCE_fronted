@@ -22,18 +22,18 @@ export function Sidebar() {
   return (
     <aside
       aria-label="Primary"
-      className="relative hidden w-64 flex-col overflow-hidden bg-navy-900 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-white lg:flex"
+      className="relative hidden w-64 flex-col overflow-hidden border-r border-blue-100 bg-white p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-navy-900 lg:flex"
     >
-      <div className="pointer-events-none absolute -right-28 -top-24 size-72 rounded-full border-[28px] border-white/5" aria-hidden />
-      <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-navy-800/70" aria-hidden />
+      <div className="pointer-events-none absolute -right-28 -top-24 size-72 rounded-full border-[28px] border-blue-50" aria-hidden />
+      <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-blue-50/70" aria-hidden />
       <div className="flex items-center gap-3 px-1 py-2">
-        <span className="grid size-12 place-items-center rounded-xl bg-gold-500 shadow-[0_8px_18px_rgba(201,151,28,0.25)]"><GraduationCap className="size-6" aria-hidden /></span>
+        <span className="grid size-12 place-items-center rounded-xl bg-blue-700 text-white shadow-[0_8px_18px_rgba(37,99,235,0.18)]"><GraduationCap className="size-6" aria-hidden /></span>
         <div className="flex-1 leading-tight">
-          <p className="text-sm text-blue-200">Lecturer Portal</p>
+          <p className="text-sm font-semibold text-blue-800">Lecturer Portal</p>
         </div>
       </div>
 
-      <p className="mt-6 px-2 text-xs font-semibold tracking-widest text-sky-400">NAVIGATION</p>
+      <p className="mt-6 px-2 text-xs font-semibold tracking-widest text-blue-600">NAVIGATION</p>
       <nav className="mt-2 space-y-1">
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink
@@ -41,14 +41,14 @@ export function Sidebar() {
             to={to}
             end={end}
             className={({ isActive }) =>
-              clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-navy-700/60 text-white' : 'text-blue-100 hover:bg-white/5')
+              clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-blue-50 text-blue-800' : 'text-muted hover:bg-blue-50 hover:text-blue-800')
             }
           >
             {({ isActive }) => (
               <>
                 <Icon className="size-[18px]" aria-hidden />
                 <span className="flex-1">{label}</span>
-                {isActive && <span className="h-5 w-1 rounded-full bg-gold-500" aria-hidden />}
+                {isActive && <span className="h-5 w-1 rounded-full bg-blue-600" aria-hidden />}
               </>
             )}
           </NavLink>
@@ -58,7 +58,7 @@ export function Sidebar() {
       <div className="mt-auto">
         <button
           onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login?role=lecturer', { replace: true }) })}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-blue-100 hover:bg-white/5"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted transition hover:bg-red-50 hover:text-red-700"
         >
           <LogOut className="size-[18px]" aria-hidden /> Sign Out
         </button>

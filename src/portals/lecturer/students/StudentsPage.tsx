@@ -65,7 +65,7 @@ export function StudentsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <p className="text-sm font-semibold text-gold-600">TEACHING</p>
+        <p className="text-sm font-semibold tracking-wide text-blue-700">TEACHING</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Allocated Students</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">Every student registered on a unit you teach, with their attendance standing in that unit.</p>
       </div>
@@ -139,11 +139,11 @@ function StudentRow({ student }: { student: LecturerStudent }) {
       <td className="px-5 py-3 font-mono text-xs text-muted">{student.registrationNumber ?? '—'}</td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-900 text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-blue-700 text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
           <span className="font-medium text-navy-900">{student.fullName ?? 'Unnamed student'}</span>
         </div>
       </td>
-      <td className="px-5 py-3"><span className="rounded-md bg-navy-900/5 px-2 py-1 text-xs font-semibold text-navy-900">{student.unitCode}</span></td>
+      <td className="px-5 py-3"><span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{student.unitCode}</span></td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2">
           <div className="h-1.5 w-20 overflow-hidden rounded-full bg-line">

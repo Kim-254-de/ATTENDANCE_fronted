@@ -11,7 +11,7 @@ export function StudentUnitsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold text-gold-600">STUDENT WORKSPACE</p>
+        <p className="text-sm font-semibold tracking-wide text-blue-700">STUDENT WORKSPACE</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">My units</h1>
         <p className="mt-2 text-sm text-muted">Every unit you're registered for, with your attendance rate in each.</p>
       </div>

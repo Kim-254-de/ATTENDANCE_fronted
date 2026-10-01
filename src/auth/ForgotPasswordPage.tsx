@@ -25,7 +25,7 @@ export function ForgotPasswordPage() {
 
   const loginLink = isStudent ? '/login?role=student' : '/login'
 
-  return <AuthShell title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'} subtitle={isStudent ? 'Reset the password for your attendance dashboard.' : undefined}>
+  return <AuthShell student={isStudent} title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'} subtitle={isStudent ? 'Reset the password for your attendance dashboard.' : undefined}>
     {submittedEmail ? <div className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" role="status">
       <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><CheckCircle2 className="size-7" aria-hidden /></div>
       <div><h2 className="text-xl font-bold text-navy-900">Check your inbox</h2><p className="mt-2 text-sm leading-6 text-muted">If an account exists for <strong className="text-navy-900">{submittedEmail}</strong>, reset instructions will arrive shortly. Remember to check your spam folder.</p></div>

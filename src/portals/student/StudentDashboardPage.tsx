@@ -54,7 +54,7 @@ export function StudentDashboardPage() {
         </div>
         <Link
           to="/scan"
-          className="flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-b from-blue-600 to-blue-700 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
+          className="flex h-12 w-full items-center justify-center rounded-xl bg-linear-to-b from-blue-600 to-blue-700 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
         >
           Start QR Scan
         </Link>
@@ -63,7 +63,7 @@ export function StudentDashboardPage() {
       <Card className="space-y-4 p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-gold-100 text-gold-600"><ScanFace className="size-5" aria-hidden /></span>
+            <span className="grid size-10 place-items-center rounded-xl bg-blue-50 text-blue-700"><ScanFace className="size-5" aria-hidden /></span>
             <div><h2 className="font-bold text-navy-900">Face Recognition</h2><p className="text-xs text-muted">Biometric attendance</p></div>
           </div>
           <span className="inline-flex items-center rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-muted">Coming soon</span>
@@ -87,7 +87,7 @@ export function StudentDashboardPage() {
       <section aria-labelledby="todays-classes" className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 id="todays-classes" className="text-lg font-bold text-navy-900">Today's Classes</h2>
-          <Link to="/student-units" className="text-sm font-semibold text-navy-900 hover:underline">My units →</Link>
+          <Link to="/student-units" className="text-sm font-semibold text-blue-700 hover:underline">My units →</Link>
         </div>
         {attendance.error ? (
           <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(attendance.error, 'Could not load your attendance.')}</Card>

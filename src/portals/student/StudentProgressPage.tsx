@@ -89,8 +89,8 @@ export function StudentProgressPage() {
       </section>
 
       {streak > 0 && (
-        <Card className="flex items-center gap-3 border border-gold-500/30 bg-gold-100/60 p-5">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gold-500 text-white"><Star className="size-5 fill-current" aria-hidden /></span>
+        <Card className="flex items-center gap-3 border border-blue-100 bg-blue-50/70 p-5">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-blue-700 text-white"><Star className="size-5 fill-current" aria-hidden /></span>
           <div>
             <p className="font-bold text-navy-900">{streak}-Day Streak!</p>
             <p className="text-sm text-muted">You're on a roll — keep it going!</p>
@@ -126,7 +126,7 @@ function OverallRing({ rate, loading, animate }: { rate: number | null; loading:
         <defs>
           <linearGradient id="overallRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#2563eb" />
-            <stop offset="100%" stopColor="#c9971c" />
+            <stop offset="100%" stopColor="#60a5fa" />
           </linearGradient>
         </defs>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e6eaf2" strokeWidth={strokeWidth} />
