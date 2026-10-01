@@ -205,8 +205,10 @@ export interface TaughtUnit {
   /** Legacy: nothing creates a pending allocation now that rosters come from the ERP. */
   pendingCount: number
   createdAt: string
-  /** Null only for units created before schedules existed. */
+  /** The single weekly slot, or (from /units/current) the meeting on now; null for a unit meeting several times a week. */
   schedule: UnitSchedule | null
+  /** Every weekly meeting, Monday first, each with its room. Absent from older backends. */
+  slots?: Array<UnitSchedule & { roomCode: string | null }>
   status: UnitVerificationStatus
   /** The unit this class belongs to ("COSC 103" for "COSC 103 GR A"); null for units only added by code. */
   baseCode: string | null

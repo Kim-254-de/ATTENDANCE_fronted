@@ -94,7 +94,11 @@ function UnitCard({ unit, rate }: { unit: TaughtUnit; rate: number | undefined }
 
         <div>
           <h3 className="truncate font-semibold text-navy-900">{unit.name ?? unit.code}</h3>
-          {formatSchedule(unit.schedule) && <p className="text-xs text-muted">{formatSchedule(unit.schedule)}</p>}
+          {unit.slots && unit.slots.length > 0 ? (
+            <p className="text-xs text-muted">{unit.slots.map(formatSchedule).join(' · ')}</p>
+          ) : (
+            formatSchedule(unit.schedule) && <p className="text-xs text-muted">{formatSchedule(unit.schedule)}</p>
+          )}
           {ungrouped && (
             <p className="mt-2 text-xs font-medium text-gold-600" title="They are on no group's roster until they pick their group on the timetable">
               {ungrouped}
