@@ -2,10 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { CreateSessionInput, CurrentQr, DeviceLocation, SessionAttendance, SessionStatus, SessionSummary } from '@/types'
 
-export const useCreateSession = () =>
-  useMutation({
+export const useCreateSession = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
     mutationFn: async (input: CreateSessionInput) => (await api.post<SessionSummary>('/sessions', input)).data,
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['sessions', 'live'] }),
   })
+}
 
 /**
  * The code to show right now. Nothing is written server-side per rotation, so

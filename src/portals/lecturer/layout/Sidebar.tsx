@@ -24,7 +24,7 @@ export function Sidebar() {
       aria-label="Primary"
       className="sticky top-0 hidden h-dvh w-64 flex-col overflow-hidden bg-blue-700 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-white lg:flex"
     >
-      <div className="pointer-events-none absolute -right-28 -top-24 size-72 rounded-full border-[28px] border-white/5" aria-hidden />
+      <div className="pointer-events-none absolute -right-28 -top-24 size-72 rounded-full border-28 border-white/5" aria-hidden />
       <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-blue-800/70" aria-hidden />
       <div className="flex items-center gap-3 px-1 py-2">
         <div className="flex-1 leading-tight">
@@ -40,14 +40,14 @@ export function Sidebar() {
             to={to}
             end={end}
             className={({ isActive }) =>
-              clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-blue-600/50 text-white' : 'text-blue-100 hover:bg-white/5')
+              clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-blue-600 text-white' : 'text-blue-100 hover:bg-white/5')
             }
           >
             {({ isActive }) => (
               <>
-                <Icon className="size-[18px]" aria-hidden />
+                <Icon className="size-4.5" aria-hidden />
                 <span className="flex-1">{label}</span>
-                {isActive && <span className="h-5 w-1 rounded-full bg-orange-500" aria-hidden />}
+                {isActive && <span className="h-5 w-1 rounded-full bg-blue-300" aria-hidden />}
               </>
             )}
           </NavLink>
@@ -59,7 +59,7 @@ export function Sidebar() {
           onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login?role=lecturer', { replace: true }) })}
           className="flex w-full items-center gap-3 rounded-xl border border-red-400 px-3 py-2.5 text-sm text-red-300 transition hover:border-red-600 hover:bg-red-600 hover:text-white"
         >
-          <LogOut className="size-[18px]" aria-hidden /> Sign Out
+          <LogOut className="size-4.5" aria-hidden /> Sign Out
         </button>
       </div>
     </aside>
