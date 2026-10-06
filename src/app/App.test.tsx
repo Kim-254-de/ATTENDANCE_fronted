@@ -74,7 +74,13 @@ describe('lecturer portal', () => {
     await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    await screen.findByLabelText('Full name')
+    expect(await screen.findByText('Dr. Joseph K. Osei')).toBeInTheDocument()
+    expect(screen.queryByText('Personal details')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: /dr\. joseph k\. osei/i }))
+
+    expect(await screen.findByRole('heading', { name: /edit profile/i })).toBeInTheDocument()
     // Name and email are ERP-verified and read-only; only title/department can be edited.
     expect(screen.getByLabelText('Full name')).toHaveAttribute('readonly')
     const department = screen.getByLabelText('Department')
