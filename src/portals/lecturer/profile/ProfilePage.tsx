@@ -48,14 +48,14 @@ export function ProfilePage() {
   const status = STATUS_STYLE[user.status]
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto max-w-xl">
         <Card className="h-fit overflow-hidden">
-          <div className="bg-blue-50 px-6 pb-7 pt-6 text-navy-900">
+          <div className="bg-linear-to-b from-blue-600 to-blue-700 px-5 pb-5 pt-5 text-white sm:px-6">
             <div className="relative inline-block">
               {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="size-20 rounded-2xl object-cover shadow-lg shadow-black/15" />
+                <img src={user.avatarUrl} alt="" className="size-16 rounded-2xl object-cover shadow-lg shadow-black/15" />
               ) : (
-                <div className="grid size-20 place-items-center rounded-2xl bg-blue-100 text-2xl font-bold text-blue-800">{initials(user.fullName)}</div>
+                <div className="grid size-16 place-items-center rounded-2xl bg-white/15 text-xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
               )}
               <button
                 type="button"
@@ -68,26 +68,26 @@ export function ProfilePage() {
               </button>
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickPhoto} />
             </div>
-            <Link to="/profile/edit" className="group mt-5 block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700">
-              <span className="flex items-center gap-2 text-xl font-bold group-hover:underline">{user.fullName}<Pencil className="size-4 opacity-80" aria-hidden /></span>
-              <span className="mt-1 block text-sm text-muted">{user.title || 'Lecturer'} · {user.department}</span>
-              <span className="mt-1 block text-xs font-medium text-blue-700">Edit profile</span>
+            <Link to="/profile/edit" className="group mt-3 block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              <span className="flex items-center gap-2 text-lg font-bold group-hover:underline">{user.fullName}<Pencil className="size-4 opacity-80" aria-hidden /></span>
+              <span className="mt-0.5 block text-sm text-blue-200">{user.title || 'Lecturer'} · {user.department}</span>
+              <span className="mt-0.5 block text-xs text-blue-200">Edit profile</span>
             </Link>
             {(user.avatarUrl || setAvatar.isPending || removeAvatar.isPending) && (
               <button
                 type="button"
                 onClick={() => removeAvatar.mutate()}
                 disabled={removeAvatar.isPending || setAvatar.isPending}
-                className="mt-2 text-xs font-medium text-blue-700 underline hover:text-blue-900"
+                className="mt-2 text-xs font-medium text-blue-200 underline hover:text-white"
               >
                 {setAvatar.isPending ? 'Uploading…' : removeAvatar.isPending ? 'Removing…' : 'Remove photo'}
               </button>
             )}
             {(setAvatar.isError || removeAvatar.isError) && (
-              <p className="mt-2 text-xs text-red-600">{errorMessage(setAvatar.error ?? removeAvatar.error)}</p>
+              <p className="mt-2 text-xs text-red-300">{errorMessage(setAvatar.error ?? removeAvatar.error)}</p>
             )}
           </div>
-          <div className="space-y-4 p-6">
+          <div className="space-y-3 p-5 sm:p-6">
             <div className="flex items-start gap-3">
               <Mail className="mt-0.5 size-5 text-muted" aria-hidden />
               <div><p className="text-xs font-semibold uppercase tracking-wider text-muted">Email</p><p className="mt-1 break-all text-sm font-medium text-ink">{user.email}</p></div>
@@ -96,7 +96,7 @@ export function ProfilePage() {
               <ShieldCheck className={`mt-0.5 size-5 ${status.className}`} aria-hidden />
               <div><p className="text-xs font-semibold uppercase tracking-wider text-muted">Account status</p><p className={`mt-1 text-sm font-medium ${status.className}`}>{status.label}</p></div>
             </div>
-            <div className="border-t border-line pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Staff number</p><p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.staffNumber}</p></div>
+            <div className="border-t border-line pt-3"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Staff number</p><p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.staffNumber}</p></div>
             {forgotPassword.isSuccess ? (
               <p role="status" className="flex items-center gap-2 text-sm font-medium text-success"><MailCheck className="size-4" aria-hidden /> Check your inbox for the reset link.</p>
             ) : (
