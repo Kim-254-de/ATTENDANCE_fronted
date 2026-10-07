@@ -82,6 +82,11 @@ export const routes = [
             handle: { title: 'My Profile' },
           },
           {
+            path: 'profile/edit',
+            lazy: async () => ({ Component: (await import('@/portals/lecturer/profile/EditProfilePage')).EditProfilePage }),
+            handle: { title: 'Edit Profile' },
+          },
+          {
             path: 'attendance',
             lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/AttendanceReportsPage')).AttendanceReportsPage }),
             handle: { title: 'Attendance Reports' },

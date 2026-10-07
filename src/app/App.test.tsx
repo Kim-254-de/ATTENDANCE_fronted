@@ -40,6 +40,31 @@ describe('lecturer portal', () => {
     expect(await screen.findByRole('timer')).toHaveTextContent(/refreshes in/i)
   })
 
+  it('shows only the latest session for each unit in Recent Sessions', async () => {
+    server.use(
+      http.get('/api/reports/sessions', () => HttpResponse.json({
+        success: true,
+        data: [
+          { id: 's1', date: '2026-10-01T08:00:00Z', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', present: 78, absent: 9, total: 87, rate: 90, reference: 'QR-CS301-OLDER' },
+          { id: 's2', date: '2026-10-01T10:00:00Z', unitId: 'u2', unitCode: 'CS405', unitName: 'Database Management Systems', present: 61, absent: 3, total: 64, rate: 95, reference: 'QR-CS405-0908' },
+          { id: 's3', date: '2026-10-01T12:00:00Z', unitId: 'u3', unitCode: 'cs301', unitName: 'Data Structures & Algorithms', present: 80, absent: 7, total: 87, rate: 92, reference: 'QR-CS301-LATEST' },
+        ],
+      })),
+    )
+    const user = userEvent.setup()
+    renderApp('/login?role=lecturer')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    const table = await screen.findByRole('table')
+    expect(within(table).getAllByText(/^CS301$/i)).toHaveLength(1)
+    expect(within(table).getByRole('button', { name: 'Copy reference QR-CS301-LATEST' })).toBeInTheDocument()
+    expect(within(table).queryByRole('button', { name: 'Copy reference QR-CS301-OLDER' })).not.toBeInTheDocument()
+    expect(within(table).getAllByText('CS405')).toHaveLength(1)
+    expect(within(table).getAllByText('01 Oct 2026')).toHaveLength(2)
+  })
+
   it('opens the profile and saves updated lecturer details', async () => {
     const user = userEvent.setup()
     renderApp('/profile')
@@ -49,7 +74,13 @@ describe('lecturer portal', () => {
     await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    await screen.findByLabelText('Full name')
+    expect(await screen.findByText('Dr. Joseph K. Osei')).toBeInTheDocument()
+    expect(screen.queryByText('Personal details')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: /dr\. joseph k\. osei/i }))
+
+    expect(await screen.findByRole('heading', { name: /edit profile/i })).toBeInTheDocument()
     // Name and email are ERP-verified and read-only; only title/department can be edited.
     expect(screen.getByLabelText('Full name')).toHaveAttribute('readonly')
     const department = screen.getByLabelText('Department')

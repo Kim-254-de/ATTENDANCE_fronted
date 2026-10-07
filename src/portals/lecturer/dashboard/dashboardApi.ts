@@ -39,6 +39,21 @@ export const useUnits = () =>
 export const useRecentSessions = (limit = 5) =>
   useQuery({
     queryKey: ['lecturer', 'sessions', 'recent', limit],
-    queryFn: async () => (await api.get<RecentSession[]>('/reports/sessions', { params: { limit } })).data,
+    queryFn: async () => {
+      const sessions = (await api.get<RecentSession[]>('/reports/sessions')).data
+      return latestSessionsPerUnit(sessions).slice(0, limit)
+    },
     refetchInterval: 60_000,
   })
+
+function latestSessionsPerUnit(sessions: RecentSession[]): RecentSession[] {
+  const latestByUnit = new Map<string, RecentSession>()
+  for (const session of sessions) {
+    const unitKey = session.unitCode.trim().toLocaleUpperCase()
+    const existing = latestByUnit.get(unitKey)
+    if (!existing || Date.parse(session.date) > Date.parse(existing.date)) {
+      latestByUnit.set(unitKey, session)
+    }
+  }
+  return [...latestByUnit.values()].sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+}

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
 import { useCurrentUnit } from '@/portals/lecturer/units/unitsApi'
-import { useCreateSession } from './sessionApi'
+import { useCreateSession, useLiveSessions } from './sessionApi'
 
 /**
  * The one action a lecturer needs fastest: whatever class the issued
@@ -15,11 +15,15 @@ import { useCreateSession } from './sessionApi'
  */
 export function ActivateClass() {
   const { data: unit, isPending, error, refetch } = useCurrentUnit()
+  const liveSessions = useLiveSessions()
   const navigate = useNavigate()
   const create = useCreateSession()
+  const activeSession = liveSessions.data?.find((session) =>
+    session.unitId === unit?.id && session.status !== 'CLOSED' && new Date(session.closesAt).getTime() > Date.now(),
+  )
 
   const activate = () => {
-    if (!unit) return
+    if (!unit || activeSession || create.isPending) return
     create.mutate(
       { unitId: unit.id },
       {
@@ -31,16 +35,8 @@ export function ActivateClass() {
   }
 
   return (
-    <Card className="overflow-hidden border border-orange-500/30">
-      <div className="flex items-center gap-3 border-b border-line p-5">
-        <span className="grid size-11 place-items-center rounded-xl bg-orange-100 text-orange-600"><Zap className="size-5" aria-hidden /></span>
-        <div className="leading-tight">
-          <h2 className="font-semibold text-navy-900">Activate Class</h2>
-          <p className="text-sm text-muted">Per your timetable — start a session so students can check in</p>
-        </div>
-      </div>
-
-      <div className="space-y-4 p-5">
+    <Card className="border border-line p-5">
+      <div className="space-y-4">
         {error ? (
           <p role="alert" className="text-sm text-red-600">
             {errorMessage(error, 'Could not load your timetable.')}{' '}
@@ -61,11 +57,20 @@ export function ActivateClass() {
           </div>
         )}
 
-        <VerificationMethods />
+        {!activeSession && <VerificationMethods />}
 
-        <Button variant="lecturer" className="w-full" onClick={activate} disabled={!unit} loading={create.isPending}>
-          <Zap className="size-4" aria-hidden /> Activate Class
-        </Button>
+        {activeSession ? (
+          <Link
+            to={`/session/${activeSession.id}`}
+            className="flex min-h-12 w-full items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+          >
+            {activeSession.status === 'PAUSED' ? 'Class paused — reopen session' : 'Class in progress — reopen session'}
+          </Link>
+        ) : (
+          <Button variant="lecturer" className="w-full" onClick={activate} disabled={!unit || isPending || liveSessions.isPending || create.isPending} loading={create.isPending}>
+            <Zap className="size-4" aria-hidden /> Activate Class
+          </Button>
+        )}
         {create.error && <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>}
       </div>
     </Card>

@@ -568,6 +568,10 @@ export const liveHandlers = [
     await delay(300)
     const unit = units.find((u) => u.id === input.unitId)
     if (!unit) return fail(404, 'NOT_FOUND', 'Unit not found')
+    const existingSession = [...sessions.values()].find((session) =>
+      session.unitId === unit.id && session.status !== 'CLOSED' && new Date(session.closesAt).getTime() > Date.now(),
+    )
+    if (existingSession) return fail(409, 'CONFLICT', 'A class session is already in progress for this unit.')
 
     // Mirrors session.service.ts's resolveClosesAt: a unit with an issued
     // schedule gets closesAt derived from the slot's end time, ignoring any
