@@ -44,7 +44,7 @@ export function FaceTerminalPage() {
 
   const session = qr.data?.session
   const checkedIn = attendance.data?.checkedIn ?? qr.data?.checkedIn
-  const recentFace = attendance.data?.attendees.filter((a) => a.method === 'FACE').slice(0, 5) ?? []
+  const recentFace = attendance.data?.attendees.filter((a) => a.verificationMethod === 'FACE').slice(0, 5) ?? []
 
   const onCapture = (image: string) => {
     identify.mutate(image, {
