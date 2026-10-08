@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInResult, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInMethod, CheckInResult, FaceCheckInResult, FaceIdentifyResult, FaceStatus, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -92,6 +92,8 @@ interface MockSession extends SessionSummary {
   checkedIn: number
   /** Students who checked in through POST /attendance/check-in — one each, like the backend's unique index. */
   checkedInStudents: Set<string>
+  /** Real mock check-ins (QR or face), oldest first, for the attendee list. */
+  records: Array<{ studentUserId: string; fullName: string; registrationNumber: string | null; method: CheckInMethod; recordedAt: string }>
 }
 
 /** Ticks the simulated check-in count up a little, capped at the unit's roster. Never goes down. */
@@ -117,6 +119,7 @@ export const resetMocks = () => {
   for (const key of [...accounts.keys()]) if (!BASE_ACCOUNT_KEYS.has(key)) accounts.delete(key)
   for (const u of units.slice(BASE_UNIT_COUNT)) { schedules.delete(u.id); unitStatuses.delete(u.id); allocations.delete(u.id); timetableCounts.delete(u.id) }
   units.length = BASE_UNIT_COUNT
+  resetFaceMocks()
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -144,7 +147,7 @@ function currentToken(session: MockSession, at = Date.now()) {
 
 /** What the client may see of a session: never its secret or check-in bookkeeping. */
 function toSummary(session: MockSession): SessionSummary {
-  const { secret: _secret, checkedIn: _checkedIn, checkedInStudents: _students, ...summary } = session
+  const { secret: _secret, checkedIn: _checkedIn, checkedInStudents: _students, records: _records, ...summary } = session
   return summary
 }
 
@@ -206,6 +209,7 @@ export function openMockSessionForScan(unitId = 'u1') {
     secret: crypto.randomUUID(),
     checkedIn: 0,
     checkedInStudents: new Set(),
+    records: [],
   }
   sessions.set(session.id, session)
   const expiredCounter = rotationCounter(session) - 2
@@ -447,8 +451,11 @@ const studentsHandler = http.get(`${API}/lecturers/students`, async () => {
  * ERP's enrolment records. The roster sizes in `units` are just headline
  * numbers; these are the rows the roster page actually lists.
  */
-const mockRoster = (names: Array<[reg: string, fullName: string, hasAccount: boolean]>): Allocation[] =>
-  names.map(([registrationNumber, fullName, hasAccount]) => ({
+/** A seeded student's face check-in: turned on in their app (`consented`), and registered by a lecturer (`enrolled`). */
+type SeedFace = 'enrolled' | 'consented' | 'off'
+
+const mockRoster = (names: Array<[reg: string, fullName: string, hasAccount: boolean, face?: SeedFace]>): Allocation[] =>
+  names.map(([registrationNumber, fullName, hasAccount, face = 'off']) => ({
     id: crypto.randomUUID(),
     registrationNumber,
     studentUserId: hasAccount ? crypto.randomUUID() : null,
@@ -456,13 +463,15 @@ const mockRoster = (names: Array<[reg: string, fullName: string, hasAccount: boo
     status: 'ACTIVE' as const,
     source: 'SMARTTT' as const,
     hasAccount,
+    faceConsent: face !== 'off',
+    faceEnrolled: face === 'enrolled',
     createdAt: '2026-09-01T08:00:00Z',
   }))
 
 const allocations = new Map<string, Allocation[]>([
   ['u1', mockRoster([
-    ['SC211/0001/2022', 'Amina Wanjiku Kamau', true],
-    ['SC211/0002/2022', 'Brian Otieno Odhiambo', true],
+    ['SC211/0001/2022', 'Amina Wanjiku Kamau', true, 'enrolled'],
+    ['SC211/0002/2022', 'Brian Otieno Odhiambo', true, 'consented'],
     ['SC211/0006/2021', 'Felix Kiprono Rotich', false],
   ])],
   ['u2', mockRoster([
@@ -470,6 +479,9 @@ const allocations = new Map<string, Allocation[]>([
     ['SC211/0004/2023', 'David Mwangi Njoroge', false],
   ])],
 ])
+
+/** The seeded face state, so tests that register or remove a face don't leak into the next. */
+const SEED_FACES = new Map([...allocations.values()].flat().map((a) => [a.id, { faceConsent: a.faceConsent, faceEnrolled: a.faceEnrolled }]))
 
 const taughtUnit = (u: Unit): TaughtUnit => {
   const list = allocations.get(u.id) ?? []
@@ -552,13 +564,16 @@ export const liveHandlers = [
     if (!store.get()) return unauthorized()
     const session = sessions.get(params.id as string)
     if (!session) return fail(404, 'NOT_FOUND', 'Session not found.')
-    const attendees: SessionAttendance['attendees'] = Array.from({ length: session.checkedIn }, (_, i) => ({
+    const real: SessionAttendance['attendees'] = [...session.records].reverse().map((r, i) => ({ id: `${session.id}-r${i}`, ...r }))
+    const simulated: SessionAttendance['attendees'] = Array.from({ length: Math.max(0, session.checkedIn - real.length) }, (_, i) => ({
       id: `${session.id}-${i}`,
       studentUserId: `stu-${i}`,
-      fullName: `Student ${String(session.checkedIn - i).padStart(3, '0')}`,
+      fullName: `Student ${String(session.checkedIn - real.length - i).padStart(3, '0')}`,
       registrationNumber: null,
-      recordedAt: new Date(Date.now() - i * 20_000).toISOString(),
+      recordedAt: new Date(Date.now() - (i + 1) * 20_000).toISOString(),
+      method: 'QR' as const,
     }))
+    const attendees = [...real, ...simulated]
     return ok({ sessionId: session.id, checkedIn: session.checkedIn, attendees })
   }),
 
@@ -603,6 +618,7 @@ export const liveHandlers = [
       secret: crypto.randomUUID(),
       checkedIn: 0,
       checkedInStudents: new Set(),
+      records: [],
     }
     sessions.set(session.id, session)
     const summary = toSummary(session)
@@ -658,6 +674,7 @@ export const liveHandlers = [
     }
     session.checkedInStudents.add(currentAccount.id)
     session.checkedIn += 1
+    session.records.push({ studentUserId: currentAccount.id, fullName: currentAccount.fullName, registrationNumber: currentAccount.registrationNumber, method: 'QR', recordedAt: new Date().toISOString() })
     const result: CheckInResult = {
       recordId: crypto.randomUUID(),
       sessionId: session.id,
@@ -745,4 +762,146 @@ export const liveHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...dataHandlers, ...liveHandlers]
+// --- Face check-in (backend: src/modules/verification) -----------------------
+
+/** The mock student's own face check-in. */
+let studentFace: { consentedAt: string | null; enrolledAt: string | null } = { consentedAt: null, enrolledAt: null }
+/** Matches the terminal has shown, by token, until confirmed. */
+const faceMatches = new Map<string, { sessionId: string; allocation: Allocation; score: number; expiresAt: number }>()
+const FACE_MATCH_TTL_MS = 60_000
+
+function resetFaceMocks() {
+  studentFace = { consentedAt: null, enrolledAt: null }
+  faceMatches.clear()
+  for (const a of [...allocations.values()].flat()) Object.assign(a, SEED_FACES.get(a.id))
+}
+
+const faceStatus = (): FaceStatus => ({
+  consentGiven: studentFace.consentedAt !== null,
+  consentedAt: studentFace.consentedAt,
+  enrolled: studentFace.enrolledAt !== null,
+  enrolledAt: studentFace.enrolledAt,
+})
+
+/**
+ * What the mock "sees" in a photo. Tests send `face:<full name>` (or `face:none`,
+ * `face:nobody`, `face:twins`) as the image's base64 content; a real camera
+ * frame from the demo decodes to something else, and is treated as `face:any`.
+ */
+function seenInPhoto(image: string): string {
+  try {
+    const text = atob(image.split(',')[1] ?? image)
+    return text.startsWith('face:') ? text.slice(5) : 'any'
+  } catch {
+    return 'any'
+  }
+}
+
+const NO_FACE = 'No face found. Hold the phone at eye level, about an arm\'s length from the student.'
+
+export const faceHandlers = [
+  http.get(`${API}/students/me/face`, () => {
+    if (!store.get()) return unauthorized()
+    if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
+    return ok(faceStatus())
+  }),
+
+  http.put(`${API}/students/me/face-consent`, () => {
+    if (!store.get()) return unauthorized()
+    if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
+    studentFace.consentedAt ??= new Date().toISOString()
+    return ok(faceStatus())
+  }),
+
+  /** Withdrawing deletes the registered face, as on the backend. */
+  http.delete(`${API}/students/me/face-consent`, () => {
+    if (!store.get()) return unauthorized()
+    if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
+    studentFace = { consentedAt: null, enrolledAt: null }
+    return ok(faceStatus())
+  }),
+
+  http.post(`${API}/units/:unitId/students/:studentUserId/face`, async ({ params, request }) => {
+    if (!store.get()) return unauthorized()
+    const allocation = allocations.get(params.unitId as string)?.find((a) => a.studentUserId === params.studentUserId)
+    if (!allocation) return fail(404, 'NOT_FOUND', 'This student is not on the unit.')
+    if (!allocation.faceConsent) {
+      return fail(409, 'FACE_CONSENT_REQUIRED', `${allocation.fullName} has not turned on face check-in in their app yet. Ask them to, then try again.`)
+    }
+    const { images = [] } = (await request.json()) as { images?: string[] }
+    if (images.length !== 3) return fail(400, 'VALIDATION_FAILED', 'Take 3 photos.')
+    await delay(300)
+    const blank = images.findIndex((image) => seenInPhoto(image) === 'none')
+    if (blank >= 0) return HttpResponse.json({ success: false, error: { code: 'FACE_NOT_FOUND', message: NO_FACE, details: { photo: blank + 1 } } }, { status: 422 })
+    const replaced = allocation.faceEnrolled
+    allocation.faceEnrolled = true
+    return ok({ studentUserId: allocation.studentUserId, enrolledAt: new Date().toISOString(), replaced }, 201)
+  }),
+
+  http.delete(`${API}/units/:unitId/students/:studentUserId/face`, ({ params }) => {
+    if (!store.get()) return unauthorized()
+    const allocation = allocations.get(params.unitId as string)?.find((a) => a.studentUserId === params.studentUserId)
+    if (!allocation) return fail(404, 'NOT_FOUND', 'This student is not on the unit.')
+    const removed = allocation.faceEnrolled
+    allocation.faceEnrolled = false
+    return ok({ removed })
+  }),
+
+  /** Mirrors verification.service.ts identifyFace: only the unit's enrolled students can match, and nothing is recorded. */
+  http.post(`${API}/sessions/:id/face/identify`, async ({ params, request }) => {
+    if (!store.get()) return unauthorized()
+    const session = sessions.get(params.id as string)
+    if (!session) return fail(404, 'NOT_FOUND', 'Session not found.')
+    const blocked = assertAcceptingScans(session)
+    if (blocked) return blocked
+    const { image = '' } = (await request.json()) as { image?: string }
+    await delay(250)
+    const seen = seenInPhoto(image)
+    if (seen === 'none') return fail(422, 'FACE_NOT_FOUND', NO_FACE)
+
+    const enrolled = (allocations.get(session.unitId) ?? []).filter((a) => a.status === 'ACTIVE' && a.faceConsent && a.faceEnrolled && a.studentUserId)
+    const counts = { facesInFrame: 1, enrolledOnUnit: enrolled.length }
+    if (seen === 'twins') return ok<FaceIdentifyResult>({ result: 'AMBIGUOUS', ...counts })
+    const allocation = seen === 'any'
+      ? enrolled.find((a) => !session.checkedInStudents.has(a.studentUserId!))
+      : enrolled.find((a) => a.fullName === seen)
+    if (!allocation) return ok<FaceIdentifyResult>({ result: 'NO_MATCH', ...counts })
+
+    const alreadyCheckedIn = session.checkedInStudents.has(allocation.studentUserId!)
+    const expiresAt = Date.now() + FACE_MATCH_TTL_MS
+    const matchToken = alreadyCheckedIn ? null : `mock-match.${crypto.randomUUID()}`
+    if (matchToken) faceMatches.set(matchToken, { sessionId: session.id, allocation, score: 0.87, expiresAt })
+    return ok<FaceIdentifyResult>({
+      result: 'MATCH',
+      student: { studentUserId: allocation.studentUserId!, fullName: allocation.fullName ?? '', registrationNumber: allocation.registrationNumber, avatarDataUrl: null },
+      score: 0.87,
+      alreadyCheckedIn,
+      matchToken,
+      expiresAt: matchToken ? new Date(expiresAt).toISOString() : null,
+      ...counts,
+    })
+  }),
+
+  /** Mirrors verification.service.ts confirmFace: only a current match on this session, and once per student. */
+  http.post(`${API}/sessions/:id/face/confirm`, async ({ params, request }) => {
+    if (!store.get()) return unauthorized()
+    const session = sessions.get(params.id as string)
+    if (!session) return fail(404, 'NOT_FOUND', 'Session not found.')
+    const blocked = assertAcceptingScans(session)
+    if (blocked) return blocked
+    const { matchToken = '' } = (await request.json()) as { matchToken?: string }
+    const match = faceMatches.get(matchToken)
+    if (!match || match.sessionId !== session.id) return fail(400, 'VALIDATION_FAILED', 'Not a valid match. Photograph the student again.')
+    if (Date.now() > match.expiresAt) return fail(410, 'FACE_MATCH_EXPIRED', 'That match has expired. Photograph the student again.')
+    const { allocation } = match
+    const studentUserId = allocation.studentUserId!
+    if (session.checkedInStudents.has(studentUserId)) return fail(409, 'CONFLICT', 'Your attendance for this class has already been recorded.')
+    session.checkedInStudents.add(studentUserId)
+    session.checkedIn += 1
+    const recordedAt = new Date().toISOString()
+    session.records.push({ studentUserId, fullName: allocation.fullName ?? '', registrationNumber: allocation.registrationNumber, method: 'FACE', recordedAt })
+    return ok<FaceCheckInResult>({ recordId: crypto.randomUUID(), sessionId: session.id, unitCode: session.unitCode, studentUserId, fullName: allocation.fullName ?? '', recordedAt }, 201)
+  }),
+]
+
+export const handlers = [...authHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...dataHandlers, ...liveHandlers, ...faceHandlers]

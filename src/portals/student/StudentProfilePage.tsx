@@ -7,6 +7,7 @@ import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
 import { resizeImageFile } from '@/lib/image'
 import { useForgotPassword, useLogout, useMe, useRemoveAvatar, useSetAvatar } from '@/auth/authApi'
+import { FaceCheckInCard } from './FaceCheckInCard'
 
 /**
  * A student's own details. Read-only: name, email and registration number are
@@ -93,6 +94,7 @@ export function StudentProfilePage() {
           </div>
         </div>
       </Card>
+      <FaceCheckInCard />
     </div>
   )
 }

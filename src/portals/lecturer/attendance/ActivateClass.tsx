@@ -78,15 +78,16 @@ export function ActivateClass() {
 }
 
 /**
- * Only QR is implemented (src/modules/verification is a placeholder for the
- * rest — see backend README). Shown anyway so the roadmap is visible, but the
- * other three are inert: nothing consumes their state yet.
+ * QR and facial recognition are both on in every class, each the other's
+ * fallback: a student who can't scan is checked in on the lecturer's phone
+ * (Face check-in, on the live session), and the other way round. Biometric
+ * and ID scan are shown so the roadmap is visible, but are inert.
  */
 function VerificationMethods() {
   const methods = [
     { icon: QrCode, label: 'QR Code', active: true },
     { icon: FingerprintPattern, label: 'Biometric', active: false },
-    { icon: ScanFace, label: 'Facial Recognition', active: false },
+    { icon: ScanFace, label: 'Facial Recognition', active: true },
     { icon: IdCard, label: 'Student ID Scan', active: false },
   ]
 

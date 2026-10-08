@@ -176,7 +176,61 @@ export interface SessionAttendance {
     fullName: string
     registrationNumber: string | null
     recordedAt: string
+    /** Scanned the QR code, or recognised on the lecturer's face terminal. */
+    method: CheckInMethod
   }[]
+}
+
+export type CheckInMethod = 'QR' | 'FACE'
+
+/** GET /students/me/face — the student's own face check-in status. */
+export interface FaceStatus {
+  consentGiven: boolean
+  consentedAt: string | null
+  /** A lecturer has registered their face. */
+  enrolled: boolean
+  enrolledAt: string | null
+}
+
+/** Who the face terminal matched, for the lecturer to check against the person. */
+export interface FaceStudentCard {
+  studentUserId: string
+  fullName: string
+  registrationNumber: string | null
+  avatarDataUrl: string | null
+}
+
+/** POST /sessions/:id/face/identify. Nothing is recorded until the lecturer confirms. */
+export type FaceIdentifyResult =
+  | {
+      result: 'MATCH'
+      student: FaceStudentCard
+      /** Cosine similarity, 0..1. */
+      score: number
+      /** Recorded already (by QR or face): no token, nothing to confirm. */
+      alreadyCheckedIn: boolean
+      matchToken: string | null
+      expiresAt: string | null
+      facesInFrame: number
+      enrolledOnUnit: number
+    }
+  | { result: 'NO_MATCH' | 'AMBIGUOUS'; facesInFrame: number; enrolledOnUnit: number }
+
+/** POST /sessions/:id/face/confirm */
+export interface FaceCheckInResult {
+  recordId: string
+  sessionId: string
+  unitCode: string
+  studentUserId: string
+  fullName: string
+  recordedAt: string
+}
+
+/** POST /units/:unitId/students/:studentUserId/face */
+export interface FaceEnrollmentResult {
+  studentUserId: string
+  enrolledAt: string
+  replaced: boolean
 }
 
 /** The unit's issued weekly meeting slot. 0=Sunday..6=Saturday, matches JS Date#getDay(). */
@@ -243,6 +297,10 @@ export interface Allocation {
   source: 'SMARTTT' | 'ERP' | 'LECTURER' | 'SELF_ENROLLED'
   /** False until the student registers — they are on the list but cannot sign in to check in yet. */
   hasAccount: boolean
+  /** The student turned on face check-in in their app. A lecturer can only register a face after that. */
+  faceConsent: boolean
+  /** A lecturer has registered the student's face. */
+  faceEnrolled: boolean
   createdAt: string
 }
 

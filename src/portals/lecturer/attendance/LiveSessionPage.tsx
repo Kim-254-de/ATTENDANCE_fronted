@@ -1,8 +1,8 @@
-import { ArrowLeft, LocateFixed, Pause, PictureInPicture2, Play, Smartphone, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, LocateFixed, Pause, PictureInPicture2, Play, ScanFace, Smartphone, TriangleAlert } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
 import { formatElapsed } from '@/lib/format'
@@ -134,6 +134,14 @@ export function LiveSessionPage() {
               {session.status === 'PAUSED' ? <Play className="size-4" aria-hidden /> : <Pause className="size-4" aria-hidden />}
               {session.status === 'PAUSED' ? 'Resume' : 'Pause'}
             </Button>
+            {session.status === 'OPEN' && (
+              <Link
+                to={`/session/${session.id}/face`}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 text-sm font-semibold text-navy-900 transition hover:bg-surface"
+              >
+                <ScanFace className="size-4" aria-hidden /> Face check-in
+              </Link>
+            )}
             <FloatButton
               payload={session.status === 'OPEN' && !awaitingLocation ? qr.data?.payload : undefined}
               refreshLabel={secondsLeft !== null ? `Refreshes in ${secondsLeft}s` : undefined}
@@ -178,7 +186,12 @@ function Attendees({ attendees }: { attendees: SessionAttendance['attendees'] })
         {attendees.slice(0, SHOWN).map((a) => (
           <li key={a.id} className="flex justify-between gap-3 rounded-lg bg-white/5 px-3 py-1.5">
             <span className="truncate">{a.fullName}</span>
-            <span className="shrink-0 tabular-nums text-sky-300">
+            <span className="flex shrink-0 items-center gap-2 tabular-nums text-sky-300">
+              {a.method === 'FACE' && (
+                <span className="flex items-center gap-1 rounded-full bg-sky-400/15 px-1.5 text-[10px] font-semibold uppercase tracking-wide">
+                  <ScanFace className="size-3" aria-hidden /> Face
+                </span>
+              )}
               {new Date(a.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </li>
