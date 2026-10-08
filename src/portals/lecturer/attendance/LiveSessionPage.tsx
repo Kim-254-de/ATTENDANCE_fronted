@@ -187,7 +187,7 @@ function Attendees({ attendees }: { attendees: SessionAttendance['attendees'] })
           <li key={a.id} className="flex justify-between gap-3 rounded-lg bg-white/5 px-3 py-1.5">
             <span className="truncate">{a.fullName}</span>
             <span className="flex shrink-0 items-center gap-2 tabular-nums text-sky-300">
-              {a.method === 'FACE' && (
+              {a.verificationMethod === 'FACE' && (
                 <span className="flex items-center gap-1 rounded-full bg-sky-400/15 px-1.5 text-[10px] font-semibold uppercase tracking-wide">
                   <ScanFace className="size-3" aria-hidden /> Face
                 </span>

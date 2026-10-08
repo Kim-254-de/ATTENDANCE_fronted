@@ -264,12 +264,12 @@ export interface SessionAttendance {
     fullName: string
     registrationNumber: string | null
     recordedAt: string
-    /** Scanned the QR code, or recognised on the lecturer's face terminal. */
-    method: CheckInMethod
+    /** What proved they were present: the QR code, a face the lecturer confirmed, a card swipe. */
+    verificationMethod: VerificationMethod
   }[]
 }
 
-export type CheckInMethod = 'QR' | 'FACE'
+export type VerificationMethod = 'QR' | 'FINGERPRINT' | 'FACE' | 'CARD'
 
 /** GET /students/me/face — the student's own face check-in status. */
 export interface FaceStatus {

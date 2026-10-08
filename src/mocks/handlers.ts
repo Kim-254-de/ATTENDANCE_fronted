@@ -107,7 +107,7 @@ interface MockSession extends SessionSummary {
   /** Students who checked in through POST /attendance/check-in — one each, like the backend's unique index. */
   checkedInStudents: Set<string>
   /** Real mock check-ins (QR or face), oldest first, for the attendee list. */
-  records: Array<{ studentUserId: string; fullName: string; registrationNumber: string | null; method: CheckInMethod; recordedAt: string }>
+  records: Array<{ studentUserId: string; fullName: string; registrationNumber: string | null; verificationMethod: VerificationMethod; recordedAt: string }>
 }
 
 /** Ticks the simulated check-in count up a little, capped at the unit's roster. Never goes down. */
@@ -585,7 +585,7 @@ export const liveHandlers = [
       fullName: `Student ${String(session.checkedIn - real.length - i).padStart(3, '0')}`,
       registrationNumber: null,
       recordedAt: new Date(Date.now() - (i + 1) * 20_000).toISOString(),
-      method: 'QR' as const,
+      verificationMethod: 'QR' as const,
     }))
     const attendees = [...real, ...simulated]
     return ok({ sessionId: session.id, checkedIn: session.checkedIn, attendees })
@@ -688,7 +688,7 @@ export const liveHandlers = [
     }
     session.checkedInStudents.add(currentAccount.id)
     session.checkedIn += 1
-    session.records.push({ studentUserId: currentAccount.id, fullName: currentAccount.fullName, registrationNumber: currentAccount.registrationNumber, method: 'QR', recordedAt: new Date().toISOString() })
+    session.records.push({ studentUserId: currentAccount.id, fullName: currentAccount.fullName, registrationNumber: currentAccount.registrationNumber, verificationMethod: 'QR', recordedAt: new Date().toISOString() })
     const result: CheckInResult = {
       recordId: crypto.randomUUID(),
       sessionId: session.id,
@@ -913,7 +913,7 @@ export const faceHandlers = [
     session.checkedInStudents.add(studentUserId)
     session.checkedIn += 1
     const recordedAt = new Date().toISOString()
-    session.records.push({ studentUserId, fullName: allocation.fullName ?? '', registrationNumber: allocation.registrationNumber, method: 'FACE', recordedAt })
+    session.records.push({ studentUserId, fullName: allocation.fullName ?? '', registrationNumber: allocation.registrationNumber, verificationMethod: 'FACE', recordedAt })
     return ok<FaceCheckInResult>({ recordId: crypto.randomUUID(), sessionId: session.id, unitCode: session.unitCode, studentUserId, fullName: allocation.fullName ?? '', recordedAt }, 201)
   }),
 ]
