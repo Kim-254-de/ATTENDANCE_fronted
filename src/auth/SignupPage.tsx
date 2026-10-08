@@ -21,7 +21,7 @@ const schema = z
     email: z.string().trim().email('Enter a valid school email.').max(255, 'Email address is too long.'),
     staffNumber: z.string().trim().min(3, 'Staff number is too short.').max(64, 'Staff number is too long.')
       .regex(/^[A-Za-z0-9][A-Za-z0-9/\-_.]*$/, 'Staff number may only contain letters, digits and / - _ .'),
-    password: z.string().min(12, 'Password must be at least 12 characters.').max(128, 'Password must be at most 128 characters.')
+    password: z.string().min(6, 'Password must be at least 6 characters.').max(128, 'Password must be at most 128 characters.')
       .regex(/[a-z]/, 'Password must include a lowercase letter.')
       .regex(/[A-Z]/, 'Password must include an uppercase letter.')
       .regex(/[0-9]/, 'Password must include a digit.'),
@@ -103,7 +103,7 @@ function LecturerSignup() {
                 {...register('password')}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
-                placeholder="At least 12 characters"
+                placeholder="At least 6 characters"
                 className="input pr-11"
                 aria-invalid={errors.password ? true : undefined}
                 aria-describedby={errors.password ? 'lecturer-password-error' : undefined}
@@ -164,7 +164,7 @@ const studentSchema = z
     email: z.string().trim().email('Enter a valid email address.').max(255, 'Email address is too long.'),
     registrationNumber: z.string().trim().min(3, 'Registration number is too short.').max(64, 'Registration number is too long.')
       .regex(/^[A-Za-z0-9][A-Za-z0-9/\-_.]*$/, 'Registration number may only contain letters, digits and / - _ .'),
-    password: z.string().min(12, 'Password must be at least 12 characters.').max(128, 'Password must be at most 128 characters.')
+    password: z.string().min(6, 'Password must be at least 6 characters.').max(128, 'Password must be at most 128 characters.')
       .regex(/[a-z]/, 'Password must include a lowercase letter.')
       .regex(/[A-Z]/, 'Password must include an uppercase letter.')
       .regex(/[0-9]/, 'Password must include a digit.'),
@@ -238,7 +238,7 @@ function StudentSignup() {
             {...register('password')}
             type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
-            placeholder="At least 12 characters"
+            placeholder="At least 6 characters"
             error={errors.password?.message}
             trailing={
               <button

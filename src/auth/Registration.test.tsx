@@ -33,7 +33,7 @@ describe('lecturer registration', () => {
     server.use(http.post('/api/auth/lecturer/register', () => { calls += 1; return HttpResponse.json({}) }))
     renderApp('/signup?role=lecturer')
     await fillForm({ password: 'short', confirm: 'different' })
-    expect(await screen.findByText('Password must be at least 12 characters.')).toBeInTheDocument()
+    expect(await screen.findByText('Password must be at least 6 characters.')).toBeInTheDocument()
     expect(screen.getByText('Passwords do not match.')).toBeInTheDocument()
     expect(screen.getByLabelText('Password')).toHaveAttribute('aria-invalid', 'true')
     expect(calls).toBe(0)
