@@ -6,6 +6,7 @@ import { SignupPage } from '@/auth/SignupPage'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { VerifyEmailPage } from '@/auth/VerifyEmailPage'
 import { AppLayout } from '@/portals/lecturer/layout/AppLayout'
+import { DepartmentLayout } from '@/portals/department/layout/DepartmentLayout'
 import { StudentLayout } from '@/portals/student/layout/StudentLayout'
 import { LandingPage } from '@/pages/LandingPage'
 
@@ -30,16 +31,19 @@ export const routes = [
   {
     element: <RequireAuth />,
     errorElement: <RouteError />,
+    // Which role may open each page lives on these route objects: RequireAuth reads
+    // `handle.role` off the matched route rather than keeping its own list of paths.
     children: [
       {
         // Full-bleed: no shell chrome, same reasoning as the lecturer's session/:sessionId below.
         path: 'scan',
         lazy: async () => ({ Component: (await import('@/portals/student/ScanPage')).ScanPage }),
-        handle: { title: 'Scan to check in' },
+        handle: { title: 'Scan to check in', role: 'student' },
       },
       {
         element: <StudentLayout />,
         errorElement: <RouteError />,
+        handle: { role: 'student' },
         children: [
           {
             path: 'student-dashboard',
@@ -71,6 +75,7 @@ export const routes = [
       {
         element: <AppLayout />,
         errorElement: <RouteError />,
+        handle: { role: 'lecturer' },
         children: [
           {
             path: 'lecturer-dashboard',
@@ -118,13 +123,45 @@ export const routes = [
         // The lecturer's phone as a face check-in terminal. Full-bleed, like the session it belongs to.
         path: 'session/:sessionId/face',
         lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/FaceTerminalPage')).FaceTerminalPage }),
-        handle: { title: 'Face Check-in' },
+        handle: { title: 'Face Check-in', role: 'lecturer' },
+      },
+      {
+        element: <DepartmentLayout />,
+        errorElement: <RouteError />,
+        handle: { role: 'department' },
+        children: [
+          {
+            path: 'department-dashboard',
+            lazy: async () => ({ Component: (await import('@/portals/department/dashboard/OverviewPage')).OverviewPage }),
+            handle: { title: 'Department Overview' },
+          },
+          {
+            path: 'department-lecturers',
+            lazy: async () => ({ Component: (await import('@/portals/department/lecturers/LecturersPage')).LecturersPage }),
+            handle: { title: 'Lecturers' },
+          },
+          {
+            path: 'department-lecturers/:lecturerUserId',
+            lazy: async () => ({ Component: (await import('@/portals/department/lecturers/LecturerDetailPage')).LecturerDetailPage }),
+            handle: { title: 'Lecturer' },
+          },
+          {
+            path: 'department-students',
+            lazy: async () => ({ Component: (await import('@/portals/department/students/StudentsPage')).StudentsPage }),
+            handle: { title: 'Students' },
+          },
+          {
+            path: 'department-units',
+            lazy: async () => ({ Component: (await import('@/portals/department/units/UnitsPage')).UnitsPage }),
+            handle: { title: 'Units' },
+          },
+        ],
       },
       {
         // Full-bleed: no sidebar/bottom-nav chrome, so this is what's actually projected in the room.
         path: 'session/:sessionId',
         lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/LiveSessionPage')).LiveSessionPage }),
-        handle: { title: 'Live Session' },
+        handle: { title: 'Live Session', role: 'lecturer' },
       },
     ],
   },

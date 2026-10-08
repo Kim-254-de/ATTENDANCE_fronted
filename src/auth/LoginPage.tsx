@@ -9,6 +9,7 @@ import { errorMessage } from '@/lib/api'
 import { Field, IconField } from './AuthCard'
 import { AuthShell } from './AuthShell'
 import { useLogin, useMe } from './authApi'
+import { roleHome } from './roleHome'
 import { SocialSignIn, StudentAuthTabs } from './StudentAuthChrome'
 
 const schema = z.object({
@@ -22,7 +23,7 @@ export function LoginPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const roleParam = searchParams.get('role')
-  const role = roleParam === 'student' ? 'student' : roleParam === 'lecturer' ? 'lecturer' : null
+  const role = roleParam === 'student' || roleParam === 'lecturer' || roleParam === 'department' ? roleParam : null
   const from = (location.state as { from?: string } | null)?.from ?? '/lecturer-dashboard'
   const message = (location.state as { message?: string } | null)?.message
   const { data: me } = useMe()
@@ -34,14 +35,22 @@ export function LoginPage() {
     formState: { errors },
   } = useForm<Values>({ resolver: zodResolver(schema) })
 
-  // Students only have the /student-* pages and /scan, so any other return path would bounce them anyway.
+  // Each portal only has its own pages, so a return path belonging to another role would bounce anyway.
   // A student who opened /scan signed out goes straight back to the scanner after signing in.
-  const landing = (r: string) => (r === 'student' && !from.startsWith('/student-') && from !== '/scan' ? '/student-dashboard' : from)
+  const landing = (r: string) => {
+    if (r === 'student') return from.startsWith('/student-') || from === '/scan' ? from : roleHome(r)
+    if (r === 'department') return from.startsWith('/department-') ? from : roleHome(r)
+    return from
+  }
 
   if (me) return <Navigate to={landing(me.role)} replace />
   if (!role) return <Navigate to="/" replace />
 
   const isStudent = role === 'student'
+  // Department officers share the lecturer form's layout (identifier + password) but not its
+  // staff-number wording, and their accounts are provisioned, never self-registered.
+  const isDepartment = role === 'department'
+  const isLecturer = role === 'lecturer'
   const toggleButton = (
     <button
       type="button"
@@ -83,7 +92,11 @@ export function LoginPage() {
   )
 
   return (
-    <AuthShell student={isStudent} title={isStudent ? 'STUDENT PORTAL' : 'Lecturer Portal'} subtitle={isStudent ? 'Sign in to access your attendance dashboard.' : 'Sign in to manage attendance'}>
+    <AuthShell
+      student={isStudent}
+      title={isStudent ? 'STUDENT PORTAL' : isDepartment ? 'Department Portal' : 'Lecturer Portal'}
+      subtitle={isStudent ? 'Sign in to access your attendance dashboard.' : isDepartment ? 'Sign in to review department attendance' : 'Sign in to manage attendance'}
+    >
       {isStudent && <StudentAuthTabs active="signin" />}
       <form
         onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: (user) => navigate(landing(user.role), { replace: true }) }))}
@@ -105,7 +118,7 @@ export function LoginPage() {
             error={errors.identifier?.message}
           />
         ) : (
-          <Field label="Staff number or email" error={errors.identifier?.message}>
+          <Field label={isDepartment ? 'Email' : 'Staff number or email'} error={errors.identifier?.message}>
             <input {...register('identifier')} autoComplete="username" className="input" />
           </Field>
         )}
@@ -113,10 +126,11 @@ export function LoginPage() {
 
         <div className="flex justify-end"><Link to={isStudent ? '/forgot-password?role=student' : '/forgot-password'} className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
 
-        <Button type="submit" variant={isStudent ? 'accent' : 'lecturer'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
+        <Button type="submit" variant={isStudent ? 'accent' : isDepartment ? 'primary' : 'lecturer'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
         {isStudent && <SocialSignIn />}
       </form>
-      {!isStudent && (
+      {/* Only lecturers self-register: students sign up from their own tabbed form, department accounts are provisioned. */}
+      {isLecturer && (
         <p className="mt-6 text-center text-base text-muted">
           New to UniLearn? <Link to="/signup?role=lecturer" className="font-semibold text-navy-900 hover:underline">Create an account</Link>
         </p>
