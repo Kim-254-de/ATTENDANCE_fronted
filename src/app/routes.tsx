@@ -115,6 +115,12 @@ export const routes = [
         ],
       },
       {
+        // The lecturer's phone as a face check-in terminal. Full-bleed, like the session it belongs to.
+        path: 'session/:sessionId/face',
+        lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/FaceTerminalPage')).FaceTerminalPage }),
+        handle: { title: 'Face Check-in' },
+      },
+      {
         // Full-bleed: no sidebar/bottom-nav chrome, so this is what's actually projected in the room.
         path: 'session/:sessionId',
         lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/LiveSessionPage')).LiveSessionPage }),

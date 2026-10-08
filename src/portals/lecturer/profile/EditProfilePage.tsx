@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { ArrowLeft, Check, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMe, useUpdateProfile, type UpdateProfileInput } from '@/auth/authApi'
+import type { Lecturer } from '@/types'
 import { Field } from '@/auth/ChangePasswordCard'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -10,15 +11,15 @@ import { errorMessage } from '@/lib/api'
 export function EditProfilePage() {
   const { data: me } = useMe()
   const user = me?.role === 'lecturer' ? me : undefined
-  const updateProfile = useUpdateProfile()
-  const [form, setForm] = useState<UpdateProfileInput>({ title: '', department: '' })
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    if (user) setForm({ title: user.title, department: user.department })
-  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
   if (!user) return null
+  // Keyed on the user, so the form starts from their saved details instead of filling in a render late.
+  return <EditProfileForm key={user.id} user={user} />
+}
+
+function EditProfileForm({ user }: { user: Lecturer }) {
+  const updateProfile = useUpdateProfile()
+  const [form, setForm] = useState<UpdateProfileInput>({ title: user.title, department: user.department })
+  const [saved, setSaved] = useState(false)
 
   const setField = (field: keyof UpdateProfileInput, value: string) => {
     setSaved(false)

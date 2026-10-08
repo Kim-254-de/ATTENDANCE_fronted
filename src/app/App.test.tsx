@@ -77,10 +77,12 @@ describe('lecturer portal', () => {
     expect(await screen.findByText('Dr. Joseph K. Osei')).toBeInTheDocument()
     expect(screen.queryByText('Personal details')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+    // The sidebar has its own Sign Out; this is the profile page's.
+    expect(within(screen.getByRole('main')).getByRole('button', { name: /sign out/i })).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: /dr\. joseph k\. osei/i }))
 
-    expect(await screen.findByRole('heading', { name: /edit profile/i })).toBeInTheDocument()
+    // The layout's header shows the page title too; this is the page's own heading.
+    expect(await within(screen.getByRole('main')).findByRole('heading', { name: /edit profile/i })).toBeInTheDocument()
     // Name and email are ERP-verified and read-only; only title/department can be edited.
     expect(screen.getByLabelText('Full name')).toHaveAttribute('readonly')
     const department = screen.getByLabelText('Department')
@@ -89,7 +91,9 @@ describe('lecturer portal', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     expect(await screen.findByText('Profile updated')).toBeInTheDocument()
-    expect(screen.getAllByText(/Software Engineering/).length).toBeGreaterThan(0)
+    // The saved department shows on the profile itself, not just in the form.
+    await user.click(screen.getByRole('link', { name: /back to profile/i }))
+    expect(await screen.findByText(/· Software Engineering/)).toBeInTheDocument()
   })
 
   it("lists every student across the lecturer's units, searchable, sortable and filterable by unit", async () => {

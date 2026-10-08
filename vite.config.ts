@@ -33,6 +33,8 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./src/test/setup.ts'],
       css: false,
       exclude: ['e2e/**', 'node_modules/**'],
+      // Journeys through several pages against a mock API with realistic delays run past the 5 s default.
+      testTimeout: 15_000,
     },
   }
 })
