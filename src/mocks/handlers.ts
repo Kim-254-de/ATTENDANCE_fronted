@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInMethod, CheckInResult, DepartmentLecturer, DepartmentLecturerDetail, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, LecturerTimekeepingEntry, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentLecturerDetail, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, LecturerTimekeepingEntry, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -38,7 +38,7 @@ const departmentOfficer: DepartmentOfficer = {
   email: 'g.mutiso@university.edu',
   departmentId: 'dept-cs',
   departmentName: 'Computer Science',
-  facultyName: 'Faculty of Science & Technology',
+  facultyName: 'Physical Engineering and Technologies',
   status: 'ACTIVE',
   avatarUrl: null,
 }
