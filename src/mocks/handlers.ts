@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInResult, FaceCheckInResult, FaceIdentifyResult, FaceStatus, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentLecturerDetail, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, LecturerTimekeepingEntry, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -30,11 +30,25 @@ const student: Student = {
   avatarUrl: null,
 }
 
+/** Department accounts are provisioned, never self-registered, so email is the only identifier they sign in with. */
+const departmentOfficer: DepartmentOfficer = {
+  id: 'dep-1',
+  role: 'department',
+  fullName: 'Prof. Grace N. Mutiso',
+  email: 'g.mutiso@university.edu',
+  departmentId: 'dept-cs',
+  departmentName: 'Computer Science',
+  facultyName: 'Physical Engineering and Technologies',
+  status: 'ACTIVE',
+  avatarUrl: null,
+}
+
 const accounts = new Map<string, { user: Account; password: string }>([
   [lecturer.staffNumber.toLowerCase(), { user: lecturer, password: 'password' }],
   [student.registrationNumber.toLowerCase(), { user: student, password: 'password' }],
   [lecturer.email.toLowerCase(), { user: lecturer, password: 'password' }],
   [student.email.toLowerCase(), { user: student, password: 'password' }],
+  [departmentOfficer.email.toLowerCase(), { user: departmentOfficer, password: 'password' }],
 ])
 
 /** The seeded accounts; accounts registered during a test are removed by resetMocks. */
@@ -904,4 +918,194 @@ export const faceHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+/* ------------------------------------------------------------------ *
+ * Department portal (GET /departments/*)
+ *
+ * One officer oversees a whole department, so these rows are wider than
+ * the lecturer portal's: three lecturers, the units they teach, and the
+ * timekeeping log behind the on-time rates. All read-only.
+ * ------------------------------------------------------------------ */
+
+/** The seeded lecturer is one of the three, so the lecturer and department portals never disagree about them. */
+const DEPARTMENT_LECTURERS: DepartmentLecturer[] = [
+  { userId: lecturer.id, fullName: lecturer.fullName, staffNumber: lecturer.staffNumber, unitsTaught: 2, studentsTaught: 151, avgAttendanceRate: 92.5, sessionsHeld: 38, avgLateMinutes: 1.2, onTimeRate: 94.7 },
+  { userId: 'lec-2', fullName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', unitsTaught: 2, studentsTaught: 93, avgAttendanceRate: 76, sessionsHeld: 22, avgLateMinutes: 8.4, onTimeRate: 63.6 },
+  { userId: 'lec-3', fullName: 'Mr. Peter Njuguna', staffNumber: 'STF/03480', unitsTaught: 1, studentsTaught: 110, avgAttendanceRate: 68, sessionsHeld: 14, avgLateMinutes: 17.9, onTimeRate: 42.9 },
+]
+
+/** Every unit in the department — a superset of `units` (the seeded lecturer's own), plus two colleagues'. */
+const DEPARTMENT_UNITS: (DepartmentUnit & { lecturerUserId: string })[] = [
+  { id: 'u1', code: 'CS301', name: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, studentCount: 87, attendanceRate: 90 },
+  { id: 'u2', code: 'CS405', name: 'Database Management Systems', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, studentCount: 64, attendanceRate: 95 },
+  { id: 'u3', code: 'CS502', name: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', lecturerUserId: 'lec-2', studentCount: 52, attendanceRate: 76 },
+  { id: 'u4', code: 'CS210', name: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', lecturerUserId: 'lec-3', studentCount: 110, attendanceRate: 68 },
+  // Timetabled but never activated yet, so it has no rate to show — the null-rate case the tables must handle.
+  { id: 'u5', code: 'CS410', name: 'Distributed Systems', lecturerName: 'Dr. Mary Wambui', lecturerUserId: 'lec-2', studentCount: 41, attendanceRate: null },
+]
+
+const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000)
+
+/**
+ * The timekeeping log: scheduled start against when the class was actually
+ * opened. A deliberate mix — early, on time, a few minutes late, and badly
+ * late — so each colour band on the Timekeeping table is exercised.
+ */
+const DEPARTMENT_TIMEKEEPING: (DepartmentTimekeepingEntry & { lecturerUserId: string; unitId: string })[] = [
+  { sessionId: 'dts-1', unitId: 'u1', unitCode: 'CS301', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, scheduledStartAt: hoursAgo(4).toISOString(), opensAt: hoursAgo(4).toISOString(), lateMinutes: 0 },
+  { sessionId: 'dts-2', unitId: 'u2', unitCode: 'CS405', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, scheduledStartAt: hoursAgo(28).toISOString(), opensAt: new Date(hoursAgo(28).getTime() - 3 * 60_000).toISOString(), lateMinutes: -3 },
+  { sessionId: 'dts-3', unitId: 'u1', unitCode: 'CS301', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, scheduledStartAt: hoursAgo(52).toISOString(), opensAt: new Date(hoursAgo(52).getTime() + 2 * 60_000).toISOString(), lateMinutes: 2 },
+  { sessionId: 'dts-4', unitId: 'u3', unitCode: 'CS502', lecturerName: 'Dr. Mary Wambui', lecturerUserId: 'lec-2', scheduledStartAt: hoursAgo(7).toISOString(), opensAt: new Date(hoursAgo(7).getTime() + 9 * 60_000).toISOString(), lateMinutes: 9 },
+  { sessionId: 'dts-5', unitId: 'u5', unitCode: 'CS410', lecturerName: 'Dr. Mary Wambui', lecturerUserId: 'lec-2', scheduledStartAt: null, opensAt: hoursAgo(30).toISOString(), lateMinutes: null },
+  { sessionId: 'dts-6', unitId: 'u4', unitCode: 'CS210', lecturerName: 'Mr. Peter Njuguna', lecturerUserId: 'lec-3', scheduledStartAt: hoursAgo(9).toISOString(), opensAt: new Date(hoursAgo(9).getTime() + 23 * 60_000).toISOString(), lateMinutes: 23 },
+  { sessionId: 'dts-7', unitId: 'u4', unitCode: 'CS210', lecturerName: 'Mr. Peter Njuguna', lecturerUserId: 'lec-3', scheduledStartAt: hoursAgo(33).toISOString(), opensAt: new Date(hoursAgo(33).getTime() + 16 * 60_000).toISOString(), lateMinutes: 16 },
+]
+
+/** Demo rates for the department-wide student list, chosen to show a mix of Active and At Risk standing. */
+const DEMO_DEPARTMENT_STUDENT_RATES = [96, 81, 69, 88, 74, 93, 58, 100]
+
+/**
+ * Students on colleagues' units. Kept separate from `allocations` (the seeded
+ * lecturer's own rosters, which the lecturer portal's tests count) so the
+ * department list can be wider without changing what a lecturer sees.
+ */
+const DEPARTMENT_EXTRA_STUDENTS: { unitId: string; registrationNumber: string; fullName: string }[] = [
+  { unitId: 'u3', registrationNumber: 'SC211/0007/2022', fullName: 'Grace Nyambura Maina' },
+  { unitId: 'u3', registrationNumber: 'SC211/0008/2022', fullName: 'Hassan Ali Noor' },
+  { unitId: 'u4', registrationNumber: 'SC211/0009/2023', fullName: 'Irene Chepkoech Lagat' },
+  { unitId: 'u4', registrationNumber: 'SC211/0010/2023', fullName: 'John Mutua Kilonzo' },
+]
+
+/** Department pages are for department accounts only — mirrors the backend's role guard. */
+const requireDepartment = () => {
+  if (!store.get()) return unauthorized()
+  if (currentAccount.role !== 'department') return fail(403, 'FORBIDDEN', 'Forbidden')
+  return null
+}
+
+const departmentHandlers = [
+  http.get(`${API}/departments/me`, () => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const officer = currentAccount as DepartmentOfficer
+    const profile: DepartmentProfile = {
+      departmentId: officer.departmentId,
+      departmentName: officer.departmentName,
+      facultyName: officer.facultyName,
+    }
+    return ok(profile)
+  }),
+
+  http.get(`${API}/departments/overview`, async () => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(200)
+    const rated = DEPARTMENT_UNITS.filter((u) => u.attendanceRate !== null)
+    const overview: DepartmentOverview = {
+      lecturerCount: DEPARTMENT_LECTURERS.length,
+      studentCount: 212,
+      unitCount: DEPARTMENT_UNITS.length,
+      avgAttendanceRate: Math.round((rated.reduce((n, u) => n + (u.attendanceRate ?? 0), 0) / rated.length) * 10) / 10,
+      sessionsHeld: DEPARTMENT_LECTURERS.reduce((n, l) => n + l.sessionsHeld, 0),
+      onTimeRate: 78.5,
+    }
+    return ok(overview)
+  }),
+
+  http.get(`${API}/departments/lecturers`, async () => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(200)
+    return ok(DEPARTMENT_LECTURERS)
+  }),
+
+  http.get(`${API}/departments/lecturers/:lecturerUserId`, async ({ params }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(200)
+    const row = DEPARTMENT_LECTURERS.find((l) => l.userId === params.lecturerUserId)
+    if (!row) return fail(404, 'NOT_FOUND', 'Lecturer not found in this department.')
+    const detail: DepartmentLecturerDetail = {
+      userId: row.userId,
+      fullName: row.fullName,
+      staffNumber: row.staffNumber,
+      units: DEPARTMENT_UNITS.filter((u) => u.lecturerUserId === row.userId)
+        .map((u) => ({ unitId: u.id, code: u.code, name: u.name, attendanceRate: u.attendanceRate })),
+      recentSessions: DEPARTMENT_TIMEKEEPING.filter((t) => t.lecturerUserId === row.userId)
+        .map(({ sessionId, unitCode, scheduledStartAt, opensAt, lateMinutes }): LecturerTimekeepingEntry =>
+          ({ sessionId, unitCode, scheduledStartAt, opensAt, lateMinutes }))
+        .sort((a, b) => b.opensAt.localeCompare(a.opensAt)),
+    }
+    return ok(detail)
+  }),
+
+  /** One row per (student, unit) across the department — same shape as /lecturers/students. */
+  http.get(`${API}/departments/students`, async () => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(200)
+    let i = 0
+    const rows: LecturerStudent[] = [...allocations.entries()].flatMap(([unitId, roster]) => {
+      const unit = DEPARTMENT_UNITS.find((u) => u.id === unitId)
+      if (!unit) return []
+      return roster.map((a): LecturerStudent => {
+        const rate = DEMO_DEPARTMENT_STUDENT_RATES[i++ % DEMO_DEPARTMENT_STUDENT_RATES.length]!
+        return {
+          id: a.id,
+          registrationNumber: a.registrationNumber,
+          studentUserId: a.studentUserId,
+          fullName: a.fullName,
+          unitId,
+          unitCode: unit.code,
+          unitName: unit.name,
+          sessionsHeld: 20,
+          sessionsAttended: Math.round((rate / 100) * 20),
+          attendanceRate: rate,
+        }
+      })
+    })
+    for (const extra of DEPARTMENT_EXTRA_STUDENTS) {
+      const unit = DEPARTMENT_UNITS.find((u) => u.id === extra.unitId)
+      if (!unit) continue
+      const rate = DEMO_DEPARTMENT_STUDENT_RATES[i++ % DEMO_DEPARTMENT_STUDENT_RATES.length]!
+      rows.push({
+        id: `dep-alloc-${extra.registrationNumber}`,
+        registrationNumber: extra.registrationNumber,
+        studentUserId: null,
+        fullName: extra.fullName,
+        unitId: unit.id,
+        unitCode: unit.code,
+        unitName: unit.name,
+        sessionsHeld: 18,
+        sessionsAttended: Math.round((rate / 100) * 18),
+        attendanceRate: rate,
+      })
+    }
+    return ok(rows)
+  }),
+
+  http.get(`${API}/departments/units`, async () => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(200)
+    const rows: DepartmentUnit[] = DEPARTMENT_UNITS.map(({ lecturerUserId: _lecturerUserId, ...unit }) => unit)
+    return ok(rows)
+  }),
+
+  http.get(`${API}/departments/timekeeping`, async ({ request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(200)
+    const query = new URL(request.url).searchParams
+    const lecturerUserId = query.get('lecturerUserId')
+    const unitId = query.get('unitId')
+    const limit = Number(query.get('limit') ?? 20)
+    const rows: DepartmentTimekeepingEntry[] = DEPARTMENT_TIMEKEEPING
+      .filter((t) => (!lecturerUserId || t.lecturerUserId === lecturerUserId) && (!unitId || t.unitId === unitId))
+      .sort((a, b) => b.opensAt.localeCompare(a.opensAt))
+      .slice(0, Number.isFinite(limit) && limit > 0 ? limit : 20)
+      .map(({ lecturerUserId: _lecturerUserId, unitId: _unitId, ...entry }) => entry)
+    return ok(rows)
+  }),
+]
+
+export const handlers = [...authHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

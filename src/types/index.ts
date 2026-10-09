@@ -27,8 +27,96 @@ export interface Student {
   avatarUrl: string | null
 }
 
-/** Whoever is signed in. Check `role` before using lecturer- or student-only fields. */
-export type Account = Lecturer | Student
+/**
+ * A signed-in department officer: oversees every lecturer, unit and student in
+ * one department, read-only. Not self-registered — the backend provisions these.
+ */
+export interface DepartmentOfficer {
+  id: string
+  role: 'department'
+  fullName: string
+  email: string
+  departmentId: string
+  departmentName: string
+  facultyName: string | null
+  status: AccountStatus
+  avatarUrl: string | null
+}
+
+/** Whoever is signed in. Check `role` before using lecturer-, student- or department-only fields. */
+export type Account = Lecturer | Student | DepartmentOfficer
+
+/** GET /departments/me — the department the signed-in officer oversees. */
+export interface DepartmentProfile {
+  departmentId: string
+  departmentName: string
+  facultyName: string | null
+}
+
+/** GET /departments/overview — the department dashboard's stat tiles. Rates are 0–100. */
+export interface DepartmentOverview {
+  lecturerCount: number
+  studentCount: number
+  unitCount: number
+  avgAttendanceRate: number
+  sessionsHeld: number
+  onTimeRate: number
+}
+
+/** GET /departments/lecturers — one row per lecturer in the department. */
+export interface DepartmentLecturer {
+  userId: string
+  fullName: string
+  staffNumber: string
+  unitsTaught: number
+  studentsTaught: number
+  /** 0–100; null until a session has been held for any of their units. */
+  avgAttendanceRate: number | null
+  sessionsHeld: number
+  /** Mean minutes between a class's scheduled start and when it was actually opened; null with nothing to measure. */
+  avgLateMinutes: number | null
+  /** 0–100; null until a scheduled session has been held. */
+  onTimeRate: number | null
+}
+
+/**
+ * One class meeting as the timekeeping tables read it: when it was meant to
+ * start against when the lecturer actually opened it.
+ */
+export interface LecturerTimekeepingEntry {
+  sessionId: string
+  unitCode: string
+  /** Null for a unit with no issued schedule, so there is nothing to be late against. */
+  scheduledStartAt: string | null
+  opensAt: string
+  /** Minutes after the scheduled start; negative means early. Null when unscheduled. */
+  lateMinutes: number | null
+}
+
+/** GET /departments/lecturers/:lecturerUserId — the drill-down for one lecturer. */
+export interface DepartmentLecturerDetail {
+  userId: string
+  fullName: string
+  staffNumber: string
+  units: { unitId: string; code: string; name: string | null; attendanceRate: number | null }[]
+  recentSessions: LecturerTimekeepingEntry[]
+}
+
+/** GET /departments/timekeeping — recent sessions across the department, newest first. */
+export interface DepartmentTimekeepingEntry extends LecturerTimekeepingEntry {
+  lecturerName: string
+}
+
+/** GET /departments/units — one row per unit taught in the department. */
+export interface DepartmentUnit {
+  id: string
+  code: string
+  name: string | null
+  lecturerName: string
+  studentCount: number
+  /** 0–100; null until a session has been held. */
+  attendanceRate: number | null
+}
 
 /** POST /auth/student/register */
 export interface StudentRegistrationInput {

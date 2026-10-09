@@ -2,13 +2,14 @@ import { GraduationCap, Presentation } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
 import { AuthShell } from '@/auth/AuthShell'
+import { roleHome } from '@/auth/roleHome'
 
 /** The site root: an already-signed-in visitor is sent straight to their dashboard; everyone else picks a role. */
 export function LandingPage() {
   const { data: me } = useMe()
   const navigate = useNavigate()
 
-  if (me) return <Navigate to={me.role === 'student' ? '/student-dashboard' : '/lecturer-dashboard'} replace />
+  if (me) return <Navigate to={roleHome(me.role)} replace />
 
   return (
     <AuthShell title="Welcome to Smart Attendance" subtitle="Choose how you'd like to sign in.">
