@@ -43,8 +43,23 @@ export interface DepartmentOfficer {
   avatarUrl: string | null
 }
 
-/** Whoever is signed in. Check `role` before using lecturer-, student- or department-only fields. */
-export type Account = Lecturer | Student | DepartmentOfficer
+/**
+ * A signed-in faculty officer: oversees every department, lecturer, unit and
+ * student in one faculty, read-only. The department role one level up.
+ */
+export interface FacultyOfficer {
+  id: string
+  role: 'faculty'
+  fullName: string
+  email: string
+  facultyId: string
+  facultyName: string
+  status: AccountStatus
+  avatarUrl: string | null
+}
+
+/** Whoever is signed in. Check `role` before using lecturer-, student-, department- or faculty-only fields. */
+export type Account = Lecturer | Student | DepartmentOfficer | FacultyOfficer
 
 /** GET /departments/me — the department the signed-in officer oversees. */
 export interface DepartmentProfile {
@@ -117,6 +132,190 @@ export interface DepartmentUnit {
   studentCount: number
   /** 0–100; null until a session has been held. */
   attendanceRate: number | null
+}
+
+/**
+ * Faculty types mirror the backend's faculty.service.ts DTOs field-for-field
+ * (verified against the running API, not inferred) — no renaming/mapping
+ * layer, unlike the department module's unit/lecturer-detail endpoints.
+ */
+
+/** GET /faculties/me — the faculty the signed-in officer oversees. */
+export interface FacultyProfile {
+  facultyId: string
+  facultyName: string
+}
+
+/** GET /faculties/overview — the faculty dashboard's stat tiles. Rates are 0–100. */
+export interface FacultyOverview {
+  facultyId: string
+  facultyName: string
+  departmentCount: number
+  lecturerCount: number
+  studentCount: number
+  unitCount: number
+  avgAttendanceRate: number
+  sessionsHeld: number
+  /** 0–100; null until any session in the faculty has a scheduled start to measure against. */
+  onTimeRate: number | null
+  graceMinutes: number
+  periodLabel: string
+}
+
+/** GET /faculties/departments — one row per department, the faculty's distinguishing view. */
+export interface FacultyDepartment {
+  departmentId: string
+  departmentName: string
+  lecturerCount: number
+  studentCount: number
+  unitCount: number
+  avgAttendanceRate: number
+  sessionsHeld: number
+  onTimeRate: number | null
+}
+
+/** GET /faculties/lecturers — one row per lecturer across the whole faculty. */
+export interface FacultyLecturer {
+  userId: string
+  fullName: string
+  staffNumber: string
+  departmentId: string
+  departmentName: string
+  unitsTaught: number
+  studentsTaught: number
+  avgAttendanceRate: number
+  sessionsHeld: number
+  avgLateMinutes: number | null
+  onTimeRate: number | null
+}
+
+/** A unit as the faculty's lists read it — one row per section (e.g. "CSC102 GR A" is its own row). */
+export interface FacultyUnit {
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  lecturerUserId: string
+  lecturerName: string
+  departmentId: string
+  departmentName: string
+  activeStudents: number
+  sessionsHeld: number
+  avgAttendanceRate: number
+}
+
+/** GET /faculties/departments/:departmentId — the drill-down for one department. */
+export interface FacultyDepartmentDetail {
+  departmentId: string
+  departmentName: string
+  lecturers: FacultyLecturer[]
+  units: FacultyUnit[]
+  courses: CourseOffering[]
+}
+
+/** One class meeting as a faculty lecturer drill-down reads it. */
+export interface FacultyLecturerSession {
+  sessionId: string
+  unitId: string
+  unitCode: string
+  title: string | null
+  status: string
+  opensAt: string
+  closesAt: string
+  /** Null for a unit with no issued schedule, so there is nothing to be late against. */
+  scheduledStartAt: string | null
+  /** Minutes after the scheduled start; negative means early. Null when unscheduled. */
+  lateMinutes: number | null
+  present: number
+  total: number
+  attendanceRate: number | null
+}
+
+/** GET /faculties/lecturers/:lecturerUserId — the drill-down for one lecturer. */
+export interface FacultyLecturerDetail {
+  lecturer: {
+    userId: string
+    fullName: string
+    staffNumber: string
+    title: string | null
+    email: string
+    departmentId: string
+    departmentName: string
+  }
+  units: FacultyUnit[]
+  sessions: FacultyLecturerSession[]
+}
+
+/** GET /faculties/students — one row per (student, unit) across the whole faculty. */
+export interface FacultyStudent {
+  id: string
+  registrationNumber: string | null
+  studentUserId: string | null
+  fullName: string | null
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  lecturerUserId: string
+  lecturerName: string
+  departmentId: string
+  departmentName: string
+  sessionsHeld: number
+  sessionsAttended: number
+  attendanceRate: number | null
+}
+
+/** GET /faculties/timekeeping — recent sessions across the faculty, newest first. */
+export interface FacultyTimekeepingEntry {
+  sessionId: string
+  unitId: string
+  unitCode: string
+  lecturerUserId: string
+  lecturerName: string
+  departmentId: string
+  departmentName: string
+  title: string | null
+  scheduledStartAt: string
+  opensAt: string
+  lateMinutes: number
+  onTime: boolean
+}
+
+/**
+ * Course provisioning: faculty provides a course to a department (manually —
+ * no ERP check), the department decides how many lecturer-taught sections it
+ * needs and allocates its own lecturers to them. Types mirror the real
+ * backend's response shapes field-for-field, same discipline as the rest of
+ * the faculty module.
+ */
+
+/** POST /faculties/departments */
+export interface CreateDepartmentResult {
+  departmentId: string
+  departmentName: string
+}
+
+/** POST /faculties/departments/:departmentId/courses */
+export interface ProvidedCourse {
+  id: string
+  code: string
+  name: string | null
+  departmentId: string
+  segmentsPlanned: number
+}
+
+/** GET /departments/courses — a course offering as the department sees it. */
+export interface CourseOffering {
+  id: string
+  code: string
+  name: string | null
+  segmentsPlanned: number
+  /** How many of segmentsPlanned already have a lecturer. */
+  segmentsFilled: number
+}
+
+/** POST /departments/courses/:offeringId/segments — the unit that allocation just created. */
+export interface AllocatedUnit {
+  unitId: string
+  code: string
 }
 
 /** POST /auth/student/register */

@@ -3,23 +3,26 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { AvgLateMinutes, RateBar } from '@/components/attendance/RateBar'
 import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
-import type { DepartmentLecturer } from '@/types'
-import { AvgLateMinutes, RateBar } from '@/components/attendance/RateBar'
-import { useDepartmentLecturers } from './lecturersApi'
+import type { FacultyLecturer } from '@/types'
+import { useFacultyLecturers } from './lecturersApi'
 
-const HEADERS = ['LECTURER', 'STAFF NO.', 'UNITS', 'STUDENTS', 'AVG. ATTENDANCE', 'SESSIONS', 'ON TIME']
+const HEADERS = ['LECTURER', 'STAFF NO.', 'DEPARTMENT', 'UNITS', 'STUDENTS', 'AVG. ATTENDANCE', 'SESSIONS', 'ON TIME']
 
-/** Every lecturer in the department, worst-attended first — the rows that need a conversation. */
+/** Every lecturer across every department in the faculty, worst-attended first — the rows that need a conversation. */
 export function LecturersPage() {
-  const { data: lecturers, isPending, error, refetch } = useDepartmentLecturers()
+  const { data: lecturers, isPending, error, refetch } = useFacultyLecturers()
   const [search, setSearch] = useState('')
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase()
     return (lecturers ?? [])
-      .filter((l) => !query || l.fullName.toLowerCase().includes(query) || l.staffNumber.toLowerCase().includes(query))
+      .filter((l) => !query
+        || l.fullName.toLowerCase().includes(query)
+        || l.staffNumber.toLowerCase().includes(query)
+        || l.departmentName.toLowerCase().includes(query))
       // Null rates (nothing held yet) sort last: there is nothing to act on there.
       .sort((a, b) => (a.avgAttendanceRate ?? 101) - (b.avgAttendanceRate ?? 101))
   }, [lecturers, search])
@@ -27,7 +30,7 @@ export function LecturersPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <p className="max-w-2xl text-sm text-muted">
-        Everyone teaching in your department, listed by attendance standing. Open a row for their units and timekeeping.
+        Everyone teaching across your faculty, listed by attendance standing. Open a row for their units and timekeeping.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -36,8 +39,8 @@ export function LecturersPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name or staff number…"
-            aria-label="Search name or staff number"
+            placeholder="Search name, staff number or department…"
+            aria-label="Search name, staff number or department"
             className="input pl-10"
           />
         </label>
@@ -46,7 +49,7 @@ export function LecturersPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the department’s lecturers.')}</p>
+          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the faculty’s lecturers.')}</p>
           <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
         </Card>
       ) : isPending || !lecturers ? (
@@ -55,13 +58,13 @@ export function LecturersPage() {
         <Card className="p-10 text-center">
           <GraduationCap className="mx-auto size-8 text-muted" aria-hidden />
           <p className="mt-3 font-semibold text-navy-900">No lecturers yet</p>
-          <p className="mt-1 text-sm text-muted">Lecturers appear here once they are assigned a unit in this department.</p>
+          <p className="mt-1 text-sm text-muted">Lecturers appear here once they are assigned a unit in this faculty.</p>
         </Card>
       ) : rows.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted">No lecturers match your search.</Card>
       ) : (
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[880px] text-left text-sm">
+          <table className="w-full min-w-[960px] text-left text-sm">
             <thead>
               <tr className="border-b border-line text-xs font-semibold uppercase tracking-wider text-muted">
                 {HEADERS.map((h) => <th key={h} scope="col" className="px-5 py-3 font-semibold">{h}</th>)}
@@ -77,16 +80,19 @@ export function LecturersPage() {
   )
 }
 
-function LecturerRow({ lecturer }: { lecturer: DepartmentLecturer }) {
+function LecturerRow({ lecturer }: { lecturer: FacultyLecturer }) {
   return (
-    <tr className="transition-colors hover:bg-indigo-50/60">
+    <tr className="transition-colors hover:bg-teal-50/60">
       <td className="px-5 py-3">
-        <Link to={`/department-lecturers/${lecturer.userId}`} className="flex items-center gap-2.5 hover:underline">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-indigo-700 text-xs font-bold text-white">{initials(lecturer.fullName)}</span>
+        <Link to={`/faculty-lecturers/${lecturer.userId}`} className="flex items-center gap-2.5 hover:underline">
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-teal-700 text-xs font-bold text-white">{initials(lecturer.fullName)}</span>
           <span className="font-medium text-navy-900">{lecturer.fullName}</span>
         </Link>
       </td>
       <td className="px-5 py-3 font-mono text-xs text-muted">{lecturer.staffNumber}</td>
+      <td className="px-5 py-3">
+        <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{lecturer.departmentName}</span>
+      </td>
       <td className="px-5 py-3 text-navy-900">{lecturer.unitsTaught}</td>
       <td className="px-5 py-3 text-navy-900">{lecturer.studentsTaught}</td>
       <td className="px-5 py-3"><RateBar rate={lecturer.avgAttendanceRate} label={`${lecturer.fullName} average attendance`} /></td>

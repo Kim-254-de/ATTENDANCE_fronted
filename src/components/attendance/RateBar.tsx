@@ -8,10 +8,10 @@ const VERY_LATE_MINUTES_THRESHOLD = 15
 const formatRate = (rate: number | null) => (rate === null ? '—' : `${rate.toFixed(0)}%`)
 
 /**
- * The lecturer dashboard's inline rate bar (see RecentSessions), shared by the
- * department tables: a track with a filled width, plus the number. Anything
- * under the exam-eligibility threshold reads amber rather than green, so a
- * column of rates can be scanned without reading any of them.
+ * The lecturer dashboard's inline rate bar (see RecentSessions), shared by
+ * the department and faculty portals: a track with a filled width, plus the
+ * number. Anything under the exam-eligibility threshold reads amber rather
+ * than green, so a column of rates can be scanned without reading any of them.
  */
 export function RateBar({ rate, label }: { rate: number | null; label: string }) {
   const below = rate !== null && rate < MIN_REQUIRED_ATTENDANCE

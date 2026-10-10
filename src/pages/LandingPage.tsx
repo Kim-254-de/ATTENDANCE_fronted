@@ -1,4 +1,4 @@
-import { Building2, GraduationCap, Presentation } from 'lucide-react'
+import { Building2, GraduationCap, Landmark, Presentation } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
 import { AuthShell } from '@/auth/AuthShell'
@@ -13,7 +13,7 @@ export function LandingPage() {
 
   return (
     <AuthShell title="Welcome to Smart Attendance" subtitle="Choose how you'd like to sign in.">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <RoleCard
           icon={<Presentation className="size-7" aria-hidden />}
           label="I'm a Lecturer"
@@ -31,6 +31,12 @@ export function LandingPage() {
           label="Department Officer"
           detail="Review attendance and punctuality across your department."
           onClick={() => navigate('/login?role=department')}
+        />
+        <RoleCard
+          icon={<Landmark className="size-7" aria-hidden />}
+          label="Faculty Officer"
+          detail="Compare departments and review attendance across your faculty."
+          onClick={() => navigate('/login?role=faculty')}
         />
       </div>
     </AuthShell>
