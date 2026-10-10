@@ -28,13 +28,13 @@ export function LandingPage() {
         />
         <RoleCard
           icon={<Building2 className="size-7" aria-hidden />}
-          label="Department Officer"
+          label="Department"
           detail="Review attendance and punctuality across your department."
           onClick={() => navigate('/login?role=department')}
         />
         <RoleCard
           icon={<Landmark className="size-7" aria-hidden />}
-          label="Faculty Officer"
+          label="Faculty"
           detail="Compare departments and review attendance across your faculty."
           onClick={() => navigate('/login?role=faculty')}
         />
