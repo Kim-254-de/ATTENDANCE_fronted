@@ -23,7 +23,7 @@ export function LoginPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const roleParam = searchParams.get('role')
-  const role = roleParam === 'student' || roleParam === 'lecturer' || roleParam === 'department' ? roleParam : null
+  const role = roleParam === 'student' || roleParam === 'lecturer' || roleParam === 'department' || roleParam === 'faculty' ? roleParam : null
   const from = (location.state as { from?: string } | null)?.from ?? '/lecturer-dashboard'
   const message = (location.state as { message?: string } | null)?.message
   const { data: me } = useMe()
@@ -40,6 +40,7 @@ export function LoginPage() {
   const landing = (r: string) => {
     if (r === 'student') return from.startsWith('/student-') || from === '/scan' ? from : roleHome(r)
     if (r === 'department') return from.startsWith('/department-') ? from : roleHome(r)
+    if (r === 'faculty') return from.startsWith('/faculty-') ? from : roleHome(r)
     return from
   }
 
@@ -47,10 +48,12 @@ export function LoginPage() {
   if (!role) return <Navigate to="/" replace />
 
   const isStudent = role === 'student'
-  // Department officers share the lecturer form's layout (identifier + password) but not its
-  // staff-number wording, and their accounts are provisioned, never self-registered.
+  // Department and faculty officers share the lecturer form's layout (identifier + password) but
+  // not its staff-number wording, and their accounts are provisioned, never self-registered.
   const isDepartment = role === 'department'
+  const isFaculty = role === 'faculty'
   const isLecturer = role === 'lecturer'
+  const isOfficer = isDepartment || isFaculty
   const toggleButton = (
     <button
       type="button"
@@ -94,8 +97,8 @@ export function LoginPage() {
   return (
     <AuthShell
       student={isStudent}
-      title={isStudent ? 'STUDENT PORTAL' : isDepartment ? 'Department Portal' : 'Lecturer Portal'}
-      subtitle={isStudent ? 'Sign in to access your attendance dashboard.' : isDepartment ? 'Sign in to review department attendance' : 'Sign in to manage attendance'}
+      title={isStudent ? 'STUDENT PORTAL' : isDepartment ? 'Department Portal' : isFaculty ? 'Faculty Portal' : 'Lecturer Portal'}
+      subtitle={isStudent ? 'Sign in to access your attendance dashboard.' : isDepartment ? 'Sign in to review department attendance' : isFaculty ? 'Sign in to review faculty attendance' : 'Sign in to manage attendance'}
     >
       {isStudent && <StudentAuthTabs active="signin" />}
       <form
@@ -118,7 +121,7 @@ export function LoginPage() {
             error={errors.identifier?.message}
           />
         ) : (
-          <Field label={isDepartment ? 'Email' : 'Staff number or email'} error={errors.identifier?.message}>
+          <Field label={isOfficer ? 'Email' : 'Staff number or email'} error={errors.identifier?.message}>
             <input {...register('identifier')} autoComplete="username" className="input" />
           </Field>
         )}
@@ -126,10 +129,10 @@ export function LoginPage() {
 
         <div className="flex justify-end"><Link to={isStudent ? '/forgot-password?role=student' : '/forgot-password'} className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
 
-        <Button type="submit" variant={isStudent ? 'accent' : isDepartment ? 'primary' : 'lecturer'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
+        <Button type="submit" variant={isStudent ? 'accent' : isOfficer ? 'primary' : 'lecturer'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
         {isStudent && <SocialSignIn />}
       </form>
-      {/* Only lecturers self-register: students sign up from their own tabbed form, department accounts are provisioned. */}
+      {/* Only lecturers self-register: students sign up from their own tabbed form, department/faculty accounts are provisioned. */}
       {isLecturer && (
         <p className="mt-6 text-center text-base text-muted">
           New to UniLearn? <Link to="/signup?role=lecturer" className="font-semibold text-navy-900 hover:underline">Create an account</Link>

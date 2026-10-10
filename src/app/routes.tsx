@@ -7,6 +7,7 @@ import { RequireAuth } from '@/auth/RequireAuth'
 import { VerifyEmailPage } from '@/auth/VerifyEmailPage'
 import { AppLayout } from '@/portals/lecturer/layout/AppLayout'
 import { DepartmentLayout } from '@/portals/department/layout/DepartmentLayout'
+import { FacultyLayout } from '@/portals/faculty/layout/FacultyLayout'
 import { StudentLayout } from '@/portals/student/layout/StudentLayout'
 import { LandingPage } from '@/pages/LandingPage'
 
@@ -162,6 +163,48 @@ export const routes = [
         path: 'session/:sessionId',
         lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/LiveSessionPage')).LiveSessionPage }),
         handle: { title: 'Live Session', role: 'lecturer' },
+      },
+      {
+        element: <FacultyLayout />,
+        errorElement: <RouteError />,
+        handle: { role: 'faculty' },
+        children: [
+          {
+            path: 'faculty-dashboard',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/dashboard/OverviewPage')).OverviewPage }),
+            handle: { title: 'Performance Dashboard' },
+          },
+          {
+            path: 'faculty-departments',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/departments/DepartmentsPage')).DepartmentsPage }),
+            handle: { title: 'Departments' },
+          },
+          {
+            path: 'faculty-departments/:departmentId',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/departments/DepartmentDetailPage')).DepartmentDetailPage }),
+            handle: { title: 'Department' },
+          },
+          {
+            path: 'faculty-lecturers',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/lecturers/LecturersPage')).LecturersPage }),
+            handle: { title: 'Lecturers' },
+          },
+          {
+            path: 'faculty-lecturers/:lecturerUserId',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/lecturers/LecturerDetailPage')).LecturerDetailPage }),
+            handle: { title: 'Lecturer' },
+          },
+          {
+            path: 'faculty-students',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/students/StudentsPage')).StudentsPage }),
+            handle: { title: 'Students' },
+          },
+          {
+            path: 'faculty-units',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/units/UnitsPage')).UnitsPage }),
+            handle: { title: 'Units' },
+          },
+        ],
       },
     ],
   },

@@ -8,6 +8,7 @@ export const ROLE_HOME: Record<string, string> = {
   lecturer: '/lecturer-dashboard',
   student: '/student-dashboard',
   department: '/department-dashboard',
+  faculty: '/faculty-dashboard',
 }
 
 export const roleHome = (role: string) => ROLE_HOME[role] ?? '/'

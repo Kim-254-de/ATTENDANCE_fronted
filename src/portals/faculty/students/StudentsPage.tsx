@@ -2,14 +2,14 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Search, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { RateBar } from '@/components/attendance/RateBar'
 import { errorMessage } from '@/lib/api'
 import { MIN_REQUIRED_ATTENDANCE } from '@/lib/attendancePolicy'
 import { initials } from '@/lib/format'
-import type { LecturerStudent } from '@/types'
-import { RateBar } from '@/components/attendance/RateBar'
-import { useDepartmentStudents } from './studentsApi'
+import type { FacultyStudent } from '@/types'
+import { useFacultyStudents } from './studentsApi'
 
-type SortKey = 'name' | 'unit' | 'attendance'
+type SortKey = 'name' | 'department' | 'unit' | 'attendance'
 type SortDir = 'asc' | 'desc'
 
 /** Below the minimum required to sit the exam counts as At Risk; no sessions yet is given the benefit of the doubt. */
@@ -17,17 +17,18 @@ const isAtRisk = (rate: number | null) => rate !== null && rate < MIN_REQUIRED_A
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'name', label: 'Full Name' },
+  { key: 'department', label: 'Department' },
   { key: 'unit', label: 'Unit' },
   { key: 'attendance', label: 'Attendance' },
 ]
 
 /**
- * The lecturer portal's Students table, widened to the whole department: one
- * row per (student, unit), so a student on three units in this department
- * appears three times — each with its own standing.
+ * The department portal's Students table, widened to the whole faculty: one
+ * row per (student, unit) across every department, so a student on three
+ * units appears three times — each with its own standing and department.
  */
 export function StudentsPage() {
-  const { data: students, isPending, error, refetch } = useDepartmentStudents()
+  const { data: students, isPending, error, refetch } = useFacultyStudents()
   const [search, setSearch] = useState('')
   const [unitId, setUnitId] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('name')
@@ -48,11 +49,13 @@ export function StudentsPage() {
         || (s.registrationNumber ?? '').toLowerCase().includes(query)
         || s.unitCode.toLowerCase().includes(query)
         || (s.unitName ?? '').toLowerCase().includes(query)
+        || s.departmentName.toLowerCase().includes(query)
     })
     const dir = sortDir === 'asc' ? 1 : -1
     return filtered.sort((a, b) => {
       switch (sortKey) {
         case 'name': return dir * (a.fullName ?? '').localeCompare(b.fullName ?? '')
+        case 'department': return dir * a.departmentName.localeCompare(b.departmentName)
         case 'unit': return dir * a.unitCode.localeCompare(b.unitCode)
         case 'attendance': return dir * ((a.attendanceRate ?? -1) - (b.attendanceRate ?? -1))
       }
@@ -66,7 +69,7 @@ export function StudentsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <p className="max-w-2xl text-sm text-muted">Every student registered on a unit taught in your department, with their attendance standing in that unit.</p>
+      <p className="max-w-2xl text-sm text-muted">Every student registered on a unit taught in your faculty, with their attendance standing and department.</p>
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="relative min-w-[240px] flex-1">
@@ -74,8 +77,8 @@ export function StudentsPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, ID or unit…"
-            aria-label="Search name, ID or unit"
+            placeholder="Search name, ID, unit or department…"
+            aria-label="Search name, ID, unit or department"
             className="input pl-10"
           />
         </label>
@@ -90,7 +93,7 @@ export function StudentsPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the department’s students.')}</p>
+          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the faculty’s students.')}</p>
           <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
         </Card>
       ) : isPending || !students ? (
@@ -99,13 +102,13 @@ export function StudentsPage() {
         <Card className="p-10 text-center">
           <Users className="mx-auto size-8 text-muted" aria-hidden />
           <p className="mt-3 font-semibold text-navy-900">No students yet</p>
-          <p className="mt-1 text-sm text-muted">Students appear here once they are registered on a unit in this department.</p>
+          <p className="mt-1 text-sm text-muted">Students appear here once they are registered on a unit in this faculty.</p>
         </Card>
       ) : rows.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted">No students match your search.</Card>
       ) : (
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[840px] text-left text-sm">
+          <table className="w-full min-w-[960px] text-left text-sm">
             <thead>
               <tr className="border-b border-line text-xs font-semibold uppercase tracking-wider text-muted">
                 <th scope="col" className="px-5 py-3 font-semibold">Student ID</th>
@@ -132,19 +135,22 @@ export function StudentsPage() {
   )
 }
 
-function StudentRow({ student }: { student: LecturerStudent }) {
+function StudentRow({ student }: { student: FacultyStudent }) {
   const atRisk = isAtRisk(student.attendanceRate)
   return (
-    <tr className="transition-colors hover:bg-indigo-50/60">
+    <tr className="transition-colors hover:bg-teal-50/60">
       <td className="px-5 py-3 font-mono text-xs text-muted">{student.registrationNumber ?? '—'}</td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-indigo-700 text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-teal-700 text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
           <span className="font-medium text-navy-900">{student.fullName ?? 'Unnamed student'}</span>
         </div>
       </td>
       <td className="px-5 py-3">
-        <span className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-800 ring-1 ring-inset ring-indigo-100" title={student.unitName ?? undefined}>{student.unitCode}</span>
+        <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{student.departmentName}</span>
+      </td>
+      <td className="px-5 py-3">
+        <span className="rounded-md bg-navy-900/5 px-2 py-1 text-xs font-semibold text-navy-900" title={student.unitName ?? undefined}>{student.unitCode}</span>
       </td>
       <td className="px-5 py-3"><RateBar rate={student.attendanceRate} label={`${student.fullName ?? 'Student'} attendance in ${student.unitCode}`} /></td>
       <td className="px-5 py-3"><b className="text-navy-900">{student.sessionsAttended}</b><span className="text-muted">/{student.sessionsHeld}</span></td>
