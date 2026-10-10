@@ -1,4 +1,4 @@
-import { BookOpen, GraduationCap, LayoutGrid, Users } from 'lucide-react'
+import { BookOpen, GraduationCap, LayoutGrid, Library, Users } from 'lucide-react'
 
 /**
  * The portal's primary navigation, shared by Sidebar (lg+) and BottomNav
@@ -6,6 +6,7 @@ import { BookOpen, GraduationCap, LayoutGrid, Users } from 'lucide-react'
  */
 export const nav = [
   { to: '/department-dashboard', label: 'Dashboard', icon: LayoutGrid, end: true },
+  { to: '/department-courses', label: 'Courses', icon: Library },
   { to: '/department-lecturers', label: 'Lecturers', icon: GraduationCap },
   { to: '/department-students', label: 'Students', icon: Users },
   { to: '/department-units', label: 'Units', icon: BookOpen },

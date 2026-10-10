@@ -1,11 +1,13 @@
-import { ArrowLeft, Building2 } from 'lucide-react'
+import { ArrowLeft, Building2, Plus } from 'lucide-react'
+import { useId, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AvgLateMinutes, RateBar } from '@/components/attendance/RateBar'
-import { errorMessage } from '@/lib/api'
+import { errorMessage, fieldErrors } from '@/lib/api'
 import { initials } from '@/lib/format'
-import { useFacultyDepartment } from './departmentsApi'
+import { useFacultyDepartment, useProvideCourse } from './departmentsApi'
 
 /**
  * One department, from the faculty's side: its lecturers (load, attendance,
@@ -16,6 +18,7 @@ import { useFacultyDepartment } from './departmentsApi'
 export function DepartmentDetailPage() {
   const { departmentId } = useParams<{ departmentId: string }>()
   const { data, isPending, error, refetch } = useFacultyDepartment(departmentId)
+  const [adding, setAdding] = useState(false)
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -38,6 +41,49 @@ export function DepartmentDetailPage() {
               <h2 className="truncate text-lg font-bold text-navy-900">{data.departmentName}</h2>
               <p className="text-xs text-muted">{data.lecturers.length} lecturer{data.lecturers.length === 1 ? '' : 's'} · {data.units.length} unit{data.units.length === 1 ? '' : 's'}</p>
             </div>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <div className="flex items-center justify-between gap-4 p-5">
+              <div>
+                <h2 className="font-semibold text-navy-900">Courses offered</h2>
+                <p className="mt-1 text-sm text-muted">What this department can hand to lecturers. The department decides how many sections each needs.</p>
+              </div>
+              {!adding && (
+                <Button onClick={() => setAdding(true)}>
+                  <Plus className="size-4" aria-hidden /> Provide a course
+                </Button>
+              )}
+            </div>
+            {adding && departmentId && (
+              <div className="border-t border-line p-5">
+                <ProvideCourseForm departmentId={departmentId} onDone={() => setAdding(false)} />
+              </div>
+            )}
+            {data.courses.length === 0 ? (
+              !adding && <p className="border-t border-line p-8 text-center text-sm text-muted">No courses provided to this department yet.</p>
+            ) : (
+              <div className="overflow-x-auto border-t border-line">
+                <table className="w-full min-w-[520px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-line bg-surface/60 text-xs font-semibold uppercase tracking-wider text-muted">
+                      {['COURSE', 'NAME', 'SECTIONS'].map((h) => <th key={h} scope="col" className="px-5 py-3">{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {data.courses.map((c) => (
+                      <tr key={c.id}>
+                        <td className="px-5 py-3">
+                          <span className="rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{c.code}</span>
+                        </td>
+                        <td className="px-5 py-3 text-navy-900">{c.name ?? '—'}</td>
+                        <td className="px-5 py-3 text-navy-900">{c.segmentsFilled} / {c.segmentsPlanned} assigned</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
 
           <Card className="overflow-hidden">
@@ -108,5 +154,63 @@ export function DepartmentDetailPage() {
         </>
       )}
     </div>
+  )
+}
+
+function ProvideCourseForm({ departmentId, onDone }: { departmentId: string; onDone: () => void }) {
+  const id = useId()
+  const provide = useProvideCourse(departmentId)
+  const [code, setCode] = useState('')
+  const [name, setName] = useState('')
+  const fields = fieldErrors(provide.error)
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    provide.mutate({ code, name: name.trim() || undefined }, { onSuccess: onDone })
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4" noValidate>
+      <p className="text-sm text-muted">Entered directly — this isn't checked against the issued timetable. The department assigns a lecturer to it next.</p>
+      <div className="flex flex-wrap gap-4">
+        <div className="max-w-[200px] flex-1 space-y-1.5">
+          <label htmlFor={`${id}-code`} className="text-sm font-medium text-navy-900">Course code</label>
+          <input
+            id={`${id}-code`}
+            className="input uppercase"
+            placeholder="MECH 201"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            maxLength={32}
+            required
+            autoFocus
+            aria-invalid={!!fields.code || undefined}
+          />
+          {fields.code && <p className="text-xs text-red-600">{fields.code}</p>}
+        </div>
+        <div className="max-w-xs flex-1 space-y-1.5">
+          <label htmlFor={`${id}-name`} className="text-sm font-medium text-navy-900">Name (optional)</label>
+          <input
+            id={`${id}-name`}
+            className="input"
+            placeholder="Thermodynamics"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={200}
+            aria-invalid={!!fields.name || undefined}
+          />
+          {fields.name && <p className="text-xs text-red-600">{fields.name}</p>}
+        </div>
+      </div>
+      {provide.error && !fields.code && !fields.name && (
+        <p role="alert" className="text-sm text-red-600">{errorMessage(provide.error)}</p>
+      )}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
+        <Button type="submit" loading={provide.isPending} disabled={!code.trim()}>
+          Provide course
+        </Button>
+      </div>
+    </form>
   )
 }

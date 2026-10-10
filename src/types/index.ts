@@ -209,6 +209,7 @@ export interface FacultyDepartmentDetail {
   departmentName: string
   lecturers: FacultyLecturer[]
   units: FacultyUnit[]
+  courses: CourseOffering[]
 }
 
 /** One class meeting as a faculty lecturer drill-down reads it. */
@@ -276,6 +277,45 @@ export interface FacultyTimekeepingEntry {
   opensAt: string
   lateMinutes: number
   onTime: boolean
+}
+
+/**
+ * Course provisioning: faculty provides a course to a department (manually —
+ * no ERP check), the department decides how many lecturer-taught sections it
+ * needs and allocates its own lecturers to them. Types mirror the real
+ * backend's response shapes field-for-field, same discipline as the rest of
+ * the faculty module.
+ */
+
+/** POST /faculties/departments */
+export interface CreateDepartmentResult {
+  departmentId: string
+  departmentName: string
+}
+
+/** POST /faculties/departments/:departmentId/courses */
+export interface ProvidedCourse {
+  id: string
+  code: string
+  name: string | null
+  departmentId: string
+  segmentsPlanned: number
+}
+
+/** GET /departments/courses — a course offering as the department sees it. */
+export interface CourseOffering {
+  id: string
+  code: string
+  name: string | null
+  segmentsPlanned: number
+  /** How many of segmentsPlanned already have a lecturer. */
+  segmentsFilled: number
+}
+
+/** POST /departments/courses/:offeringId/segments — the unit that allocation just created. */
+export interface AllocatedUnit {
+  unitId: string
+  code: string
 }
 
 /** POST /auth/student/register */

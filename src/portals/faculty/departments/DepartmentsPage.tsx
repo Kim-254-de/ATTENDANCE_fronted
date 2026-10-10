@@ -1,12 +1,13 @@
-import { Building2, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Building2, Plus, Search } from 'lucide-react'
+import { useId, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { RateBar } from '@/components/attendance/RateBar'
-import { errorMessage } from '@/lib/api'
+import { errorMessage, fieldErrors } from '@/lib/api'
 import type { FacultyDepartment } from '@/types'
-import { useFacultyDepartments } from './departmentsApi'
+import { useCreateDepartment, useFacultyDepartments } from './departmentsApi'
 
 const HEADERS = ['DEPARTMENT', 'LECTURERS', 'STUDENTS', 'UNITS', 'AVG. ATTENDANCE', 'SESSIONS', 'ON TIME']
 
@@ -18,6 +19,7 @@ const HEADERS = ['DEPARTMENT', 'LECTURERS', 'STUDENTS', 'UNITS', 'AVG. ATTENDANC
 export function DepartmentsPage() {
   const { data: departments, isPending, error, refetch } = useFacultyDepartments()
   const [search, setSearch] = useState('')
+  const [adding, setAdding] = useState(false)
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -28,7 +30,16 @@ export function DepartmentsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <p className="max-w-2xl text-sm text-muted">Every department in your faculty, listed by attendance standing. Open a row for its lecturers and units.</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <p className="max-w-2xl text-sm text-muted">Every department in your faculty, listed by attendance standing. Open a row for its lecturers and units.</p>
+        {!adding && (
+          <Button onClick={() => setAdding(true)}>
+            <Plus className="size-4" aria-hidden /> New department
+          </Button>
+        )}
+      </div>
+
+      {adding && <NewDepartmentForm onDone={() => setAdding(false)} />}
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="relative min-w-[240px] flex-1">
@@ -74,6 +85,50 @@ export function DepartmentsPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+function NewDepartmentForm({ onDone }: { onDone: () => void }) {
+  const id = useId()
+  const create = useCreateDepartment()
+  const [name, setName] = useState('')
+  const fields = fieldErrors(create.error)
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    create.mutate(name, { onSuccess: onDone })
+  }
+
+  return (
+    <Card className="border border-teal-500/30 p-5">
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        <h3 className="font-semibold text-navy-900">New department</h3>
+        <div className="max-w-sm space-y-1.5">
+          <label htmlFor={`${id}-name`} className="text-sm font-medium text-navy-900">Department name</label>
+          <input
+            id={`${id}-name`}
+            className="input"
+            placeholder="Department of Mechanical Engineering"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={160}
+            required
+            autoFocus
+            aria-invalid={!!fields.name || undefined}
+          />
+          {fields.name && <p className="text-xs text-red-600">{fields.name}</p>}
+        </div>
+        {create.error && !fields.name && (
+          <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
+          <Button type="submit" loading={create.isPending} disabled={!name.trim()}>
+            Create department
+          </Button>
+        </div>
+      </form>
+    </Card>
   )
 }
 

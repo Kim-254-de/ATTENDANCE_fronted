@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -1128,6 +1128,61 @@ const departmentHandlers = [
       .map(({ lecturerUserId: _lecturerUserId, unitId: _unitId, ...entry }) => entry)
     return ok(rows)
   }),
+
+  /** Courses faculty has provided to the signed-in officer's own department. */
+  http.get(`${API}/departments/courses`, async () => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(150)
+    const officer = currentAccount as DepartmentOfficer
+    const rows: CourseOffering[] = COURSE_OFFERINGS
+      .filter((o) => o.departmentId === officer.departmentId)
+      .map(({ departmentId: _departmentId, ...offering }) => offering)
+    return ok(rows)
+  }),
+
+  http.patch(`${API}/departments/courses/:offeringId`, async ({ params, request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(150)
+    const officer = currentAccount as DepartmentOfficer
+    const offering = COURSE_OFFERINGS.find((o) => o.id === params.offeringId)
+    if (!offering || offering.departmentId !== officer.departmentId) {
+      return fail(404, 'NOT_FOUND', 'No such course in your department.')
+    }
+    const { segmentsPlanned } = (await request.json()) as { segmentsPlanned?: number }
+    if (!segmentsPlanned || segmentsPlanned < 1 || segmentsPlanned > 26) {
+      return fail(400, 'VALIDATION_FAILED', 'Sections must be between 1 and 26.')
+    }
+    if (segmentsPlanned < offering.segmentsFilled) {
+      return fail(400, 'VALIDATION_FAILED', `This course already has ${offering.segmentsFilled} section(s) assigned; it cannot be reduced below that.`)
+    }
+    offering.segmentsPlanned = segmentsPlanned
+    return ok({ offeringId: offering.id, segmentsPlanned })
+  }),
+
+  /** Allocates one of the department's own lecturers to the next open segment — mirrors department.repository.ts allocateLecturerToSegment. */
+  http.post(`${API}/departments/courses/:offeringId/segments`, async ({ params, request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(150)
+    const officer = currentAccount as DepartmentOfficer
+    const offering = COURSE_OFFERINGS.find((o) => o.id === params.offeringId)
+    if (!offering || offering.departmentId !== officer.departmentId) {
+      return fail(404, 'NOT_FOUND', 'No such course in your department.')
+    }
+    const { lecturerUserId } = (await request.json()) as { lecturerUserId?: string }
+    const lecturer = DEPARTMENT_LECTURERS.find((l) => l.userId === lecturerUserId)
+    if (!lecturer) return fail(400, 'VALIDATION_FAILED', 'That lecturer is not in your department.')
+    if (offering.segmentsFilled >= offering.segmentsPlanned) {
+      return fail(409, 'CONFLICT', 'This course already has a lecturer assigned to every planned section.')
+    }
+    const multiSegment = offering.segmentsPlanned > 1
+    const letter = String.fromCharCode('A'.charCodeAt(0) + offering.segmentsFilled)
+    offering.segmentsFilled += 1
+    const code = multiSegment ? `${offering.code} GR ${letter}` : offering.code
+    return ok({ unitId: `unit-${++courseOfferingSeq}`, code }, 201)
+  }),
 ]
 
 /* ------------------------------------------------------------------ *
@@ -1183,7 +1238,62 @@ const requireFaculty = () => {
   return null
 }
 
+/**
+ * Course provisioning's shared state: faculty creates these, departments read
+ * and write them. One array, like the real course_offerings table, so both
+ * mock sections below agree with each other.
+ */
+interface MockCourseOffering {
+  id: string
+  code: string
+  name: string | null
+  departmentId: string
+  segmentsPlanned: number
+  segmentsFilled: number
+}
+const COURSE_OFFERINGS: MockCourseOffering[] = []
+let courseOfferingSeq = 0
+
 const facultyHandlers = [
+  http.post(`${API}/faculties/departments`, async ({ request }) => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    await delay(150)
+    const { name } = (await request.json()) as { name?: string }
+    const trimmed = name?.trim()
+    if (!trimmed) return fail(400, 'VALIDATION_FAILED', 'Enter the department name.')
+    if (FACULTY_DEPARTMENTS_SEED.some((d) => d.name.toLowerCase() === trimmed.toLowerCase())) {
+      return fail(409, 'CONFLICT', `A department named "${trimmed}" already exists.`)
+    }
+    const id = `dept-${++courseOfferingSeq}`
+    FACULTY_DEPARTMENTS_SEED.push({ id, name: trimmed })
+    return ok({ departmentId: id, departmentName: trimmed }, 201)
+  }),
+
+  http.post(`${API}/faculties/departments/:departmentId/courses`, async ({ params, request }) => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    await delay(150)
+    const dept = FACULTY_DEPARTMENTS_SEED.find((d) => d.id === params.departmentId)
+    if (!dept) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
+    const { code, name } = (await request.json()) as { code?: string; name?: string }
+    const normalised = code?.trim().toUpperCase().replace(/\s+/g, ' ') ?? ''
+    if (!normalised) return fail(400, 'VALIDATION_FAILED', 'Enter the course code, e.g. COSC 100.')
+    if (COURSE_OFFERINGS.some((o) => o.code === normalised)) {
+      return fail(409, 'CONFLICT', `${normalised} already exists as a course or unit.`)
+    }
+    const offering: MockCourseOffering = {
+      id: `offering-${++courseOfferingSeq}`,
+      code: normalised,
+      name: name?.trim() || null,
+      departmentId: dept.id,
+      segmentsPlanned: 1,
+      segmentsFilled: 0,
+    }
+    COURSE_OFFERINGS.push(offering)
+    const { segmentsFilled: _segmentsFilled, ...created } = offering
+    return ok(created, 201)
+  }),
   http.get(`${API}/faculties/me`, () => {
     const blocked = requireFaculty()
     if (blocked) return blocked
@@ -1244,6 +1354,7 @@ const facultyHandlers = [
       departmentName: dept.name,
       lecturers: FACULTY_LECTURERS.filter((l) => l.departmentId === dept.id),
       units: FACULTY_UNITS.filter((u) => u.departmentId === dept.id),
+      courses: COURSE_OFFERINGS.filter((o) => o.departmentId === dept.id),
     })
   }),
 
