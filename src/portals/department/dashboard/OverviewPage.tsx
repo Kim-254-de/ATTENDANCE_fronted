@@ -37,7 +37,7 @@ export function OverviewPage() {
               <StatCard icon={BookOpen} label="Units" value={data.unitCount} hint="Taught in this department" />
               <StatCard icon={ClipboardCheck} label="Avg. Attendance" value={`${data.avgAttendanceRate.toFixed(1)}%`} hint="All units, semester to date" accent />
               <StatCard icon={Radio} label="Sessions Held" value={data.sessionsHeld} hint="All time" />
-              <StatCard icon={Timer} label="On-Time Rate" value={`${data.onTimeRate.toFixed(1)}%`} hint="Classes opened at their scheduled start" accent />
+              <StatCard icon={Timer} label="On-Time Rate" value={data.onTimeRate === null ? '—' : `${data.onTimeRate.toFixed(1)}%`} hint="Classes opened at their scheduled start" accent />
             </>
           )}
         </section>

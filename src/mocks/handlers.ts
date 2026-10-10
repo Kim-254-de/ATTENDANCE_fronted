@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentLecturerDetail, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, LecturerTimekeepingEntry, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -934,13 +934,13 @@ const DEPARTMENT_LECTURERS: DepartmentLecturer[] = [
 ]
 
 /** Every unit in the department — a superset of `units` (the seeded lecturer's own), plus two colleagues'. */
-const DEPARTMENT_UNITS: (DepartmentUnit & { lecturerUserId: string })[] = [
-  { id: 'u1', code: 'CS301', name: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, studentCount: 87, attendanceRate: 90 },
-  { id: 'u2', code: 'CS405', name: 'Database Management Systems', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, studentCount: 64, attendanceRate: 95 },
-  { id: 'u3', code: 'CS502', name: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', lecturerUserId: 'lec-2', studentCount: 52, attendanceRate: 76 },
-  { id: 'u4', code: 'CS210', name: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', lecturerUserId: 'lec-3', studentCount: 110, attendanceRate: 68 },
+const DEPARTMENT_UNITS: (DepartmentUnit & { lecturerUserId: string; sessionsHeld: number })[] = [
+  { id: 'u1', code: 'CS301', name: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, studentCount: 87, attendanceRate: 90, sessionsHeld: 20 },
+  { id: 'u2', code: 'CS405', name: 'Database Management Systems', lecturerName: lecturer.fullName, lecturerUserId: lecturer.id, studentCount: 64, attendanceRate: 95, sessionsHeld: 18 },
+  { id: 'u3', code: 'CS502', name: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', lecturerUserId: 'lec-2', studentCount: 52, attendanceRate: 76, sessionsHeld: 14 },
+  { id: 'u4', code: 'CS210', name: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', lecturerUserId: 'lec-3', studentCount: 110, attendanceRate: 68, sessionsHeld: 14 },
   // Timetabled but never activated yet, so it has no rate to show — the null-rate case the tables must handle.
-  { id: 'u5', code: 'CS410', name: 'Distributed Systems', lecturerName: 'Dr. Mary Wambui', lecturerUserId: 'lec-2', studentCount: 41, attendanceRate: null },
+  { id: 'u5', code: 'CS410', name: 'Distributed Systems', lecturerName: 'Dr. Mary Wambui', lecturerUserId: 'lec-2', studentCount: 41, attendanceRate: null, sessionsHeld: 0 },
 ]
 
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000)
@@ -1018,24 +1018,29 @@ const departmentHandlers = [
     return ok(DEPARTMENT_LECTURERS)
   }),
 
+  /** Shaped exactly as the real backend sends it (department.repository.ts): identity nested under `lecturer`, sessions under `sessions` — lecturersApi.ts maps this to the flat DepartmentLecturerDetail the pages use. */
   http.get(`${API}/departments/lecturers/:lecturerUserId`, async ({ params }) => {
     const blocked = requireDepartment()
     if (blocked) return blocked
     await delay(200)
     const row = DEPARTMENT_LECTURERS.find((l) => l.userId === params.lecturerUserId)
     if (!row) return fail(404, 'NOT_FOUND', 'Lecturer not found in this department.')
-    const detail: DepartmentLecturerDetail = {
-      userId: row.userId,
-      fullName: row.fullName,
-      staffNumber: row.staffNumber,
+    const raw = {
+      lecturer: { userId: row.userId, fullName: row.fullName, staffNumber: row.staffNumber, title: 'Dr.', email: `${row.userId}@university.edu` },
       units: DEPARTMENT_UNITS.filter((u) => u.lecturerUserId === row.userId)
-        .map((u) => ({ unitId: u.id, code: u.code, name: u.name, attendanceRate: u.attendanceRate })),
-      recentSessions: DEPARTMENT_TIMEKEEPING.filter((t) => t.lecturerUserId === row.userId)
-        .map(({ sessionId, unitCode, scheduledStartAt, opensAt, lateMinutes }): LecturerTimekeepingEntry =>
-          ({ sessionId, unitCode, scheduledStartAt, opensAt, lateMinutes }))
+        .map((u) => ({
+          unitId: u.id, unitCode: u.code, unitName: u.name, lecturerUserId: u.lecturerUserId,
+          lecturerName: u.lecturerName, activeStudents: u.studentCount, sessionsHeld: u.sessionsHeld, avgAttendanceRate: u.attendanceRate,
+        })),
+      sessions: DEPARTMENT_TIMEKEEPING.filter((t) => t.lecturerUserId === row.userId)
+        .map((t) => ({
+          sessionId: t.sessionId, unitId: DEPARTMENT_UNITS.find((u) => u.code === t.unitCode)?.id ?? '', unitCode: t.unitCode,
+          title: null, status: 'CLOSED', opensAt: t.opensAt, closesAt: t.opensAt, scheduledStartAt: t.scheduledStartAt,
+          lateMinutes: t.lateMinutes, present: 0, total: 0, attendanceRate: null,
+        }))
         .sort((a, b) => b.opensAt.localeCompare(a.opensAt)),
     }
-    return ok(detail)
+    return ok(raw)
   }),
 
   /** One row per (student, unit) across the department — same shape as /lecturers/students. */
@@ -1083,11 +1088,15 @@ const departmentHandlers = [
     return ok(rows)
   }),
 
+  /** Shaped exactly as the real backend sends it (department.repository.ts) — unitsApi.ts maps unitId/unitCode/... to the DepartmentUnit the page uses. */
   http.get(`${API}/departments/units`, async () => {
     const blocked = requireDepartment()
     if (blocked) return blocked
     await delay(200)
-    const rows: DepartmentUnit[] = DEPARTMENT_UNITS.map(({ lecturerUserId: _lecturerUserId, ...unit }) => unit)
+    const rows = DEPARTMENT_UNITS.map((u) => ({
+      unitId: u.id, unitCode: u.code, unitName: u.name, lecturerUserId: u.lecturerUserId,
+      lecturerName: u.lecturerName, activeStudents: u.studentCount, sessionsHeld: u.sessionsHeld, avgAttendanceRate: u.attendanceRate,
+    }))
     return ok(rows)
   }),
 

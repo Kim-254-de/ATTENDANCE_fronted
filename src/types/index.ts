@@ -60,7 +60,8 @@ export interface DepartmentOverview {
   unitCount: number
   avgAttendanceRate: number
   sessionsHeld: number
-  onTimeRate: number
+  /** 0–100; null until any session in the department has a scheduled start to measure against. */
+  onTimeRate: number | null
 }
 
 /** GET /departments/lecturers — one row per lecturer in the department. */
