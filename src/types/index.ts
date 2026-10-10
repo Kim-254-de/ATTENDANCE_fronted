@@ -485,7 +485,10 @@ export interface FaceStudentCard {
   studentUserId: string
   fullName: string
   registrationNumber: string | null
+  /** Their profile picture: chosen by the student, so only a fallback. */
   avatarDataUrl: string | null
+  /** The face photographed when they were registered. Null for registrations made before these were kept. */
+  referencePhotoDataUrl: string | null
 }
 
 /** POST /sessions/:id/face/identify. Nothing is recorded until the lecturer confirms. */

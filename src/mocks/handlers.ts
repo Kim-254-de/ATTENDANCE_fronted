@@ -796,10 +796,13 @@ let studentFace: { consentedAt: string | null; enrolledAt: string | null } = { c
 /** Matches the terminal has shown, by token, until confirmed. */
 const faceMatches = new Map<string, { sessionId: string; allocation: Allocation; score: number; expiresAt: number }>()
 const FACE_MATCH_TTL_MS = 60_000
+/** The first photo of each registration made in the mock, by allocation id. Seeded registrations have none, like ones made before the backend kept them. */
+const referencePhotos = new Map<string, string>()
 
 function resetFaceMocks() {
   studentFace = { consentedAt: null, enrolledAt: null }
   faceMatches.clear()
+  referencePhotos.clear()
   for (const a of [...allocations.values()].flat()) Object.assign(a, SEED_FACES.get(a.id))
 }
 
@@ -827,6 +830,10 @@ function seenInPhoto(image: string): string {
 const NO_FACE = 'No face found. Hold the phone at eye level, about an arm\'s length from the student.'
 
 export const faceHandlers = [
+  http.post(`${API}/face/warm-up`, () => {
+    if (!store.get()) return unauthorized()
+    return ok({ enabled: true }, 202)
+  }),
   http.get(`${API}/students/me/face`, () => {
     if (!store.get()) return unauthorized()
     if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
@@ -862,6 +869,7 @@ export const faceHandlers = [
     if (blank >= 0) return HttpResponse.json({ success: false, error: { code: 'FACE_NOT_FOUND', message: NO_FACE, details: { photo: blank + 1 } } }, { status: 422 })
     const replaced = allocation.faceEnrolled
     allocation.faceEnrolled = true
+    referencePhotos.set(allocation.id, images[0]!)
     return ok({ studentUserId: allocation.studentUserId, enrolledAt: new Date().toISOString(), replaced }, 201)
   }),
 
@@ -871,6 +879,7 @@ export const faceHandlers = [
     if (!allocation) return fail(404, 'NOT_FOUND', 'This student is not on the unit.')
     const removed = allocation.faceEnrolled
     allocation.faceEnrolled = false
+    referencePhotos.delete(allocation.id)
     return ok({ removed })
   }),
 
@@ -900,7 +909,7 @@ export const faceHandlers = [
     if (matchToken) faceMatches.set(matchToken, { sessionId: session.id, allocation, score: 0.87, expiresAt })
     return ok<FaceIdentifyResult>({
       result: 'MATCH',
-      student: { studentUserId: allocation.studentUserId!, fullName: allocation.fullName ?? '', registrationNumber: allocation.registrationNumber, avatarDataUrl: null },
+      student: { studentUserId: allocation.studentUserId!, fullName: allocation.fullName ?? '', registrationNumber: allocation.registrationNumber, avatarDataUrl: null, referencePhotoDataUrl: referencePhotos.get(allocation.id) ?? null },
       score: 0.87,
       alreadyCheckedIn,
       matchToken,

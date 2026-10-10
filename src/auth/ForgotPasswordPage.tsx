@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
+import { smartttAccounts } from '@/lib/env'
 import { IconField } from './AuthCard'
 import { useForgotPassword, useMe } from './authApi'
 import { AuthShell } from './AuthShell'
@@ -16,14 +17,29 @@ type Values = z.infer<typeof schema>
 export function ForgotPasswordPage() {
   const { data: me } = useMe()
   const [searchParams] = useSearchParams()
-  const isStudent = searchParams.get('role') === 'student'
+  const role = searchParams.get('role')
+  const isStudent = role === 'student'
   const request = useForgotPassword()
   const [submittedEmail, setSubmittedEmail] = useState('')
   const { register, handleSubmit, formState: { errors } } = useForm<Values>({ resolver: zodResolver(schema) })
 
   if (me) return <Navigate to="/" replace />
 
-  const loginLink = isStudent ? '/login?role=student' : '/login'
+  const loginLink = role ? `/login?role=${role}` : '/login'
+
+  // A student's or lecturer's password is their SMARTTT one: nothing to reset here.
+  if (smartttAccounts() && role !== 'department' && role !== 'faculty') {
+    return <AuthShell student={isStudent} title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'}>
+      <div className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" role="status">
+        <div className={`grid size-14 place-items-center rounded-2xl ${isStudent ? 'bg-blue-50 text-blue-700' : 'bg-orange-100 text-orange-600'}`}><Mail className="size-7" aria-hidden /></div>
+        <div>
+          <h2 className="text-xl font-bold text-navy-900">Reset it in SMARTTT</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">You sign in here with your SMARTTT password. Use <strong className="text-navy-900">Forgot password</strong> on the SMARTTT sign-in screen, then come back and sign in with the new one.</p>
+        </div>
+        <Link to={loginLink} className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Return to sign in</Link>
+      </div>
+    </AuthShell>
+  }
 
   return <AuthShell student={isStudent} title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'} subtitle={isStudent ? 'Reset the password for your attendance dashboard.' : undefined}>
     {submittedEmail ? <div className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" role="status">

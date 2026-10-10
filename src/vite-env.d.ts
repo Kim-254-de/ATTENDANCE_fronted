@@ -34,6 +34,7 @@ declare module 'qr-scanner' {
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string
   readonly VITE_USE_MOCKS?: 'true' | 'data' | 'false'
+  readonly VITE_SMARTTT_ACCOUNTS?: 'true' | 'false'
 }
 
 interface ImportMeta {

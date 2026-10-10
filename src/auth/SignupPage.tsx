@@ -6,6 +6,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { errorMessage, fieldErrors } from '@/lib/api'
+import { smartttAccounts } from '@/lib/env'
 import type { RegistrationInput, StudentRegistrationInput } from '@/types'
 import { Field, IconField } from './AuthCard'
 import { AuthShell } from './AuthShell'
@@ -41,6 +42,16 @@ const FIELDS = ['fullName', 'email', 'staffNumber', 'password', 'confirmPassword
 export function SignupPage() {
   const [searchParams] = useSearchParams()
   const role = searchParams.get('role')
+  // No sign-up here with SMARTTT accounts: the SMARTTT account is the account.
+  if (smartttAccounts() && (role === 'student' || role === 'lecturer')) {
+    return (
+      <Navigate
+        to={`/login?role=${role}`}
+        replace
+        state={{ message: 'There is no separate sign-up for attendance. Sign in with your SMARTTT account; if you have none, create it in SMARTTT first.' }}
+      />
+    )
+  }
   if (role === 'student') return <StudentSignup />
   if (role === 'lecturer') return <LecturerSignup />
   return <Navigate to="/" replace />

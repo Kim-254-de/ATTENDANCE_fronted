@@ -7,7 +7,7 @@ import { FaceCamera } from '@/components/FaceCamera'
 import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
 import type { FaceIdentifyResult } from '@/types'
-import { useConfirmFace, useIdentifyFace } from './faceApi'
+import { useConfirmFace, useIdentifyFace, useWarmUpFaceService } from './faceApi'
 import { useSessionAttendance, useSessionQr } from './sessionApi'
 
 type Match = Extract<FaceIdentifyResult, { result: 'MATCH' }>
@@ -39,6 +39,7 @@ export function FaceTerminalPage() {
   const qr = useSessionQr(sessionId)
   const attendance = useSessionAttendance(sessionId, true)
   const identify = useIdentifyFace(sessionId)
+  useWarmUpFaceService()
   const confirm = useConfirmFace(sessionId)
   const [state, setState] = useState<TerminalState>({ step: 'ready' })
 
@@ -159,14 +160,21 @@ function MatchCard({ match, confirming, onConfirm, onReject }: {
   const secondsLeft = match.expiresAt ? Math.max(0, Math.round((new Date(match.expiresAt).getTime() - now) / 1000)) : 0
   const expired = secondsLeft === 0
   const { student } = match
+  // The face registered in class is what to compare against; the profile
+  // picture is the student's own choice, so it is only a fallback.
+  const photo = student.referencePhotoDataUrl ?? student.avatarDataUrl
 
   return (
     <section aria-label="Match" className="space-y-4 rounded-2xl bg-white p-4 text-navy-900 shadow-xl">
       <div className="flex items-center gap-4">
-        {student.avatarDataUrl ? (
-          <img src={student.avatarDataUrl} alt="" className="size-16 rounded-xl object-cover" />
+        {photo ? (
+          <img
+            src={photo}
+            alt={student.referencePhotoDataUrl ? `Registered face of ${student.fullName}` : `Profile picture of ${student.fullName}`}
+            className="size-24 shrink-0 rounded-xl object-cover"
+          />
         ) : (
-          <span className="grid size-16 place-items-center rounded-xl bg-blue-100 text-xl font-bold text-blue-800" aria-hidden>
+          <span className="grid size-24 shrink-0 place-items-center rounded-xl bg-blue-100 text-2xl font-bold text-blue-800" aria-hidden>
             {initials(student.fullName)}
           </span>
         )}
@@ -177,6 +185,14 @@ function MatchCard({ match, confirming, onConfirm, onReject }: {
           <p className="text-xs text-muted">{Math.round(match.score * 100)}% match</p>
         </div>
       </div>
+      {!student.referencePhotoDataUrl && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {student.avatarDataUrl
+            ? 'This is their profile picture, not the face registered in class. '
+            : 'There is no registered photo to compare with. '}
+          Check their student ID card, and register their face again from the unit's student list to add one.
+        </p>
+      )}
       {match.facesInFrame > 1 && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
           {match.facesInFrame} faces were in the photo. This is the closest one: make sure it's the student in front of you.
