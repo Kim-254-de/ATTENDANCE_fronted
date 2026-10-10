@@ -1,8 +1,7 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { RouteError } from '@/components/RouteError'
 import { LoginPage } from '@/auth/LoginPage'
 import { ForgotPasswordPage } from '@/auth/ForgotPasswordPage'
-import { SignupPage } from '@/auth/SignupPage'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { VerifyEmailPage } from '@/auth/VerifyEmailPage'
 import { AppLayout } from '@/portals/lecturer/layout/AppLayout'
@@ -10,6 +9,19 @@ import { DepartmentLayout } from '@/portals/department/layout/DepartmentLayout'
 import { FacultyLayout } from '@/portals/faculty/layout/FacultyLayout'
 import { StudentLayout } from '@/portals/student/layout/StudentLayout'
 import { LandingPage } from '@/pages/LandingPage'
+
+/** Sends an old sign-up link to the matching sign-in page, saying why. */
+function SignupRedirect() {
+  const [searchParams] = useSearchParams()
+  const role = searchParams.get('role') === 'student' ? 'student' : 'lecturer'
+  return (
+    <Navigate
+      to={`/login?role=${role}`}
+      replace
+      state={{ message: 'There is no separate sign-up for attendance. Sign in with your SMARTTT account; if you have none, create it in SMARTTT first.' }}
+    />
+  )
+}
 
 // Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
@@ -20,8 +32,9 @@ export const routes = [
     errorElement: <RouteError />,
   },
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
-  { path: '/signup', element: <SignupPage />, errorElement: <RouteError /> },
-  { path: '/register', element: <Navigate to="/signup?role=lecturer" replace /> },
+  // No sign-up: students and lecturers sign in with their SMARTTT account. Old links land on sign-in.
+  { path: '/signup', element: <SignupRedirect /> },
+  { path: '/register', element: <SignupRedirect /> },
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <RouteError /> },
   { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteError /> },
   {

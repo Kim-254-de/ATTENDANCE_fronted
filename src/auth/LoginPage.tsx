@@ -6,11 +6,13 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
+import { smartttAccounts } from '@/lib/env'
 import { Field, IconField } from './AuthCard'
 import { AuthShell } from './AuthShell'
 import { useLogin, useMe } from './authApi'
 import { roleHome } from './roleHome'
-import { SocialSignIn, StudentAuthTabs } from './StudentAuthChrome'
+import { SmartttAccountNotice } from './SmartttAccountNotice'
+import { SocialSignIn } from './StudentAuthChrome'
 
 const schema = z.object({
   identifier: z.string().trim().min(1, 'Enter your staff number, registration number or email'),
@@ -49,11 +51,12 @@ export function LoginPage() {
 
   const isStudent = role === 'student'
   // Department and faculty officers share the lecturer form's layout (identifier + password) but
-  // not its staff-number wording, and their accounts are provisioned, never self-registered.
+  // not its staff-number wording, and their accounts are provisioned.
   const isDepartment = role === 'department'
   const isFaculty = role === 'faculty'
-  const isLecturer = role === 'lecturer'
   const isOfficer = isDepartment || isFaculty
+  // Students and lecturers sign in with their SMARTTT account; officers keep attendance passwords.
+  const viaSmarttt = smartttAccounts() && !isOfficer
   const toggleButton = (
     <button
       type="button"
@@ -98,9 +101,10 @@ export function LoginPage() {
     <AuthShell
       student={isStudent}
       title={isStudent ? 'STUDENT PORTAL' : isDepartment ? 'Department Portal' : isFaculty ? 'Faculty Portal' : 'Lecturer Portal'}
-      subtitle={isStudent ? 'Sign in to access your attendance dashboard.' : isDepartment ? 'Sign in to review department attendance' : isFaculty ? 'Sign in to review faculty attendance' : 'Sign in to manage attendance'}
+      subtitle={viaSmarttt
+        ? 'Sign in with your SMARTTT account: the same login and password you use for SMARTTT.'
+        : isStudent ? 'Sign in to access your attendance dashboard.' : isDepartment ? 'Sign in to review department attendance' : isFaculty ? 'Sign in to review faculty attendance' : 'Sign in to manage attendance'}
     >
-      {isStudent && <StudentAuthTabs active="signin" />}
       <form
         onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: (user) => navigate(landing(user.role), { replace: true }) }))}
         className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8"
@@ -114,30 +118,26 @@ export function LoginPage() {
         {isStudent ? (
           <IconField
             id="login-identifier"
-            label="Registration number or email"
+            label={viaSmarttt ? 'SMARTTT admission number or email' : 'Registration number or email'}
             icon={Mail}
             {...register('identifier')}
             autoComplete="username"
             error={errors.identifier?.message}
           />
         ) : (
-          <Field label={isOfficer ? 'Email' : 'Staff number or email'} error={errors.identifier?.message}>
+          <Field label={isOfficer ? 'Email' : viaSmarttt ? 'SMARTTT staff ID or email' : 'Staff number or email'} error={errors.identifier?.message}>
             <input {...register('identifier')} autoComplete="username" className="input" />
           </Field>
         )}
         {passwordField}
 
-        <div className="flex justify-end"><Link to={isStudent ? '/forgot-password?role=student' : '/forgot-password'} className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
+        <div className="flex justify-end"><Link to={`/forgot-password?role=${role}`} className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
 
         <Button type="submit" variant={isStudent ? 'accent' : isOfficer ? 'primary' : 'lecturer'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
         {isStudent && <SocialSignIn />}
       </form>
-      {/* Only lecturers self-register: students sign up from their own tabbed form, department/faculty accounts are provisioned. */}
-      {isLecturer && (
-        <p className="mt-6 text-center text-base text-muted">
-          New to UniLearn? <Link to="/signup?role=lecturer" className="font-semibold text-navy-900 hover:underline">Create an account</Link>
-        </p>
-      )}
+      {/* Nobody signs up here: students and lecturers use their SMARTTT account, officers are provisioned. */}
+      {viaSmarttt && <SmartttAccountNotice className="mt-6" />}
     </AuthShell>
   )
 }

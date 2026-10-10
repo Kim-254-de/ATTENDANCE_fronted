@@ -56,7 +56,7 @@ export function FaceCheckInCard() {
         <div className="space-y-3">
           <ul className="list-disc space-y-1 pl-5 text-sm text-ink">
             <li>Your lecturer will take three photos of your face, after checking your student ID.</li>
-            <li>Only a numerical template of your face is kept, not the photos. It is used only to check you in to your own classes.</li>
+            <li>A numerical template of your face is kept, plus one small photo of your face so your lecturer can check it is you. The other photos are not kept. These are used only to check you in to your own classes.</li>
             <li>You can turn this off at any time here, which deletes your face data straight away.</li>
           </ul>
           <label className="flex items-start gap-2 text-sm text-ink">

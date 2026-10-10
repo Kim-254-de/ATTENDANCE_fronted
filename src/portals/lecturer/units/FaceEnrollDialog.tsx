@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { FaceCamera } from '@/components/FaceCamera'
 import { errorMessage } from '@/lib/api'
 import type { Allocation, ApiErrorBody } from '@/types'
-import { useEnrollFace } from '@/portals/lecturer/attendance/faceApi'
+import { useEnrollFace, useWarmUpFaceService } from '@/portals/lecturer/attendance/faceApi'
 
 /** Must match ENROLLMENT_PHOTOS in the backend's verification.schema.ts. */
 const PHOTOS = 3
@@ -24,6 +24,7 @@ export function FaceEnrollDialog({ unitId, student, onClose, onDone }: {
   onDone: (message: string) => void
 }) {
   const enroll = useEnrollFace(unitId)
+  useWarmUpFaceService()
   const [photos, setPhotos] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const closeRef = useRef<HTMLButtonElement>(null)

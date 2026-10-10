@@ -105,33 +105,3 @@ describe('student units and history pages', () => {
     expect(within(history).getByText('Absent')).toBeInTheDocument()
   })
 })
-
-describe('student registration errors', () => {
-  async function fillForm(user: ReturnType<typeof userEvent.setup>, reg: string) {
-    await user.type(await screen.findByLabelText(/student id/i), reg)
-    await user.type(screen.getByLabelText(/full name/i), 'Amina Kamau')
-    await user.type(screen.getByLabelText(/^email/i), 'amina@students.tharaka.ac.ke')
-    await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
-    await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
-    await user.click(screen.getByRole('button', { name: /create account/i }))
-  }
-
-  it('shows the records check refusal from the server', async () => {
-    const user = userEvent.setup()
-    renderApp('/signup?role=student')
-    await fillForm(user, 'EBT1/99999/23')
-    expect(await screen.findByRole('alert')).toHaveTextContent(/not in the student records/i)
-  })
-
-  it('catches a password containing the registration number before sending', async () => {
-    const user = userEvent.setup()
-    renderApp('/signup?role=student')
-    await user.type(await screen.findByLabelText(/student id/i), 'EBT1/08223/23')
-    await user.type(screen.getByLabelText(/full name/i), 'Amina Kamau')
-    await user.type(screen.getByLabelText(/^email/i), 'amina@students.tharaka.ac.ke')
-    await user.type(screen.getByLabelText(/^password$/i), 'Ebt10822323xyZ')
-    await user.type(screen.getByLabelText(/^confirm password$/i), 'Ebt10822323xyZ')
-    await user.click(screen.getByRole('button', { name: /create account/i }))
-    expect(await screen.findByText(/must not contain your registration number/i)).toBeInTheDocument()
-  })
-})

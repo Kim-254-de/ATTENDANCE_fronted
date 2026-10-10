@@ -1,8 +1,9 @@
-import { screen, within } from '@testing-library/react'
+import { cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { openMockSessionForScan } from '@/mocks/handlers'
 import { renderApp } from '@/test/renderApp'
+import { server } from '@/test/setup'
 
 /**
  * jsdom has no camera, so FaceCamera is replaced by a stand-in whose "photo"
@@ -47,6 +48,8 @@ describe('face check-in terminal', () => {
     expect(within(match).getByText('Amina Wanjiku Kamau')).toBeInTheDocument()
     expect(within(match).getByText('SC211/0001/2022')).toBeInTheDocument()
     expect(within(match).getByRole('timer')).toHaveTextContent(/confirm within/i)
+    // Registered before photos were kept: nothing trustworthy to compare with, and the lecturer is told so.
+    expect(within(match).getByText(/no registered photo to compare with/i)).toBeInTheDocument()
     // While a match waits for the lecturer, the next photo can't replace it.
     expect(screen.getByRole('button', { name: /identify student/i })).toBeDisabled()
 
@@ -64,6 +67,41 @@ describe('face check-in terminal', () => {
     const attendees = await screen.findByRole('region', { name: /checked-in students/i })
     const row = within(attendees).getByText('Amina Wanjiku Kamau').closest('li')!
     expect(within(row).getByText('Face')).toBeInTheDocument()
+  })
+
+  it('shows the face registered in class, to compare with the student in front of the camera', async () => {
+    const user = await signIn('LEC00123', '/units/u1')
+    const students = await screen.findByRole('region', { name: 'Students' })
+    await user.click(within(within(students).getByText('Brian Otieno Odhiambo').closest('li')!).getByRole('button', { name: /register face/i }))
+    const dialog = await screen.findByRole('dialog', { name: /register face/i })
+    for (const n of [1, 2, 3]) await photograph(user, 'Brian Otieno Odhiambo', new RegExp(`take photo ${n} of 3`, 'i'))
+    await user.click(within(dialog).getByRole('button', { name: /save face/i }))
+    expect(await screen.findByText("Brian Otieno Odhiambo's face is registered.")).toBeInTheDocument()
+
+    // Still signed in (the mock API keeps the session): open the terminal on a live class.
+    cleanup()
+    const { session } = openMockSessionForScan('u1')
+    renderApp(`/session/${session.id}/face`)
+    await photograph(user, 'Brian Otieno Odhiambo', /identify student/i)
+    const match = await screen.findByRole('region', { name: 'Match' })
+    expect(within(match).getByRole('img', { name: 'Registered face of Brian Otieno Odhiambo' })).toBeInTheDocument()
+    expect(within(match).queryByText(/no registered photo/i)).not.toBeInTheDocument()
+  })
+
+  it('wakes the face service as soon as the terminal opens, before any photo', async () => {
+    const warmUps: string[] = []
+    const listener = ({ request }: { request: Request }) => {
+      if (new URL(request.url).pathname.endsWith('/face/warm-up')) warmUps.push(request.method)
+    }
+    server.events.on('request:start', listener)
+    try {
+      const { session } = openMockSessionForScan('u1')
+      await signIn('LEC00123', `/session/${session.id}/face`)
+      await screen.findByLabelText('Face in view')
+      await vi.waitFor(() => expect(warmUps).toContain('POST'))
+    } finally {
+      server.events.removeListener('request:start', listener)
+    }
   })
 
   it('records nobody when the lecturer says it is not them', async () => {
