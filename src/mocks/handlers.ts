@@ -1251,7 +1251,11 @@ interface MockCourseOffering {
   segmentsPlanned: number
   segmentsFilled: number
 }
-const COURSE_OFFERINGS: MockCourseOffering[] = []
+const COURSE_OFFERINGS: MockCourseOffering[] = [
+  // Provided but not yet fully staffed, in the seeded department officer's own department —
+  // so both the department and faculty Courses pages have something real to show by default.
+  { id: 'offering-seed-1', code: 'CS610', name: 'Distributed Databases', departmentId: 'dept-cs', segmentsPlanned: 2, segmentsFilled: 1 },
+]
 let courseOfferingSeq = 0
 
 const facultyHandlers = [
@@ -1294,6 +1298,19 @@ const facultyHandlers = [
     const { segmentsFilled: _segmentsFilled, ...created } = offering
     return ok(created, 201)
   }),
+
+  /** Every course offering across every department in the faculty, department named. */
+  http.get(`${API}/faculties/courses`, async () => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    await delay(150)
+    const rows = COURSE_OFFERINGS.map((o) => ({
+      ...o,
+      departmentName: FACULTY_DEPARTMENTS_SEED.find((d) => d.id === o.departmentId)?.name ?? 'Unknown',
+    }))
+    return ok(rows)
+  }),
+
   http.get(`${API}/faculties/me`, () => {
     const blocked = requireFaculty()
     if (blocked) return blocked

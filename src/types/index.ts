@@ -312,6 +312,17 @@ export interface CourseOffering {
   segmentsFilled: number
 }
 
+/** GET /faculties/courses — every course offering across every department, department named. */
+export interface FacultyCourse {
+  id: string
+  code: string
+  name: string | null
+  departmentId: string
+  departmentName: string
+  segmentsPlanned: number
+  segmentsFilled: number
+}
+
 /** POST /departments/courses/:offeringId/segments — the unit that allocation just created. */
 export interface AllocatedUnit {
   unitId: string

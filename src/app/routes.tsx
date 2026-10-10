@@ -190,6 +190,11 @@ export const routes = [
             handle: { title: 'Department' },
           },
           {
+            path: 'faculty-courses',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/courses/CoursesPage')).CoursesPage }),
+            handle: { title: 'Courses' },
+          },
+          {
             path: 'faculty-lecturers',
             lazy: async () => ({ Component: (await import('@/portals/faculty/lecturers/LecturersPage')).LecturersPage }),
             handle: { title: 'Lecturers' },
