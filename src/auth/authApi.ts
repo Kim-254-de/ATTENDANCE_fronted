@@ -4,10 +4,6 @@ import type {
   Account,
   EmailVerificationResult,
   Lecturer,
-  RegistrationInput,
-  RegistrationResult,
-  StudentRegistrationInput,
-  StudentRegistrationResult,
 } from '@/types'
 
 export const ME_KEY = ['auth', 'me'] as const
@@ -51,19 +47,6 @@ export function useLogin() {
     mutationKey: ['login'],
     mutationFn: async (input: LoginInput) => (await api.post<Account>('/auth/login', input)).data,
     onSuccess: (user) => qc.setQueryData(ME_KEY, user),
-  })
-}
-
-/**
- * Creates a student account. The backend checks the registration number, name
- * and email against the student records (the timetable system) first; the
- * account becomes active once the emailed link is opened.
- */
-export function useStudentRegister() {
-  return useMutation({
-    mutationKey: ['student-register'],
-    mutationFn: async (input: StudentRegistrationInput) =>
-      (await api.post<StudentRegistrationResult>('/auth/student/register', input)).data,
   })
 }
 
@@ -114,15 +97,6 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => api.post('/auth/logout'),
     onSettled: () => qc.clear(),
-  })
-}
-
-/** Creates the account. The backend checks the staff number against the ERP before anything is stored. */
-export function useRegister() {
-  return useMutation({
-    mutationKey: ['register'],
-    mutationFn: async (input: RegistrationInput) =>
-      (await api.post<RegistrationResult>('/auth/lecturer/register', input)).data,
   })
 }
 

@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import type { Account, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -257,33 +257,6 @@ function assertAcceptingScans(session: MockSession) {
 }
 
 const authHandlers = [
-  // Stand-in for the student records check: registration numbers starting with EBT1/ or STU "exist",
-  // except EBT1/99999/23. Real mode: POST /auth/student/register checks SMARTTT (or the ERP).
-  http.post(`${API}/auth/student/register`, async ({ request }) => {
-    const input = (await request.json()) as StudentRegistrationInput
-    await delay(300)
-    const registrationNumber = input.registrationNumber.trim().toUpperCase()
-    const email = input.email.trim().toLowerCase()
-    if (!/^(EBT1\/|STU)/.test(registrationNumber) || registrationNumber === 'EBT1/99999/23') {
-      return fail(403, 'STUDENT_RECORD_NOT_FOUND', 'Registration was not completed. This registration number is not in the student records. Check it, or contact the registrar.')
-    }
-    if (accounts.has(registrationNumber.toLowerCase()) || accounts.has(email)) {
-      return fail(409, 'ACCOUNT_ALREADY_EXISTS', 'An account already exists for these details. Try signing in, or reset your password.')
-    }
-    // No emailed link and no approval: the account can sign in straight away.
-    const account: Student = {
-      id: `student-${crypto.randomUUID()}`, role: 'student', fullName: input.fullName.trim(), email,
-      registrationNumber, programme: 'BSc Computer Science', yearOfStudy: 1, status: 'ACTIVE', avatarUrl: null,
-    }
-    accounts.set(registrationNumber.toLowerCase(), { user: account, password: input.password })
-    accounts.set(email, { user: account, password: input.password })
-    const result: StudentRegistrationResult = {
-      id: account.id, fullName: account.fullName, email, registrationNumber, status: 'ACTIVE',
-      nextStep: 'SIGN_IN', createdAt: new Date().toISOString(),
-      message: 'Your registration number was verified and your account is ready. You can now sign in.',
-    }
-    return ok(result, 201)
-  }),
   http.post(`${API}/auth/forgot-password`, async ({ request }) => {
     const { email } = (await request.json()) as { email: string }
     await delay(450)
@@ -346,53 +319,6 @@ const authHandlers = [
   // Mock sessions never expire, so there is never anything to refresh.
   http.post(`${API}/auth/refresh`, unauthorized),
 
-  // Stand-in for the ERP gate: only staff numbers starting with STF/ "exist".
-  http.post(`${API}/auth/lecturer/register`, async ({ request }) => {
-    const input = (await request.json()) as { fullName: string; email: string; staffNumber: string; password: string }
-    await delay(300)
-    const staffNumber = input.staffNumber.trim().toUpperCase()
-    const email = input.email.trim().toLowerCase()
-    if (!staffNumber.startsWith('STF/')) {
-      return HttpResponse.json(
-        { message: 'Registration was not completed. This staff number is not listed in the institutional staff records.', code: 'ERP_STAFF_NOT_FOUND' },
-        { status: 403 },
-      )
-    }
-    if (accounts.has(staffNumber.toLowerCase()) || accounts.has(email)) {
-      return HttpResponse.json(
-        { message: 'An account already exists for these details. Try signing in, or reset your password.', code: 'ACCOUNT_ALREADY_EXISTS' },
-        { status: 409 },
-      )
-    }
-
-    const account: Lecturer = {
-      id: crypto.randomUUID(),
-      role: 'lecturer',
-      fullName: input.fullName.trim(),
-      email,
-      staffNumber,
-      title: '',
-      department: '',
-      status: 'ACTIVE',
-      avatarUrl: null,
-    }
-
-    accounts.set(staffNumber.toLowerCase(), { user: account, password: input.password })
-    accounts.set(email, { user: account, password: input.password })
-
-    return HttpResponse.json(
-      {
-        id: account.id,
-        fullName: account.fullName,
-        email: account.email,
-        staffNumber: account.staffNumber,
-        status: 'ACTIVE',
-        nextStep: 'SIGN_IN',
-        message: 'Your staff number was verified and your account is ready. You can now sign in.',
-      },
-      { status: 201 },
-    )
-  }),
   http.post(`${API}/auth/verify-email`, async ({ request }) => {
     const { token } = (await request.json()) as { token: string }
     return token === 'expired'

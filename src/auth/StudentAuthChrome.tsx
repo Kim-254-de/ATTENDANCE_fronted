@@ -1,36 +1,4 @@
-import clsx from 'clsx'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-
-/** Underlined Sign In / Register switcher shown above the student login and register forms. */
-export function StudentAuthTabs({ active }: { active: 'signin' | 'register' }) {
-  return (
-    <div className="mb-8 flex gap-8 border-b border-line text-base font-semibold">
-      <Link
-        to="/login?role=student"
-        replace
-        aria-current={active === 'signin' ? 'page' : undefined}
-        className={clsx(
-          '-mb-px border-b-2 pb-3 transition',
-          active === 'signin' ? 'border-blue-700 text-blue-700' : 'border-transparent text-muted hover:text-navy-900',
-        )}
-      >
-        Sign In
-      </Link>
-      <Link
-        to="/signup?role=student"
-        replace
-        aria-current={active === 'register' ? 'page' : undefined}
-        className={clsx(
-          '-mb-px border-b-2 pb-3 transition',
-          active === 'register' ? 'border-blue-700 text-blue-700' : 'border-transparent text-muted hover:text-navy-900',
-        )}
-      >
-        Register
-      </Link>
-    </div>
-  )
-}
 
 function GoogleGlyph() {
   return (

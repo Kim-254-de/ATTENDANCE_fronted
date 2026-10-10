@@ -34,6 +34,15 @@ describe('signing in with a SMARTTT account', () => {
     expect(screen.getByLabelText('SMARTTT admission number or email')).toBeInTheDocument()
   })
 
+  it('sends old lecturer sign-up links to the lecturer sign-in', async () => {
+    for (const path of ['/signup?role=lecturer', '/register']) {
+      const { unmount } = renderApp(path)
+      expect(await screen.findByRole('status')).toHaveTextContent(/there is no separate sign-up for attendance/i)
+      expect(screen.getByLabelText('SMARTTT staff ID or email')).toBeInTheDocument()
+      unmount()
+    }
+  })
+
   it('points a forgotten password to SMARTTT, from the sign-in page', async () => {
     const user = userEvent.setup()
     renderApp('/login?role=lecturer')

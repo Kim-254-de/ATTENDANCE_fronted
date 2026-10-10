@@ -144,21 +144,6 @@ describe('lecturer portal', () => {
     expect(screen.queryByRole('textbox', { name: /full name/i })).not.toBeInTheDocument()
   })
 
-  it('registers a student and routes the new account to its dashboard and profile', async () => {
-    const user = userEvent.setup()
-    renderApp('/signup?role=student')
-    await user.type(await screen.findByLabelText(/student id/i), 'EBT1/00999/23')
-    await user.type(screen.getByLabelText(/full name/i), 'New Student')
-    await user.type(screen.getByLabelText(/^email/i), 'new.student@university.edu')
-    await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
-    await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
-    await user.click(screen.getByRole('button', { name: /create account/i }))
-
-    // Active at once: no email to confirm, the app signs them straight in.
-    expect(await screen.findByRole('heading', { name: "Today's Classes" })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /my profile/i })).toHaveAttribute('href', '/student-profile')
-  })
-
   it('sends the user back to login when the session expires mid-use', async () => {
     const user = userEvent.setup()
     renderApp('/login?role=lecturer')

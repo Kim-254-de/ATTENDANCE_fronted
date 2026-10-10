@@ -318,26 +318,6 @@ export interface AllocatedUnit {
   code: string
 }
 
-/** POST /auth/student/register */
-export interface StudentRegistrationInput {
-  fullName: string
-  email: string
-  registrationNumber: string
-  password: string
-  confirmPassword: string
-}
-
-export interface StudentRegistrationResult {
-  id: string
-  fullName: string
-  email: string
-  registrationNumber: string
-  status: AccountStatus
-  nextStep: 'SIGN_IN'
-  createdAt: string
-  message: string
-}
-
 /** GET /students/me/units: a unit the student is on, with their attendance in it. */
 export interface StudentUnit {
   /** Null for a unit known only from the timetable app (onRoster false). */
@@ -631,25 +611,6 @@ export interface ApiErrorBody {
   message: string
   code?: string
   details?: { field: string; message: string }[]
-}
-
-export interface RegistrationInput {
-  fullName: string
-  email: string
-  staffNumber: string
-  password: string
-  confirmPassword: string
-}
-
-export interface RegistrationResult {
-  id: string
-  fullName: string
-  email: string
-  staffNumber: string
-  /** Always ACTIVE: a lecturer signs in straight after registering. */
-  status: AccountStatus
-  nextStep: 'SIGN_IN'
-  message: string
 }
 
 export interface EmailVerificationResult {
