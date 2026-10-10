@@ -133,7 +133,7 @@ export const routes = [
           {
             path: 'department-dashboard',
             lazy: async () => ({ Component: (await import('@/portals/department/dashboard/OverviewPage')).OverviewPage }),
-            handle: { title: 'Department Overview' },
+            handle: { title: 'Performance Dashboard' },
           },
           {
             path: 'department-lecturers',
