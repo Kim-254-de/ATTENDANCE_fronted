@@ -25,10 +25,11 @@ export function ForgotPasswordPage() {
 
   if (me) return <Navigate to="/" replace />
 
-  const loginLink = role ? `/login?role=${role}` : '/login'
+  const isStaff = role === 'oversight'
+  const loginLink = isStaff ? '/oversight' : role ? `/login?role=${role}` : '/'
 
   // A student's or lecturer's password is their SMARTTT one: nothing to reset here.
-  if (smartttAccounts() && role !== 'department' && role !== 'faculty') {
+  if (smartttAccounts() && !isStaff) {
     return <AuthShell student={isStudent} title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'}>
       <div className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" role="status">
         <div className={`grid size-14 place-items-center rounded-2xl ${isStudent ? 'bg-blue-50 text-blue-700' : 'bg-orange-100 text-orange-600'}`}><Mail className="size-7" aria-hidden /></div>
@@ -48,7 +49,7 @@ export function ForgotPasswordPage() {
       <Link to={loginLink} className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Return to sign in</Link>
     </div> : <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={handleSubmit((values) => request.mutate(values.email, { onSuccess: () => setSubmittedEmail(values.email) }))}>
       <div className={`grid size-14 place-items-center rounded-2xl ${isStudent ? 'bg-blue-50 text-blue-700' : 'bg-orange-100 text-orange-600'}`}><Mail className="size-7" aria-hidden /></div>
-      <p className="text-sm leading-6 text-muted">{isStudent ? 'Enter the email connected to your student account and we will send you a secure password reset link.' : 'Enter the school email connected to your lecturer account and we will send you a secure password reset link.'}</p>
+      <p className="text-sm leading-6 text-muted">{isStudent ? 'Enter the email connected to your student account and we will send you a secure password reset link.' : isStaff ? 'Enter the email your invitation was sent to and we will send you a secure password reset link.' : 'Enter the school email connected to your lecturer account and we will send you a secure password reset link.'}</p>
       {request.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(request.error, 'We could not process your request.')}</p>}
       {isStudent ? (
         <IconField id="forgot-password-email" label="Email" icon={Mail} {...register('email')} type="email" autoComplete="email" placeholder="you@students.tharaka.ac.ke" error={errors.email?.message} />

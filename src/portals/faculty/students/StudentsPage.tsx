@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, Search, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { RateBar } from '@/components/attendance/RateBar'
@@ -123,6 +124,7 @@ export function StudentsPage() {
                 ))}
                 <th scope="col" className="px-5 py-3 font-semibold">Sessions</th>
                 <th scope="col" className="px-5 py-3 font-semibold">Status</th>
+                <th scope="col" className="px-5 py-3 font-semibold"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -158,6 +160,9 @@ function StudentRow({ student }: { student: FacultyStudent }) {
         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${atRisk ? 'bg-orange-100 text-orange-600' : 'bg-emerald-50 text-success'}`}>
           {atRisk ? 'At Risk' : 'Active'}
         </span>
+      </td>
+      <td className="px-3 py-3 text-right">
+        {student.studentUserId && <DeleteAccountButton scope="faculty" kind="student" userId={student.studentUserId} name={student.fullName} compact />}
       </td>
     </tr>
   )

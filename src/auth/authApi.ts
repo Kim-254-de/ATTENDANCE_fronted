@@ -3,6 +3,7 @@ import { api, isUnauthorized } from '@/lib/api'
 import type {
   Account,
   EmailVerificationResult,
+  InvitationDetails,
   Lecturer,
 } from '@/types'
 
@@ -101,6 +102,21 @@ export function useLogout() {
 }
 
 /**
+ * Deletes the signed-in student's or lecturer's own account. The server signs
+ * every session out and clears the cookies, so the whole cache goes too.
+ */
+export function useDeleteAccount() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationKey: ['account', 'delete'],
+    mutationFn: async (password: string) => {
+      await api.delete('/auth/me', { data: { password } })
+    },
+    onSuccess: () => qc.clear(),
+  })
+}
+
+/**
  * A query rather than a mutation: the token is single-use, and a query is deduplicated, so
  * StrictMode's double mount or a re-render can never send it twice and report the second
  * (already consumed) attempt as a failure.
@@ -113,5 +129,43 @@ export function useVerifyEmail(token: string | null) {
     retry: false,
     staleTime: Infinity,
     gcTime: Infinity,
+  })
+}
+
+/**
+ * Who an invitation link is for. A query (deduplicated, never retried) so the
+ * page can greet the invitee; POST only to keep the token out of URLs the
+ * server logs.
+ */
+export function useInvitationDetails(token: string | null) {
+  return useQuery({
+    queryKey: ['auth', 'invitation', token],
+    queryFn: async () => (await api.post<InvitationDetails>('/auth/invitations/lookup', { token })).data,
+    enabled: !!token,
+    retry: false,
+    staleTime: Infinity,
+  })
+}
+
+export interface SetPasswordInput {
+  token: string
+  password: string
+  confirmPassword: string
+}
+
+/** Accepts an invitation: the invitee's own password, after which they sign in at /oversight. */
+export function useAcceptInvitation() {
+  return useMutation({
+    mutationKey: ['invitation', 'accept'],
+    mutationFn: async (input: SetPasswordInput) =>
+      (await api.post<{ email: string; message: string }>('/auth/invitations/accept', input)).data,
+  })
+}
+
+/** Completes a password reset from the emailed link. Every session is signed out. */
+export function useResetPassword() {
+  return useMutation({
+    mutationKey: ['password', 'reset'],
+    mutationFn: async (input: SetPasswordInput) => (await api.post<{ message: string }>('/auth/reset-password', input)).data,
   })
 }

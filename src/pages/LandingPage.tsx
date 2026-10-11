@@ -1,10 +1,15 @@
-import { Building2, GraduationCap, Landmark, Presentation } from 'lucide-react'
+import { GraduationCap, Presentation } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
 import { AuthShell } from '@/auth/AuthShell'
 import { roleHome } from '@/auth/roleHome'
 
-/** The site root: an already-signed-in visitor is sent straight to their dashboard; everyone else picks a role. */
+/**
+ * The site root: an already-signed-in visitor is sent straight to their
+ * dashboard; everyone else picks a role. Only the roles anyone may use are
+ * offered — administrators and officers sign in at /oversight, which their
+ * invitation email links to.
+ */
 export function LandingPage() {
   const { data: me } = useMe()
   const navigate = useNavigate()
@@ -13,7 +18,7 @@ export function LandingPage() {
 
   return (
     <AuthShell title="Welcome to Smart Attendance" subtitle="Choose how you'd like to sign in.">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <RoleCard
           icon={<Presentation className="size-7" aria-hidden />}
           label="I'm a Lecturer"
@@ -25,18 +30,6 @@ export function LandingPage() {
           label="I'm a Student"
           detail="Scan the QR code in class and track your attendance."
           onClick={() => navigate('/login?role=student')}
-        />
-        <RoleCard
-          icon={<Building2 className="size-7" aria-hidden />}
-          label="Department"
-          detail="Review attendance and punctuality across your department."
-          onClick={() => navigate('/login?role=department')}
-        />
-        <RoleCard
-          icon={<Landmark className="size-7" aria-hidden />}
-          label="Faculty"
-          detail="Compare departments and review attendance across your faculty."
-          onClick={() => navigate('/login?role=faculty')}
         />
       </div>
     </AuthShell>

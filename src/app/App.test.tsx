@@ -65,6 +65,34 @@ describe('lecturer portal', () => {
     expect(within(table).getAllByText('01 Oct 2026')).toHaveLength(2)
   })
 
+  it('sends a lecturer who signs out to the role selector', async () => {
+    const user = userEvent.setup()
+    renderApp('/profile')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    await screen.findByText('Dr. Joseph K. Osei')
+    await user.click(within(screen.getByRole('main')).getByRole('button', { name: /sign out/i }))
+    expect(await screen.findByRole('button', { name: /i'm a lecturer/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /i'm a student/i })).toBeInTheDocument()
+  })
+
+  it('lets a lecturer delete their own account from the profile', async () => {
+    const user = userEvent.setup()
+    renderApp('/profile')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    await user.click(await screen.findByRole('button', { name: /delete account/i }))
+    await user.type(screen.getByLabelText(/your password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /delete my account/i }))
+
+    expect(await screen.findByText('Your account has been deleted.')).toBeInTheDocument()
+    expect(screen.getByLabelText(/staff number or email/i)).toBeInTheDocument()
+  })
+
   it('opens the profile and saves updated lecturer details', async () => {
     const user = userEvent.setup()
     renderApp('/profile')

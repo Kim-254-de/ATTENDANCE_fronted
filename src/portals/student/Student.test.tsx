@@ -105,3 +105,25 @@ describe('student units and history pages', () => {
     expect(within(history).getByText('Absent')).toBeInTheDocument()
   })
 })
+
+describe('deleting the account', () => {
+  it('asks for the password, then signs the student out for good', async () => {
+    const user = await signInAsStudent('/student-profile')
+
+    await user.click(await screen.findByRole('button', { name: /delete account/i }))
+    await user.type(screen.getByLabelText(/your password/i), 'wrong')
+    await user.click(screen.getByRole('button', { name: /delete my account/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/password is incorrect/i)
+
+    await user.clear(screen.getByLabelText(/your password/i))
+    await user.type(screen.getByLabelText(/your password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /delete my account/i }))
+    expect(await screen.findByText('Your account has been deleted.')).toBeInTheDocument()
+
+    // The same credentials no longer sign in.
+    await user.type(screen.getByLabelText(/registration number or email/i), 'STU00042')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+  })
+})

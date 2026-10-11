@@ -22,8 +22,8 @@ describe('signing in with a SMARTTT account', () => {
     expect(screen.queryByRole('link', { name: /create an account/i })).not.toBeInTheDocument()
   })
 
-  it('leaves department officers on their attendance password', async () => {
-    renderApp('/login?role=department')
+  it('leaves officers on their attendance password', async () => {
+    renderApp('/oversight')
     expect(await screen.findByLabelText('Email')).toBeInTheDocument()
     expect(screen.queryByText(/smarttt/i)).not.toBeInTheDocument()
   })
@@ -52,7 +52,7 @@ describe('signing in with a SMARTTT account', () => {
   })
 
   it('still lets an officer reset their attendance password', async () => {
-    renderApp('/forgot-password?role=faculty')
+    renderApp('/forgot-password?role=oversight')
     expect(await screen.findByRole('button', { name: /send reset link/i })).toBeInTheDocument()
   })
 })

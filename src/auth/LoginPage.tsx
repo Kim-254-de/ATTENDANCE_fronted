@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -10,7 +10,7 @@ import { smartttAccounts } from '@/lib/env'
 import { Field, IconField } from './AuthCard'
 import { AuthShell } from './AuthShell'
 import { useLogin, useMe } from './authApi'
-import { roleHome } from './roleHome'
+import { OVERSIGHT_ROLES, roleHome } from './roleHome'
 import { SmartttAccountNotice } from './SmartttAccountNotice'
 import { SocialSignIn } from './StudentAuthChrome'
 
@@ -20,16 +20,33 @@ const schema = z.object({
 })
 type Values = z.infer<typeof schema>
 
-export function LoginPage() {
+/**
+ * Sign-in. Students and lecturers arrive from the public role selector
+ * (`/login?role=…`). Administrators and faculty and department officers use
+ * the unlisted staff page, `/oversight` (`oversight` set): one form for all
+ * three, since the account itself says which portal it opens.
+ */
+export function LoginPage({ oversight = false }: { oversight?: boolean }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const roleParam = searchParams.get('role')
-  const role = roleParam === 'student' || roleParam === 'lecturer' || roleParam === 'department' || roleParam === 'faculty' ? roleParam : null
+  const role = oversight ? 'oversight' : roleParam === 'student' || roleParam === 'lecturer' ? roleParam : null
   const from = (location.state as { from?: string } | null)?.from ?? '/lecturer-dashboard'
   const message = (location.state as { message?: string } | null)?.message
   const { data: me } = useMe()
   const login = useLogin()
+
+  // The staff page is unlisted: keep it out of search results. (Not a security control —
+  // that is the invitation-only accounts behind it.)
+  useEffect(() => {
+    if (!oversight) return
+    const meta = document.createElement('meta')
+    meta.name = 'robots'
+    meta.content = 'noindex, nofollow'
+    document.head.appendChild(meta)
+    return () => meta.remove()
+  }, [oversight])
   const [showPassword, setShowPassword] = useState(false)
   const {
     register,
@@ -41,20 +58,19 @@ export function LoginPage() {
   // A student who opened /scan signed out goes straight back to the scanner after signing in.
   const landing = (r: string) => {
     if (r === 'student') return from.startsWith('/student-') || from === '/scan' ? from : roleHome(r)
-    if (r === 'department') return from.startsWith('/department-') ? from : roleHome(r)
-    if (r === 'faculty') return from.startsWith('/faculty-') ? from : roleHome(r)
-    return from
+    if (OVERSIGHT_ROLES.has(r)) return from.startsWith(`/${r}`) ? from : roleHome(r)
+    return from.startsWith('/student-') || from.startsWith('/department-') || from.startsWith('/faculty-') || from.startsWith('/admin') ? roleHome(r) : from
   }
 
   if (me) return <Navigate to={landing(me.role)} replace />
+  // Old department and faculty sign-in links: those accounts now sign in at the staff page.
+  if (roleParam === 'department' || roleParam === 'faculty') return <Navigate to="/oversight" replace state={location.state} />
   if (!role) return <Navigate to="/" replace />
 
   const isStudent = role === 'student'
-  // Department and faculty officers share the lecturer form's layout (identifier + password) but
-  // not its staff-number wording, and their accounts are provisioned.
-  const isDepartment = role === 'department'
-  const isFaculty = role === 'faculty'
-  const isOfficer = isDepartment || isFaculty
+  // Officers and administrators share the lecturer form's layout (identifier + password) but
+  // not its staff-number wording, and their accounts are invited.
+  const isOfficer = role === 'oversight'
   // Students and lecturers sign in with their SMARTTT account; officers keep attendance passwords.
   const viaSmarttt = smartttAccounts() && !isOfficer
   const toggleButton = (
@@ -100,10 +116,12 @@ export function LoginPage() {
   return (
     <AuthShell
       student={isStudent}
-      title={isStudent ? 'STUDENT PORTAL' : isDepartment ? 'Department Portal' : isFaculty ? 'Faculty Portal' : 'Lecturer Portal'}
+      title={isStudent ? 'STUDENT PORTAL' : isOfficer ? 'Staff Sign-in' : 'Lecturer Portal'}
       subtitle={viaSmarttt
         ? 'Sign in with your SMARTTT account: the same login and password you use for SMARTTT.'
-        : isStudent ? 'Sign in to access your attendance dashboard.' : isDepartment ? 'Sign in to review department attendance' : isFaculty ? 'Sign in to review faculty attendance' : 'Sign in to manage attendance'}
+        : isStudent ? 'Sign in to access your attendance dashboard.'
+        : isOfficer ? 'For administrators and faculty and department officers. Sign in with the email your invitation was sent to.'
+        : 'Sign in to manage attendance'}
     >
       <form
         onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: (user) => navigate(landing(user.role), { replace: true }) }))}

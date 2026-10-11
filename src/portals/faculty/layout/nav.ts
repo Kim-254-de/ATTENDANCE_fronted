@@ -1,4 +1,4 @@
-import { BookOpen, Building2, GraduationCap, LayoutGrid, Users } from 'lucide-react'
+import { BookOpen, Building2, GraduationCap, LayoutGrid, UserCog, Users } from 'lucide-react'
 
 /**
  * The portal's primary navigation, shared by Sidebar (lg+) and BottomNav
@@ -11,4 +11,5 @@ export const nav = [
   { to: '/faculty-lecturers', label: 'Lecturers', icon: GraduationCap },
   { to: '/faculty-students', label: 'Students', icon: Users },
   { to: '/faculty-units', label: 'Units', icon: BookOpen },
+  { to: '/faculty-officers', label: 'Officers', icon: UserCog },
 ]

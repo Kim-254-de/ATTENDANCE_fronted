@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation, useMatches } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useMe } from './authApi'
-import { roleHome } from './roleHome'
+import { OVERSIGHT_ROLES, roleHome } from './roleHome'
 
 type RoleHandle = { role?: string }
 
@@ -36,9 +36,10 @@ export function RequireAuth() {
     // The sign-in form is role-specific (registration number vs staff number vs
     // department credentials), so the page's own role picks it; anything
     // role-agnostic falls back to the lecturer form, as it always has.
+    // Officers' and administrators' pages send them to the unlisted staff sign-in instead.
     return (
       <Navigate
-        to={`/login?role=${routeRole ?? 'lecturer'}`}
+        to={routeRole && OVERSIGHT_ROLES.has(routeRole) ? '/oversight' : `/login?role=${routeRole ?? 'lecturer'}`}
         replace
         state={{ from: location.pathname }}
       />
