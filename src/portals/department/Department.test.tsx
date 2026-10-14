@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { afterEach, vi } from 'vitest'
 import { renderApp } from '@/test/renderApp'
 
 /**
@@ -9,13 +10,16 @@ import { renderApp } from '@/test/renderApp'
 const navLink = (name: RegExp) => screen.getAllByRole('link', { name })[0]!
 
 /** Signs in through the department form, as a real officer would. */
-async function signInAsDepartment(user: ReturnType<typeof userEvent.setup>, path = '/login?role=department') {
+async function signInAsDepartment(user: ReturnType<typeof userEvent.setup>, path = '/oversight') {
   renderApp(path)
-  await screen.findByRole('heading', { name: /department portal/i })
+  await screen.findByRole('heading', { name: /staff sign-in/i })
   await user.type(screen.getByLabelText(/^email$/i), 'g.mutiso@university.edu')
   await user.type(screen.getByLabelText(/^password$/i), 'password')
   await user.click(screen.getByRole('button', { name: /sign in/i }))
 }
+
+// The delete tests stub window.confirm.
+afterEach(() => { vi.restoreAllMocks() })
 
 describe('department portal', () => {
   it('signs a department officer in and shows the overview stat tiles', async () => {
@@ -34,9 +38,9 @@ describe('department portal', () => {
     expect(await screen.findByText(/attendance across every unit taught in computer science/i)).toBeInTheDocument()
   })
 
-  it('does not offer self-registration on the department sign-in form', async () => {
+  it('sends the old department sign-in link to the staff sign-in page, which offers no self-registration', async () => {
     renderApp('/login?role=department')
-    await screen.findByRole('heading', { name: /department portal/i })
+    await screen.findByRole('heading', { name: /staff sign-in/i })
     expect(screen.queryByRole('link', { name: /create an account/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/staff number/i)).not.toBeInTheDocument()
   })
@@ -79,9 +83,49 @@ describe('department portal', () => {
     expect(screen.getAllByText('Dr. Mary Wambui')).toHaveLength(2)
   })
 
-  it('sends a signed-out visitor of a department page to the department sign-in form', async () => {
+  it('deletes a lecturer’s account from their page, after a confirmation', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    await signInAsDepartment(user)
+    await screen.findByText('82.3%')
+    await user.click(navLink(/^lecturers$/i))
+    const rows = (await screen.findAllByRole('row')).slice(1)
+    await user.click(within(rows[0]!).getByRole('link', { name: /peter njuguna/i }))
+
+    await user.click(await screen.findByRole('button', { name: /delete mr\. peter njuguna's account/i }))
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/cannot be undone/i))
+    expect(await screen.findByText('2 lecturers')).toBeInTheDocument()
+    expect(screen.queryByText('Mr. Peter Njuguna')).not.toBeInTheDocument()
+  })
+
+  it('deletes a student’s account from the students list, and keeps it when the officer cancels', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const user = userEvent.setup()
+    await signInAsDepartment(user)
+    await screen.findByText('82.3%')
+    await user.click(navLink(/^students$/i))
+    expect(await screen.findByText('9 students')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /delete amina wanjiku kamau's account/i }))
+    expect(screen.getByText('9 students')).toBeInTheDocument()
+
+    confirm.mockReturnValue(true)
+    await user.click(screen.getByRole('button', { name: /delete amina wanjiku kamau's account/i }))
+    expect(await screen.findByText('8 students')).toBeInTheDocument()
+    expect(screen.queryByText('Amina Wanjiku Kamau')).not.toBeInTheDocument()
+  })
+
+  it('sends an officer who signs out back to the staff sign-in page', async () => {
+    const user = userEvent.setup()
+    await signInAsDepartment(user)
+    await screen.findByText('82.3%')
+    await user.click(screen.getAllByRole('button', { name: /sign out/i })[0]!)
+    expect(await screen.findByRole('heading', { name: /staff sign-in/i })).toBeInTheDocument()
+  })
+
+  it('sends a signed-out visitor of a department page to the staff sign-in page', async () => {
     renderApp('/department-lecturers')
-    expect(await screen.findByRole('heading', { name: /department portal/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /staff sign-in/i })).toBeInTheDocument()
   })
 
   it('bounces a lecturer who opens a department page back to their own dashboard', async () => {

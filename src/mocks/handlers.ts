@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentRegistrationInput, StudentRegistrationResult, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import type { Account, Admin, AdminFaculty, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, InvitationDetails, Officer, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -43,6 +43,16 @@ const departmentOfficer: DepartmentOfficer = {
   avatarUrl: null,
 }
 
+/** Administrators are invited too; this one stands in for the first, made with `npm run admin:invite`. */
+const adminUser: Admin = {
+  id: 'adm-1',
+  role: 'admin',
+  fullName: 'Ms. Aisha Njeri',
+  email: 'admin@university.edu',
+  status: 'ACTIVE',
+  avatarUrl: null,
+}
+
 /** Faculty accounts are provisioned the same way department ones are. */
 const facultyOfficer: FacultyOfficer = {
   id: 'fac-1',
@@ -62,6 +72,7 @@ const accounts = new Map<string, { user: Account; password: string }>([
   [student.email.toLowerCase(), { user: student, password: 'password' }],
   [departmentOfficer.email.toLowerCase(), { user: departmentOfficer, password: 'password' }],
   [facultyOfficer.email.toLowerCase(), { user: facultyOfficer, password: 'password' }],
+  [adminUser.email.toLowerCase(), { user: adminUser, password: 'password' }],
 ])
 
 /** The seeded accounts; accounts registered during a test are removed by resetMocks. */
@@ -111,6 +122,13 @@ const store = (() => {
 
 let currentAccount: Account = lecturer
 
+/**
+ * Accounts deleted during a test (DELETE /auth/me, or by an officer). Kept as
+ * a set rather than removed from the seed data, so resetMocks brings them back.
+ */
+const deletedUserIds = new Set<string>()
+const isDeleted = (userId: string | null) => userId !== null && deletedUserIds.has(userId)
+
 
 interface MockSession extends SessionSummary {
   /** Never sent to the client; only used to derive a stable-looking fake signature. */
@@ -146,7 +164,9 @@ export const resetMocks = () => {
   for (const key of [...accounts.keys()]) if (!BASE_ACCOUNT_KEYS.has(key)) accounts.delete(key)
   for (const u of units.slice(BASE_UNIT_COUNT)) { schedules.delete(u.id); unitStatuses.delete(u.id); allocations.delete(u.id); timetableCounts.delete(u.id) }
   units.length = BASE_UNIT_COUNT
+  deletedUserIds.clear()
   resetFaceMocks()
+  resetOfficerMocks()
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -257,33 +277,6 @@ function assertAcceptingScans(session: MockSession) {
 }
 
 const authHandlers = [
-  // Stand-in for the student records check: registration numbers starting with EBT1/ or STU "exist",
-  // except EBT1/99999/23. Real mode: POST /auth/student/register checks SMARTTT (or the ERP).
-  http.post(`${API}/auth/student/register`, async ({ request }) => {
-    const input = (await request.json()) as StudentRegistrationInput
-    await delay(300)
-    const registrationNumber = input.registrationNumber.trim().toUpperCase()
-    const email = input.email.trim().toLowerCase()
-    if (!/^(EBT1\/|STU)/.test(registrationNumber) || registrationNumber === 'EBT1/99999/23') {
-      return fail(403, 'STUDENT_RECORD_NOT_FOUND', 'Registration was not completed. This registration number is not in the student records. Check it, or contact the registrar.')
-    }
-    if (accounts.has(registrationNumber.toLowerCase()) || accounts.has(email)) {
-      return fail(409, 'ACCOUNT_ALREADY_EXISTS', 'An account already exists for these details. Try signing in, or reset your password.')
-    }
-    // No emailed link and no approval: the account can sign in straight away.
-    const account: Student = {
-      id: `student-${crypto.randomUUID()}`, role: 'student', fullName: input.fullName.trim(), email,
-      registrationNumber, programme: 'BSc Computer Science', yearOfStudy: 1, status: 'ACTIVE', avatarUrl: null,
-    }
-    accounts.set(registrationNumber.toLowerCase(), { user: account, password: input.password })
-    accounts.set(email, { user: account, password: input.password })
-    const result: StudentRegistrationResult = {
-      id: account.id, fullName: account.fullName, email, registrationNumber, status: 'ACTIVE',
-      nextStep: 'SIGN_IN', createdAt: new Date().toISOString(),
-      message: 'Your registration number was verified and your account is ready. You can now sign in.',
-    }
-    return ok(result, 201)
-  }),
   http.post(`${API}/auth/forgot-password`, async ({ request }) => {
     const { email } = (await request.json()) as { email: string }
     await delay(450)
@@ -295,8 +288,11 @@ const authHandlers = [
     await delay(300)
     const accountRecord = accounts.get(identifier.trim().toLowerCase())
     const account = accountRecord?.user
-    const ok = Boolean(accountRecord) && accountRecord?.password === password
+    const ok = Boolean(accountRecord) && accountRecord?.password === password && !isDeleted(account?.id ?? null)
     if (!ok) return HttpResponse.json({ message: 'Invalid staff number/email or password' }, { status: 401 })
+    if (officers.find((o) => o.userId === account?.id)?.status === 'DEACTIVATED') {
+      return fail(403, 'ACCOUNT_NOT_ACTIVE', 'This account has been deactivated. Please contact the administrator.')
+    }
     store.set(true)
     currentAccount = account as Account
     return HttpResponse.json(account)
@@ -333,6 +329,18 @@ const authHandlers = [
     currentAccount.avatarUrl = null
     return HttpResponse.json({ avatarUrl: null })
   }),
+  // Anonymised on the real backend (auth.deletion.ts); here the account just stops signing in.
+  http.delete(`${API}/auth/me`, async ({ request }) => {
+    if (!store.get()) return unauthorized()
+    if (currentAccount.role !== 'lecturer' && currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
+    const { password } = (await request.json()) as { password?: string }
+    const record = [...accounts.values()].find((a) => a.user === currentAccount)
+    if (record?.password !== password) return fail(400, 'BAD_REQUEST', 'Your password is incorrect.')
+    deletedUserIds.add(currentAccount.id)
+    store.set(false)
+    currentAccount = lecturer
+    return new HttpResponse(null, { status: 204 })
+  }),
   http.post(`${API}/auth/change-password`, async ({ request }) => {
     if (!store.get()) return unauthorized()
     const input = (await request.json()) as { currentPassword?: string; newPassword?: string }
@@ -346,53 +354,6 @@ const authHandlers = [
   // Mock sessions never expire, so there is never anything to refresh.
   http.post(`${API}/auth/refresh`, unauthorized),
 
-  // Stand-in for the ERP gate: only staff numbers starting with STF/ "exist".
-  http.post(`${API}/auth/lecturer/register`, async ({ request }) => {
-    const input = (await request.json()) as { fullName: string; email: string; staffNumber: string; password: string }
-    await delay(300)
-    const staffNumber = input.staffNumber.trim().toUpperCase()
-    const email = input.email.trim().toLowerCase()
-    if (!staffNumber.startsWith('STF/')) {
-      return HttpResponse.json(
-        { message: 'Registration was not completed. This staff number is not listed in the institutional staff records.', code: 'ERP_STAFF_NOT_FOUND' },
-        { status: 403 },
-      )
-    }
-    if (accounts.has(staffNumber.toLowerCase()) || accounts.has(email)) {
-      return HttpResponse.json(
-        { message: 'An account already exists for these details. Try signing in, or reset your password.', code: 'ACCOUNT_ALREADY_EXISTS' },
-        { status: 409 },
-      )
-    }
-
-    const account: Lecturer = {
-      id: crypto.randomUUID(),
-      role: 'lecturer',
-      fullName: input.fullName.trim(),
-      email,
-      staffNumber,
-      title: '',
-      department: '',
-      status: 'ACTIVE',
-      avatarUrl: null,
-    }
-
-    accounts.set(staffNumber.toLowerCase(), { user: account, password: input.password })
-    accounts.set(email, { user: account, password: input.password })
-
-    return HttpResponse.json(
-      {
-        id: account.id,
-        fullName: account.fullName,
-        email: account.email,
-        staffNumber: account.staffNumber,
-        status: 'ACTIVE',
-        nextStep: 'SIGN_IN',
-        message: 'Your staff number was verified and your account is ready. You can now sign in.',
-      },
-      { status: 201 },
-    )
-  }),
   http.post(`${API}/auth/verify-email`, async ({ request }) => {
     const { token } = (await request.json()) as { token: string }
     return token === 'expired'
@@ -796,10 +757,13 @@ let studentFace: { consentedAt: string | null; enrolledAt: string | null } = { c
 /** Matches the terminal has shown, by token, until confirmed. */
 const faceMatches = new Map<string, { sessionId: string; allocation: Allocation; score: number; expiresAt: number }>()
 const FACE_MATCH_TTL_MS = 60_000
+/** The first photo of each registration made in the mock, by allocation id. Seeded registrations have none, like ones made before the backend kept them. */
+const referencePhotos = new Map<string, string>()
 
 function resetFaceMocks() {
   studentFace = { consentedAt: null, enrolledAt: null }
   faceMatches.clear()
+  referencePhotos.clear()
   for (const a of [...allocations.values()].flat()) Object.assign(a, SEED_FACES.get(a.id))
 }
 
@@ -827,6 +791,10 @@ function seenInPhoto(image: string): string {
 const NO_FACE = 'No face found. Hold the phone at eye level, about an arm\'s length from the student.'
 
 export const faceHandlers = [
+  http.post(`${API}/face/warm-up`, () => {
+    if (!store.get()) return unauthorized()
+    return ok({ enabled: true }, 202)
+  }),
   http.get(`${API}/students/me/face`, () => {
     if (!store.get()) return unauthorized()
     if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
@@ -862,6 +830,7 @@ export const faceHandlers = [
     if (blank >= 0) return HttpResponse.json({ success: false, error: { code: 'FACE_NOT_FOUND', message: NO_FACE, details: { photo: blank + 1 } } }, { status: 422 })
     const replaced = allocation.faceEnrolled
     allocation.faceEnrolled = true
+    referencePhotos.set(allocation.id, images[0]!)
     return ok({ studentUserId: allocation.studentUserId, enrolledAt: new Date().toISOString(), replaced }, 201)
   }),
 
@@ -871,6 +840,7 @@ export const faceHandlers = [
     if (!allocation) return fail(404, 'NOT_FOUND', 'This student is not on the unit.')
     const removed = allocation.faceEnrolled
     allocation.faceEnrolled = false
+    referencePhotos.delete(allocation.id)
     return ok({ removed })
   }),
 
@@ -900,7 +870,7 @@ export const faceHandlers = [
     if (matchToken) faceMatches.set(matchToken, { sessionId: session.id, allocation, score: 0.87, expiresAt })
     return ok<FaceIdentifyResult>({
       result: 'MATCH',
-      student: { studentUserId: allocation.studentUserId!, fullName: allocation.fullName ?? '', registrationNumber: allocation.registrationNumber, avatarDataUrl: null },
+      student: { studentUserId: allocation.studentUserId!, fullName: allocation.fullName ?? '', registrationNumber: allocation.registrationNumber, avatarDataUrl: null, referencePhotoDataUrl: referencePhotos.get(allocation.id) ?? null },
       score: 0.87,
       alreadyCheckedIn,
       matchToken,
@@ -1028,7 +998,7 @@ const departmentHandlers = [
     const blocked = requireDepartment()
     if (blocked) return blocked
     await delay(200)
-    return ok(DEPARTMENT_LECTURERS)
+    return ok(DEPARTMENT_LECTURERS.filter((l) => !isDeleted(l.userId)))
   }),
 
   /** Shaped exactly as the real backend sends it (department.repository.ts): identity nested under `lecturer`, sessions under `sessions` — lecturersApi.ts maps this to the flat DepartmentLecturerDetail the pages use. */
@@ -1036,7 +1006,7 @@ const departmentHandlers = [
     const blocked = requireDepartment()
     if (blocked) return blocked
     await delay(200)
-    const row = DEPARTMENT_LECTURERS.find((l) => l.userId === params.lecturerUserId)
+    const row = DEPARTMENT_LECTURERS.find((l) => l.userId === params.lecturerUserId && !isDeleted(l.userId))
     if (!row) return fail(404, 'NOT_FOUND', 'Lecturer not found in this department.')
     const raw = {
       lecturer: { userId: row.userId, fullName: row.fullName, staffNumber: row.staffNumber, title: 'Dr.', email: `${row.userId}@university.edu` },
@@ -1056,6 +1026,26 @@ const departmentHandlers = [
     return ok(raw)
   }),
 
+  http.delete(`${API}/departments/lecturers/:lecturerUserId`, async ({ params }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(200)
+    const row = DEPARTMENT_LECTURERS.find((l) => l.userId === params.lecturerUserId && !isDeleted(l.userId))
+    if (!row) return fail(404, 'NOT_FOUND', 'No such lecturer in your department.')
+    deletedUserIds.add(row.userId)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.delete(`${API}/departments/students/:studentUserId`, async ({ params }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    await delay(200)
+    const studentUserId = params.studentUserId as string
+    const found = !isDeleted(studentUserId) && [...allocations.values()].some((roster) => roster.some((a) => a.studentUserId === studentUserId))
+    if (found) deletedUserIds.add(studentUserId)
+    return found ? new HttpResponse(null, { status: 204 }) : fail(404, 'NOT_FOUND', 'No such student in your department.')
+  }),
+
   /** One row per (student, unit) across the department — same shape as /lecturers/students. */
   http.get(`${API}/departments/students`, async () => {
     const blocked = requireDepartment()
@@ -1065,7 +1055,7 @@ const departmentHandlers = [
     const rows: LecturerStudent[] = [...allocations.entries()].flatMap(([unitId, roster]) => {
       const unit = DEPARTMENT_UNITS.find((u) => u.id === unitId)
       if (!unit) return []
-      return roster.map((a): LecturerStudent => {
+      return roster.filter((a) => !isDeleted(a.studentUserId)).map((a): LecturerStudent => {
         const rate = DEMO_DEPARTMENT_STUDENT_RATES[i++ % DEMO_DEPARTMENT_STUDENT_RATES.length]!
         return {
           id: a.id,
@@ -1379,14 +1369,14 @@ const facultyHandlers = [
     const blocked = requireFaculty()
     if (blocked) return blocked
     await delay(200)
-    return ok(FACULTY_LECTURERS)
+    return ok(FACULTY_LECTURERS.filter((l) => !isDeleted(l.userId)))
   }),
 
   http.get(`${API}/faculties/lecturers/:lecturerUserId`, async ({ params }) => {
     const blocked = requireFaculty()
     if (blocked) return blocked
     await delay(200)
-    const row = FACULTY_LECTURERS.find((l) => l.userId === params.lecturerUserId)
+    const row = FACULTY_LECTURERS.find((l) => l.userId === params.lecturerUserId && !isDeleted(l.userId))
     if (!row) return fail(404, 'NOT_FOUND', 'Lecturer not found in this faculty.')
     const sessions = FACULTY_TIMEKEEPING.filter((t) => t.lecturerUserId === row.userId)
       .map((t) => ({
@@ -1405,6 +1395,26 @@ const facultyHandlers = [
     })
   }),
 
+  http.delete(`${API}/faculties/lecturers/:lecturerUserId`, async ({ params }) => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    await delay(200)
+    const row = FACULTY_LECTURERS.find((l) => l.userId === params.lecturerUserId && !isDeleted(l.userId))
+    if (!row) return fail(404, 'NOT_FOUND', 'No such lecturer in your faculty.')
+    deletedUserIds.add(row.userId)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.delete(`${API}/faculties/students/:studentUserId`, async ({ params }) => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    await delay(200)
+    const studentUserId = params.studentUserId as string
+    const found = !isDeleted(studentUserId) && [...allocations.values()].some((roster) => roster.some((a) => a.studentUserId === studentUserId))
+    if (found) deletedUserIds.add(studentUserId)
+    return found ? new HttpResponse(null, { status: 204 }) : fail(404, 'NOT_FOUND', 'No such student in your faculty.')
+  }),
+
   /** One row per (student, unit) across the faculty — department's students mock, widened and department-tagged. */
   http.get(`${API}/faculties/students`, async () => {
     const blocked = requireFaculty()
@@ -1414,7 +1424,7 @@ const facultyHandlers = [
     const rows: FacultyStudent[] = [...allocations.entries()].flatMap(([unitId, roster]) => {
       const unit = FACULTY_UNITS.find((u) => u.unitId === unitId)
       if (!unit) return []
-      return roster.map((a): FacultyStudent => {
+      return roster.filter((a) => !isDeleted(a.studentUserId)).map((a): FacultyStudent => {
         const rate = DEMO_DEPARTMENT_STUDENT_RATES[i++ % DEMO_DEPARTMENT_STUDENT_RATES.length]!
         return {
           id: a.id, registrationNumber: a.registrationNumber, studentUserId: a.studentUserId, fullName: a.fullName,
@@ -1467,4 +1477,144 @@ const facultyHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+/*
+ * Admin console and invitations (src/modules/admin, auth.invitation.ts on the real backend).
+ * Invitation links are `invite-<n>`; tests read the newest with lastMockInvitationToken().
+ */
+const OFFICERS_SEED = (): Officer[] => [
+  { userId: adminUser.id, role: 'admin', fullName: adminUser.fullName, email: adminUser.email, status: 'ACTIVE', facultyId: null, facultyName: null, departmentId: null, departmentName: null, invitedAt: '2026-09-01T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-10T07:30:00Z' },
+  { userId: facultyOfficer.id, role: 'faculty', fullName: facultyOfficer.fullName, email: facultyOfficer.email, status: 'ACTIVE', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: null, departmentName: null, invitedAt: '2026-09-02T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-09T09:00:00Z' },
+  { userId: departmentOfficer.id, role: 'department', fullName: departmentOfficer.fullName, email: departmentOfficer.email, status: 'ACTIVE', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: 'dept-cs', departmentName: 'Computer Science', invitedAt: '2026-09-03T08:00:00Z', invitationExpiresAt: null, lastLoginAt: null },
+]
+const FACULTIES_SEED = (): AdminFaculty[] => [
+  { facultyId: 'fac-pet', name: 'Physical Engineering and Technologies', departmentCount: FACULTY_DEPARTMENTS_SEED.length, officerCount: 1 },
+  { facultyId: 'fac-bus', name: 'Business and Economics', departmentCount: 0, officerCount: 0 },
+]
+let officers = OFFICERS_SEED()
+let adminFaculties = FACULTIES_SEED()
+/** token -> invited user id */
+const invitations = new Map<string, string>()
+let invitationCounter = 0
+
+function resetOfficerMocks() {
+  officers = OFFICERS_SEED()
+  adminFaculties = FACULTIES_SEED()
+  invitations.clear()
+}
+
+/** Test helper: the newest invitation link's token, as the email would carry it. */
+export const lastMockInvitationToken = () => [...invitations.keys()].at(-1) ?? null
+
+const requireAdmin = () => {
+  if (!store.get()) return unauthorized()
+  if (currentAccount.role !== 'admin') return fail(403, 'FORBIDDEN', 'Forbidden')
+  return null
+}
+
+const issueInvitation = (userId: string) => {
+  for (const [token, id] of invitations) if (id === userId) invitations.delete(token)
+  const token = `invite-${++invitationCounter}`
+  invitations.set(token, userId)
+  const officer = officers.find((o) => o.userId === userId)!
+  officer.invitedAt = new Date().toISOString()
+  officer.invitationExpiresAt = new Date(Date.now() + 72 * 3_600_000).toISOString()
+  return ok({ userId, emailSent: true }, 201)
+}
+
+const inviteOfficer = (invitee: { fullName?: string; email?: string }, scope: Pick<Officer, 'role' | 'facultyId' | 'facultyName' | 'departmentId' | 'departmentName'>) => {
+  const email = invitee.email?.trim().toLowerCase() ?? ''
+  if (!invitee.fullName?.trim() || !email.includes('@')) return fail(400, 'VALIDATION_FAILED', 'Enter a full name and a valid email.')
+  if (accounts.has(email) || officers.some((o) => o.email === email)) return fail(409, 'ACCOUNT_ALREADY_EXISTS', 'Someone already has an account with this email address.')
+  const userId = `inv-${invitationCounter + 1}`
+  officers.push({ userId, fullName: invitee.fullName.trim(), email, status: 'PENDING_VERIFICATION', invitedAt: null, invitationExpiresAt: null, lastLoginAt: null, ...scope })
+  return issueInvitation(userId)
+}
+
+const resendOfficer = (officer: Officer | undefined) => {
+  if (!officer) return fail(404, 'NOT_FOUND', 'No such officer.')
+  if (officer.status !== 'PENDING_VERIFICATION') return fail(409, 'CONFLICT', 'This person has already accepted their invitation.')
+  return issueInvitation(officer.userId)
+}
+
+const deactivateOfficer = (officer: Officer | undefined) => {
+  if (!officer) return fail(404, 'NOT_FOUND', 'No such officer.')
+  if (officer.userId === currentAccount.id) return fail(400, 'BAD_REQUEST', 'You cannot remove your own access.')
+  officer.status = 'DEACTIVATED'
+  officer.invitationExpiresAt = null
+  for (const [token, id] of invitations) if (id === officer.userId) invitations.delete(token)
+  return new HttpResponse(null, { status: 204 })
+}
+
+const invitationHandlers = [
+  http.get(`${API}/admin/faculties`, () => requireAdmin() ?? ok(adminFaculties)),
+  http.post(`${API}/admin/faculties`, async ({ request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const { name } = (await request.json()) as { name: string }
+    if (adminFaculties.some((f) => f.name.toLowerCase() === name.trim().toLowerCase())) return fail(409, 'CONFLICT', `A faculty named "${name}" already exists.`)
+    const faculty = { facultyId: `fac-${adminFaculties.length + 1}`, name: name.trim(), departmentCount: 0, officerCount: 0 }
+    adminFaculties.push(faculty)
+    return ok({ facultyId: faculty.facultyId, name: faculty.name }, 201)
+  }),
+  http.get(`${API}/admin/officers`, () => requireAdmin() ?? ok(officers)),
+  http.post(`${API}/admin/invitations`, async ({ request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const input = (await request.json()) as { role: 'admin' | 'faculty'; fullName: string; email: string; facultyId?: string }
+    if (input.role === 'admin') return inviteOfficer(input, { role: 'admin', facultyId: null, facultyName: null, departmentId: null, departmentName: null })
+    const faculty = adminFaculties.find((f) => f.facultyId === input.facultyId)
+    if (!faculty) return fail(400, 'BAD_REQUEST', 'That faculty does not exist.')
+    const res = inviteOfficer(input, { role: 'faculty', facultyId: faculty.facultyId, facultyName: faculty.name, departmentId: null, departmentName: null })
+    if (res.status === 201) faculty.officerCount += 1
+    return res
+  }),
+  http.post(`${API}/admin/officers/:userId/resend`, ({ params }) => requireAdmin() ?? resendOfficer(officers.find((o) => o.userId === params.userId))),
+  http.post(`${API}/admin/officers/:userId/deactivate`, ({ params }) => requireAdmin() ?? deactivateOfficer(officers.find((o) => o.userId === params.userId))),
+
+  http.get(`${API}/faculties/officers`, () => requireFaculty() ?? ok(officers.filter((o) => o.role === 'department' && o.facultyId === 'fac-pet'))),
+  http.post(`${API}/faculties/departments/:departmentId/officers`, async ({ params, request }) => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    const department = FACULTY_DEPARTMENTS_SEED.find((d) => d.id === params.departmentId)
+    if (!department) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
+    return inviteOfficer((await request.json()) as { fullName: string; email: string }, {
+      role: 'department', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: department.id, departmentName: department.name,
+    })
+  }),
+  http.post(`${API}/faculties/officers/:userId/resend`, ({ params }) =>
+    requireFaculty() ?? resendOfficer(officers.find((o) => o.userId === params.userId && o.role === 'department'))),
+  http.post(`${API}/faculties/officers/:userId/deactivate`, ({ params }) =>
+    requireFaculty() ?? deactivateOfficer(officers.find((o) => o.userId === params.userId && o.role === 'department'))),
+
+  http.post(`${API}/auth/invitations/lookup`, async ({ request }) => {
+    const { token } = (await request.json()) as { token: string }
+    const officer = officers.find((o) => o.userId === invitations.get(token) && o.status === 'PENDING_VERIFICATION')
+    if (!officer) return fail(400, 'BAD_REQUEST', 'This invitation link is invalid, has expired or has already been used. Ask whoever invited you to send it again.')
+    const details: InvitationDetails = {
+      fullName: officer.fullName, email: officer.email, role: officer.role,
+      scopeName: officer.departmentName ?? officer.facultyName, expiresAt: officer.invitationExpiresAt!,
+    }
+    return ok(details)
+  }),
+  http.post(`${API}/auth/invitations/accept`, async ({ request }) => {
+    const { token, password } = (await request.json()) as { token: string; password: string }
+    const officer = officers.find((o) => o.userId === invitations.get(token) && o.status === 'PENDING_VERIFICATION')
+    if (!officer) return fail(400, 'BAD_REQUEST', 'This invitation link is invalid, has expired or has already been used. Ask whoever invited you to send it again.')
+    invitations.delete(token)
+    officer.status = 'ACTIVE'
+    officer.invitationExpiresAt = null
+    const base = { id: officer.userId, fullName: officer.fullName, email: officer.email, status: 'ACTIVE' as const, avatarUrl: null }
+    const user: Account = officer.role === 'admin' ? { ...base, role: 'admin' }
+      : officer.role === 'faculty' ? { ...base, role: 'faculty', facultyId: officer.facultyId!, facultyName: officer.facultyName! }
+      : { ...base, role: 'department', departmentId: officer.departmentId!, departmentName: officer.departmentName!, facultyName: officer.facultyName }
+    accounts.set(officer.email, { user, password })
+    return ok({ email: officer.email, message: 'Your account is ready. Sign in with your email and new password.' })
+  }),
+  http.post(`${API}/auth/reset-password`, async ({ request }) => {
+    const { token } = (await request.json()) as { token: string }
+    if (token !== 'valid-reset-token') return fail(400, 'BAD_REQUEST', 'This password reset link is invalid or has expired. Please request a new one.')
+    return ok({ message: 'Your password has been changed. You have been signed out everywhere. Please sign in with your new password.' })
+  }),
+]
+
+export const handlers = [...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

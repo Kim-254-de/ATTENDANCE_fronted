@@ -15,3 +15,11 @@ if (import.meta.env.PROD && parsed.data.VITE_USE_MOCKS === 'true') {
 }
 
 export const env = { apiUrl: parsed.data.VITE_API_URL }
+
+/**
+ * Students and lecturers sign in with their SMARTTT account: there is no
+ * sign-up here, and their password is changed and reset in SMARTTT
+ * (backend docs/smarttt-accounts.md). Must match the backend's
+ * SMARTTT_ACCOUNTS. Read on each call so tests can switch it.
+ */
+export const smartttAccounts = (): boolean => import.meta.env.VITE_SMARTTT_ACCOUNTS === 'true'

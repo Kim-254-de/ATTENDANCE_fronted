@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { afterEach, vi } from 'vitest'
 import { renderApp } from '@/test/renderApp'
 
 /**
@@ -9,13 +10,16 @@ import { renderApp } from '@/test/renderApp'
 const navLink = (name: RegExp) => screen.getAllByRole('link', { name })[0]!
 
 /** Signs in through the faculty form, as a real officer would. */
-async function signInAsFaculty(user: ReturnType<typeof userEvent.setup>, path = '/login?role=faculty') {
+async function signInAsFaculty(user: ReturnType<typeof userEvent.setup>, path = '/oversight') {
   renderApp(path)
-  await screen.findByRole('heading', { name: /faculty portal/i })
+  await screen.findByRole('heading', { name: /staff sign-in/i })
   await user.type(screen.getByLabelText(/^email$/i), 'd.rotich@university.edu')
   await user.type(screen.getByLabelText(/^password$/i), 'password')
   await user.click(screen.getByRole('button', { name: /sign in/i }))
 }
+
+// The delete tests stub window.confirm.
+afterEach(() => { vi.restoreAllMocks() })
 
 describe('faculty portal', () => {
   it('signs a faculty officer in and shows the overview stat tiles', async () => {
@@ -33,9 +37,9 @@ describe('faculty portal', () => {
     expect(await screen.findByText(/attendance across every department in physical engineering and technologies/i)).toBeInTheDocument()
   })
 
-  it('does not offer self-registration on the faculty sign-in form', async () => {
-    renderApp('/login?role=faculty')
-    await screen.findByRole('heading', { name: /faculty portal/i })
+  it('does not offer self-registration on the staff sign-in form', async () => {
+    renderApp('/oversight')
+    await screen.findByRole('heading', { name: /staff sign-in/i })
     expect(screen.queryByRole('link', { name: /create an account/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/staff number/i)).not.toBeInTheDocument()
   })
@@ -59,6 +63,19 @@ describe('faculty portal', () => {
     expect(screen.getAllByText('Mr. Peter Njuguna').length).toBe(2)
     expect(screen.getByRole('heading', { name: /units/i })).toBeInTheDocument()
     expect(screen.getByText('CS210')).toBeInTheDocument()
+  })
+
+  it('deletes a lecturer’s account from their page', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    await signInAsFaculty(user)
+    await screen.findByRole('region', { name: /key statistics/i })
+    await user.click(navLink(/^lecturers$/i))
+    const rows = (await screen.findAllByRole('row')).slice(1)
+    await user.click(within(rows[0]!).getByRole('link', { name: /peter njuguna/i }))
+
+    await user.click(await screen.findByRole('button', { name: /delete mr\. peter njuguna's account/i }))
+    expect(await screen.findByText('2 lecturers')).toBeInTheDocument()
   })
 
   it('lists every lecturer across departments and drills into one\'s units and timekeeping', async () => {
@@ -107,9 +124,9 @@ describe('faculty portal', () => {
     expect(screen.getByText('1 / 2')).toBeInTheDocument()
   })
 
-  it('sends a signed-out visitor of a faculty page to the faculty sign-in form', async () => {
+  it('sends a signed-out visitor of a faculty page to the staff sign-in page', async () => {
     renderApp('/faculty-lecturers')
-    expect(await screen.findByRole('heading', { name: /faculty portal/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /staff sign-in/i })).toBeInTheDocument()
   })
 
   it('bounces a lecturer who opens a faculty page back to their own dashboard', async () => {

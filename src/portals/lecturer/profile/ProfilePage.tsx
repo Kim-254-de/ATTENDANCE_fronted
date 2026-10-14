@@ -3,6 +3,7 @@ import { Camera, LogOut, Mail, MailCheck, Pencil, ShieldCheck } from 'lucide-rea
 import { Link, useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { DeleteAccountCard } from '@/auth/DeleteAccountCard'
 import {
   useForgotPassword,
   useLogout,
@@ -48,7 +49,7 @@ export function ProfilePage() {
   const status = STATUS_STYLE[user.status]
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div className="mx-auto max-w-xl space-y-6">
         <Card className="h-fit overflow-hidden">
           <div className="bg-linear-to-b from-blue-600 to-blue-700 px-5 pb-5 pt-5 text-white sm:px-6">
             <div className="relative inline-block">
@@ -110,13 +111,14 @@ export function ProfilePage() {
             <Button
               variant="danger"
               className="w-full justify-center"
-              onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/login?role=lecturer', { replace: true }) })}
+              onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) })}
               loading={logout.isPending}
             >
               <LogOut className="size-4" aria-hidden /> Sign Out
             </Button>
           </div>
         </Card>
+        <DeleteAccountCard />
     </div>
   )
 }

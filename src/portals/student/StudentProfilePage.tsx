@@ -7,12 +7,14 @@ import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
 import { resizeImageFile } from '@/lib/image'
 import { useForgotPassword, useLogout, useMe, useRemoveAvatar, useSetAvatar } from '@/auth/authApi'
+import { DeleteAccountCard } from '@/auth/DeleteAccountCard'
 import { FaceCheckInCard } from './FaceCheckInCard'
 
 /**
  * A student's own details. Read-only: name, email and registration number are
  * what the student records check verified at registration, so they aren't
- * editable here (ask the registrar). The password and profile photo can be changed.
+ * editable here (ask the registrar). The password and profile photo can be changed,
+ * and the account deleted.
  */
 export function StudentProfilePage() {
   const { data: me } = useMe()
@@ -25,7 +27,7 @@ export function StudentProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   if (!user) return null
 
-  const signOut = () => logout.mutate(undefined, { onSettled: () => navigate('/login?role=student', { replace: true }) })
+  const signOut = () => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) })
 
   const onPickPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -95,6 +97,7 @@ export function StudentProfilePage() {
         </div>
       </Card>
       <FaceCheckInCard />
+      <DeleteAccountCard />
     </div>
   )
 }

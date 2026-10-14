@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
@@ -16,6 +17,7 @@ import { useDepartmentLecturer } from './lecturersApi'
 export function LecturerDetailPage() {
   const { lecturerUserId } = useParams<{ lecturerUserId: string }>()
   const { data, isPending, error, refetch } = useDepartmentLecturer(lecturerUserId)
+  const navigate = useNavigate()
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -38,6 +40,11 @@ export function LecturerDetailPage() {
               <h2 className="truncate text-lg font-bold text-navy-900">{data.fullName}</h2>
               <p className="font-mono text-xs text-muted">{data.staffNumber}</p>
             </div>
+            {lecturerUserId && (
+              <div className="ml-auto shrink-0">
+                <DeleteAccountButton scope="department" kind="lecturer" userId={lecturerUserId} name={data.fullName} onDeleted={() => navigate('/department-lecturers', { replace: true })} />
+              </div>
+            )}
           </Card>
 
           <Card className="overflow-hidden">

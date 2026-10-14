@@ -58,8 +58,66 @@ export interface FacultyOfficer {
   avatarUrl: string | null
 }
 
-/** Whoever is signed in. Check `role` before using lecturer-, student-, department- or faculty-only fields. */
-export type Account = Lecturer | Student | DepartmentOfficer | FacultyOfficer
+/**
+ * A signed-in administrator: creates faculties and invites faculty officers
+ * and other administrators. Invited, never self-registered.
+ */
+export interface Admin {
+  id: string
+  role: 'admin'
+  fullName: string
+  email: string
+  status: AccountStatus
+  avatarUrl: string | null
+}
+
+/** Whoever is signed in. Check `role` before using lecturer-, student-, department-, faculty- or admin-only fields. */
+export type Account = Lecturer | Student | DepartmentOfficer | FacultyOfficer | Admin
+
+/**
+ * An administrator, faculty officer or department officer as the admin console
+ * and the faculty portal list them. PENDING_VERIFICATION means invited but
+ * not yet accepted.
+ */
+export interface Officer {
+  userId: string
+  role: 'admin' | 'faculty' | 'department'
+  fullName: string
+  email: string
+  status: AccountStatus
+  facultyId: string | null
+  facultyName: string | null
+  departmentId: string | null
+  departmentName: string | null
+  invitedAt: string | null
+  /** When the pending invitation link stops working; null once accepted or withdrawn. */
+  invitationExpiresAt: string | null
+  lastLoginAt: string | null
+}
+
+/** POST /admin/invitations and the faculty's invite: emailSent false means the account exists but the email failed — re-send it. */
+export interface InvitationResult {
+  userId: string
+  emailSent: boolean
+}
+
+/** POST /auth/invitations/lookup — who an invitation link is for. */
+export interface InvitationDetails {
+  fullName: string
+  email: string
+  role: 'admin' | 'faculty' | 'department'
+  /** The faculty's or department's name; null for an administrator. */
+  scopeName: string | null
+  expiresAt: string
+}
+
+/** GET /admin/faculties */
+export interface AdminFaculty {
+  facultyId: string
+  name: string
+  departmentCount: number
+  officerCount: number
+}
 
 /** GET /departments/me — the department the signed-in officer oversees. */
 export interface DepartmentProfile {
@@ -329,26 +387,6 @@ export interface AllocatedUnit {
   code: string
 }
 
-/** POST /auth/student/register */
-export interface StudentRegistrationInput {
-  fullName: string
-  email: string
-  registrationNumber: string
-  password: string
-  confirmPassword: string
-}
-
-export interface StudentRegistrationResult {
-  id: string
-  fullName: string
-  email: string
-  registrationNumber: string
-  status: AccountStatus
-  nextStep: 'SIGN_IN'
-  createdAt: string
-  message: string
-}
-
 /** GET /students/me/units: a unit the student is on, with their attendance in it. */
 export interface StudentUnit {
   /** Null for a unit known only from the timetable app (onRoster false). */
@@ -496,7 +534,10 @@ export interface FaceStudentCard {
   studentUserId: string
   fullName: string
   registrationNumber: string | null
+  /** Their profile picture: chosen by the student, so only a fallback. */
   avatarDataUrl: string | null
+  /** The face photographed when they were registered. Null for registrations made before these were kept. */
+  referencePhotoDataUrl: string | null
 }
 
 /** POST /sessions/:id/face/identify. Nothing is recorded until the lecturer confirms. */
@@ -639,25 +680,6 @@ export interface ApiErrorBody {
   message: string
   code?: string
   details?: { field: string; message: string }[]
-}
-
-export interface RegistrationInput {
-  fullName: string
-  email: string
-  staffNumber: string
-  password: string
-  confirmPassword: string
-}
-
-export interface RegistrationResult {
-  id: string
-  fullName: string
-  email: string
-  staffNumber: string
-  /** Always ACTIVE: a lecturer signs in straight after registering. */
-  status: AccountStatus
-  nextStep: 'SIGN_IN'
-  message: string
 }
 
 export interface EmailVerificationResult {

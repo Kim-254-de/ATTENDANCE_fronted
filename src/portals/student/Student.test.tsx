@@ -106,32 +106,24 @@ describe('student units and history pages', () => {
   })
 })
 
-describe('student registration errors', () => {
-  async function fillForm(user: ReturnType<typeof userEvent.setup>, reg: string) {
-    await user.type(await screen.findByLabelText(/student id/i), reg)
-    await user.type(screen.getByLabelText(/full name/i), 'Amina Kamau')
-    await user.type(screen.getByLabelText(/^email/i), 'amina@students.tharaka.ac.ke')
-    await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
-    await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
-    await user.click(screen.getByRole('button', { name: /create account/i }))
-  }
+describe('deleting the account', () => {
+  it('asks for the password, then signs the student out for good', async () => {
+    const user = await signInAsStudent('/student-profile')
 
-  it('shows the records check refusal from the server', async () => {
-    const user = userEvent.setup()
-    renderApp('/signup?role=student')
-    await fillForm(user, 'EBT1/99999/23')
-    expect(await screen.findByRole('alert')).toHaveTextContent(/not in the student records/i)
-  })
+    await user.click(await screen.findByRole('button', { name: /delete account/i }))
+    await user.type(screen.getByLabelText(/your password/i), 'wrong')
+    await user.click(screen.getByRole('button', { name: /delete my account/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/password is incorrect/i)
 
-  it('catches a password containing the registration number before sending', async () => {
-    const user = userEvent.setup()
-    renderApp('/signup?role=student')
-    await user.type(await screen.findByLabelText(/student id/i), 'EBT1/08223/23')
-    await user.type(screen.getByLabelText(/full name/i), 'Amina Kamau')
-    await user.type(screen.getByLabelText(/^email/i), 'amina@students.tharaka.ac.ke')
-    await user.type(screen.getByLabelText(/^password$/i), 'Ebt10822323xyZ')
-    await user.type(screen.getByLabelText(/^confirm password$/i), 'Ebt10822323xyZ')
-    await user.click(screen.getByRole('button', { name: /create account/i }))
-    expect(await screen.findByText(/must not contain your registration number/i)).toBeInTheDocument()
+    await user.clear(screen.getByLabelText(/your password/i))
+    await user.type(screen.getByLabelText(/your password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /delete my account/i }))
+    expect(await screen.findByText('Your account has been deleted.')).toBeInTheDocument()
+
+    // The same credentials no longer sign in.
+    await user.type(screen.getByLabelText(/registration number or email/i), 'STU00042')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
   })
 })

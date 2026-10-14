@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { DeleteAccountButton } from '@/components/DeleteAccountButton'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { LateMinutes, RateBar } from '@/components/attendance/RateBar'
@@ -16,6 +17,7 @@ import { useFacultyLecturer } from './lecturersApi'
 export function LecturerDetailPage() {
   const { lecturerUserId } = useParams<{ lecturerUserId: string }>()
   const { data, isPending, error, refetch } = useFacultyLecturer(lecturerUserId)
+  const navigate = useNavigate()
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -39,6 +41,9 @@ export function LecturerDetailPage() {
               <p className="font-mono text-xs text-muted">{data.lecturer.staffNumber}</p>
             </div>
             <span className="ml-auto shrink-0 rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{data.lecturer.departmentName}</span>
+            {lecturerUserId && (
+              <DeleteAccountButton scope="faculty" kind="lecturer" userId={lecturerUserId} name={data.lecturer.fullName} onDeleted={() => navigate('/faculty-lecturers', { replace: true })} />
+            )}
           </Card>
 
           <Card className="overflow-hidden">

@@ -1,15 +1,29 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { RouteError } from '@/components/RouteError'
 import { LoginPage } from '@/auth/LoginPage'
 import { ForgotPasswordPage } from '@/auth/ForgotPasswordPage'
-import { SignupPage } from '@/auth/SignupPage'
 import { RequireAuth } from '@/auth/RequireAuth'
+import { SetPasswordPage } from '@/auth/SetPasswordPage'
 import { VerifyEmailPage } from '@/auth/VerifyEmailPage'
 import { AppLayout } from '@/portals/lecturer/layout/AppLayout'
 import { DepartmentLayout } from '@/portals/department/layout/DepartmentLayout'
 import { FacultyLayout } from '@/portals/faculty/layout/FacultyLayout'
+import { AdminLayout } from '@/portals/admin/layout/AdminLayout'
 import { StudentLayout } from '@/portals/student/layout/StudentLayout'
 import { LandingPage } from '@/pages/LandingPage'
+
+/** Sends an old sign-up link to the matching sign-in page, saying why. */
+function SignupRedirect() {
+  const [searchParams] = useSearchParams()
+  const role = searchParams.get('role') === 'student' ? 'student' : 'lecturer'
+  return (
+    <Navigate
+      to={`/login?role=${role}`}
+      replace
+      state={{ message: 'There is no separate sign-up for attendance. Sign in with your SMARTTT account; if you have none, create it in SMARTTT first.' }}
+    />
+  )
+}
 
 // Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
@@ -20,15 +34,16 @@ export const routes = [
     errorElement: <RouteError />,
   },
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
-  { path: '/signup', element: <SignupPage />, errorElement: <RouteError /> },
-  { path: '/register', element: <Navigate to="/signup?role=lecturer" replace /> },
+  // Staff sign-in for administrators and faculty and department officers. Unlisted: given out in
+  // invitation emails, never linked from the public role selector.
+  { path: '/oversight', element: <LoginPage oversight />, errorElement: <RouteError /> },
+  { path: '/accept-invite', element: <SetPasswordPage mode="invite" />, errorElement: <RouteError /> },
+  { path: '/reset-password', element: <SetPasswordPage mode="reset" />, errorElement: <RouteError /> },
+  // No sign-up: students and lecturers sign in with their SMARTTT account. Old links land on sign-in.
+  { path: '/signup', element: <SignupRedirect /> },
+  { path: '/register', element: <SignupRedirect /> },
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <RouteError /> },
   { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteError /> },
-  {
-    path: '/admin',
-    lazy: async () => ({ Component: (await import('@/portals/admin/AdminComingSoonPage')).AdminComingSoonPage }),
-    errorElement: <RouteError />,
-  },
   {
     element: <RequireAuth />,
     errorElement: <RouteError />,
@@ -213,6 +228,28 @@ export const routes = [
             path: 'faculty-units',
             lazy: async () => ({ Component: (await import('@/portals/faculty/units/UnitsPage')).UnitsPage }),
             handle: { title: 'Units' },
+          },
+          {
+            path: 'faculty-officers',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/officers/OfficersPage')).OfficersPage }),
+            handle: { title: 'Department Officers' },
+          },
+        ],
+      },
+      {
+        element: <AdminLayout />,
+        errorElement: <RouteError />,
+        handle: { role: 'admin' },
+        children: [
+          {
+            path: 'admin',
+            lazy: async () => ({ Component: (await import('@/portals/admin/OfficersPage')).OfficersPage }),
+            handle: { title: 'Officers' },
+          },
+          {
+            path: 'admin-faculties',
+            lazy: async () => ({ Component: (await import('@/portals/admin/FacultiesPage')).FacultiesPage }),
+            handle: { title: 'Faculties' },
           },
         ],
       },
