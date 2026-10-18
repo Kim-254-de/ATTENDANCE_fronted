@@ -55,6 +55,21 @@ describe('admin console', () => {
     expect(within(table).queryByRole('button', { name: /remove ms\. aisha njeri's access/i })).not.toBeInTheDocument()
   })
 
+  it('opens the administrator profile from the header badge without a header sign-out button', async () => {
+    const user = userEvent.setup()
+    await signInAtOversight(user, 'admin@university.edu')
+    await screen.findByRole('table')
+
+    const header = screen.getByRole('banner')
+    expect(within(header).queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument()
+    await user.click(within(header).getByRole('link', { name: /view profile/i }))
+
+    expect(await screen.findByRole('heading', { name: 'My Profile' })).toBeInTheDocument()
+    expect(screen.getByText('Ms. Aisha Njeri')).toBeInTheDocument()
+    expect(screen.getByText('admin@university.edu')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /sign out/i }).length).toBeGreaterThan(0)
+  })
+
   it('invites a faculty officer, who sets their own password and signs into the faculty portal', async () => {
     const user = userEvent.setup()
     const admin = await signInAtOversight(user, 'admin@university.edu')
@@ -125,6 +140,7 @@ describe('faculty officers inviting department officers', () => {
     expect(await screen.findByText('Prof. Grace N. Mutiso')).toBeInTheDocument()
     await user.type(screen.getByLabelText('Full name'), 'Mr. Otieno Ouma')
     await user.type(screen.getByLabelText('Work email'), 'o.ouma@university.edu')
+    await screen.findByRole('option', { name: 'Software Engineering' })
     await user.selectOptions(screen.getByLabelText('Department'), 'Software Engineering')
     await user.click(screen.getByRole('button', { name: /send invitation/i }))
     const row = (await screen.findByText('Mr. Otieno Ouma')).closest('tr')!

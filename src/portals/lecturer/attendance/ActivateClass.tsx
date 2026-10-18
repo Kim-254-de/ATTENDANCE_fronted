@@ -92,14 +92,14 @@ function VerificationMethods() {
   ]
 
   return (
-    <fieldset className="space-y-2">
+    <fieldset className="min-w-0 space-y-2">
       <legend className="text-xs font-semibold uppercase tracking-wider text-muted">Verification method</legend>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
         {methods.map(({ icon: Icon, label, active }) => (
           <label
             key={label}
             title={active ? undefined : 'Coming soon'}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+            className={`flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
               active ? 'border-orange-500/40 bg-orange-50 text-navy-900' : 'border-line text-muted opacity-60'
             }`}
           >

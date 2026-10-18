@@ -28,11 +28,11 @@ export function Sidebar() {
       <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-blue-800/70" aria-hidden />
       <div className="flex items-center gap-3 px-1 py-2">
         <div className="flex-1 leading-tight">
-          <p className="text-sm text-blue-200">Lecturer Portal</p>
+          <p className="text-sm font-semibold text-blue-800">Lecturer Portal</p>
         </div>
       </div>
 
-      <p className="mt-6 px-2 text-xs font-semibold tracking-widest text-sky-400">NAVIGATION</p>
+      <p className="mt-6 px-2 text-xs font-semibold tracking-widest text-blue-600">NAVIGATION</p>
       <nav className="mt-2 space-y-1">
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink

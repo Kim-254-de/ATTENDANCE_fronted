@@ -2,8 +2,7 @@ import clsx from 'clsx'
 import { History, Home, LineChart } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
-// Units and Profile aren't tabs here: units are one tap away from Home ("My units →"),
-// and Profile lives behind the avatar in the header every student page shares.
+// Units are one tap away from Home ("My units →"), and Profile lives behind the avatar.
 const nav = [
   { to: '/student-dashboard', label: 'Home', icon: Home },
   { to: '/student-attendance', label: 'History', icon: History },

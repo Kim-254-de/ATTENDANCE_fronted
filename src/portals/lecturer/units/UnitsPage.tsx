@@ -34,7 +34,6 @@ export function UnitsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <p className="max-w-2xl text-sm text-muted">Units you are timetabled to teach this semester appear here automatically, with how many students are registered for each. Only students on a unit can check in to its classes.</p>
         {!adding && (
           <Button variant="lecturer" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden /> Add unit

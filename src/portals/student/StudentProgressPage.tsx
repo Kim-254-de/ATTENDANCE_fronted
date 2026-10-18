@@ -8,7 +8,6 @@ import { attendanceStreak, MIN_REQUIRED_ATTENDANCE, thisMonthsWeeks, thisWeeksDa
 import { formatRate, rateTone } from './StudentUnitCard'
 import { useMyAttendance, useMyStudentUnits } from './studentApi'
 import { useAnimated, useFirstVisit } from './useAnimated'
-
 // Deep enough for a meaningful streak, weekly/monthly breakdown and overall rate, unlike the
 // Home page's short preview fetch.
 const PROGRESS_ATTENDANCE_LIMIT = 200

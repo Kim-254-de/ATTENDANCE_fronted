@@ -64,8 +64,6 @@ export function StudentsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <p className="max-w-2xl text-sm text-muted">Every student registered on a unit you teach, with their attendance standing in that unit.</p>
-
       <div className="flex flex-wrap items-center gap-3">
         <label className="relative min-w-[240px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />

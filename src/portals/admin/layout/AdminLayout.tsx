@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { LogOut } from 'lucide-react'
-import { NavLink, Outlet, useMatches, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useMatches, useNavigate } from 'react-router-dom'
 import { useLogout, useMe } from '@/auth/authApi'
 import { formatLongDate, initials } from '@/lib/format'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
@@ -40,8 +40,11 @@ export function AdminLayout() {
             <h1 className="text-xl font-bold tracking-tight text-navy-900">{title ?? 'Admin Console'}</h1>
             <p className="mt-0.5 text-sm text-muted">{formatLongDate()}</p>
           </div>
-          <button onClick={signOut} className="rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 lg:hidden">Sign Out</button>
-          {user && <span className="grid size-10 place-items-center rounded-full bg-navy-900 text-sm font-bold text-white" title={user.fullName}>{initials(user.fullName)}</span>}
+          {user && (
+            <Link to="/admin-profile" aria-label="View profile" title={user.fullName} className="grid size-10 place-items-center rounded-full bg-navy-900 text-sm font-bold text-white transition hover:bg-navy-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-900">
+              {initials(user.fullName)}
+            </Link>
+          )}
         </header>
         <main className="flex-1 p-4 pb-24 sm:p-8 lg:px-10 lg:py-9 lg:pb-9">
           <Outlet />
