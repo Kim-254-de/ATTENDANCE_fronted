@@ -25,11 +25,11 @@ export function StudentUnitsPage() {
         <div className="grid gap-4 sm:grid-cols-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[150px]" />)}</div>
       ) : units.data.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted">
-          You aren't on any unit's class list yet. Units appear here once you're registered for them on the timetable app
-          (and, for a unit split into groups, have picked your group).
+          You aren't registered for any units this term yet. Units appear here once you're registered for them on the
+          timetable app.
         </Card>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">{units.data.map((u) => <UnitCard key={u.id} unit={u} />)}</ul>
+        <ul className="grid gap-4 sm:grid-cols-2">{units.data.map((u) => <UnitCard key={u.id ?? u.code} unit={u} />)}</ul>
       )}
     </div>
   )

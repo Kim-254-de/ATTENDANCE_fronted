@@ -40,6 +40,59 @@ describe('lecturer portal', () => {
     expect(await screen.findByRole('timer')).toHaveTextContent(/refreshes in/i)
   })
 
+  it('shows only the latest session for each unit in Recent Sessions', async () => {
+    server.use(
+      http.get('/api/reports/sessions', () => HttpResponse.json({
+        success: true,
+        data: [
+          { id: 's1', date: '2026-10-01T08:00:00Z', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', present: 78, absent: 9, total: 87, rate: 90, reference: 'QR-CS301-OLDER' },
+          { id: 's2', date: '2026-10-01T10:00:00Z', unitId: 'u2', unitCode: 'CS405', unitName: 'Database Management Systems', present: 61, absent: 3, total: 64, rate: 95, reference: 'QR-CS405-0908' },
+          { id: 's3', date: '2026-10-01T12:00:00Z', unitId: 'u3', unitCode: 'cs301', unitName: 'Data Structures & Algorithms', present: 80, absent: 7, total: 87, rate: 92, reference: 'QR-CS301-LATEST' },
+        ],
+      })),
+    )
+    const user = userEvent.setup()
+    renderApp('/login?role=lecturer')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    const table = await screen.findByRole('table')
+    expect(within(table).getAllByText(/^CS301$/i)).toHaveLength(1)
+    expect(within(table).getByRole('button', { name: 'Copy reference QR-CS301-LATEST' })).toBeInTheDocument()
+    expect(within(table).queryByRole('button', { name: 'Copy reference QR-CS301-OLDER' })).not.toBeInTheDocument()
+    expect(within(table).getAllByText('CS405')).toHaveLength(1)
+    expect(within(table).getAllByText('01 Oct 2026')).toHaveLength(2)
+  })
+
+  it('sends a lecturer who signs out to the role selector', async () => {
+    const user = userEvent.setup()
+    renderApp('/profile')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    await screen.findByText('Dr. Joseph K. Osei')
+    await user.click(within(screen.getByRole('main')).getByRole('button', { name: /sign out/i }))
+    expect(await screen.findByRole('button', { name: /i'm a lecturer/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /i'm a student/i })).toBeInTheDocument()
+  })
+
+  it('lets a lecturer delete their own account from the profile', async () => {
+    const user = userEvent.setup()
+    renderApp('/profile')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    await user.click(await screen.findByRole('button', { name: /delete account/i }))
+    await user.type(screen.getByLabelText(/your password/i), 'password')
+    await user.click(screen.getByRole('button', { name: /delete my account/i }))
+
+    expect(await screen.findByText('Your account has been deleted.')).toBeInTheDocument()
+    expect(screen.getByLabelText(/staff number or email/i)).toBeInTheDocument()
+  })
+
   it('opens the profile and saves updated lecturer details', async () => {
     const user = userEvent.setup()
     renderApp('/profile')
@@ -49,7 +102,15 @@ describe('lecturer portal', () => {
     await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    await screen.findByLabelText('Full name')
+    expect(await screen.findByText('Dr. Joseph K. Osei')).toBeInTheDocument()
+    expect(screen.queryByText('Personal details')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument()
+    // The sidebar has its own Sign Out; this is the profile page's.
+    expect(within(screen.getByRole('main')).getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: /dr\. joseph k\. osei/i }))
+
+    // The layout's header shows the page title too; this is the page's own heading.
+    expect(await within(screen.getByRole('main')).findByRole('heading', { name: /edit profile/i })).toBeInTheDocument()
     // Name and email are ERP-verified and read-only; only title/department can be edited.
     expect(screen.getByLabelText('Full name')).toHaveAttribute('readonly')
     const department = screen.getByLabelText('Department')
@@ -58,7 +119,9 @@ describe('lecturer portal', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }))
 
     expect(await screen.findByText('Profile updated')).toBeInTheDocument()
-    expect(screen.getAllByText(/Software Engineering/).length).toBeGreaterThan(0)
+    // The saved department shows on the profile itself, not just in the form.
+    await user.click(screen.getByRole('link', { name: /back to profile/i }))
+    expect(await screen.findByText(/· Software Engineering/)).toBeInTheDocument()
   })
 
   it("lists every student across the lecturer's units, searchable, sortable and filterable by unit", async () => {
@@ -101,28 +164,12 @@ describe('lecturer portal', () => {
     await user.type(screen.getByLabelText(/^password$/i), 'password')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByRole('heading', { name: /student profile/i })).toBeInTheDocument()
+    expect(await screen.findByText('BSc Computer Science')).toBeInTheDocument()
     // "Ama Mensah" also appears in the shared header's greeting now, so there are two matches.
     expect(screen.getAllByText('Ama Mensah').length).toBeGreaterThan(0)
     expect(screen.getAllByText('STU00042').length).toBeGreaterThan(0)
-    expect(screen.getByText('BSc Computer Science')).toBeInTheDocument()
     // Name and email are from the student records, so they're shown, not editable.
     expect(screen.queryByRole('textbox', { name: /full name/i })).not.toBeInTheDocument()
-  })
-
-  it('registers a student and routes the new account to its dashboard and profile', async () => {
-    const user = userEvent.setup()
-    renderApp('/signup?role=student')
-    await user.type(await screen.findByLabelText(/student id/i), 'EBT1/00999/23')
-    await user.type(screen.getByLabelText(/full name/i), 'New Student')
-    await user.type(screen.getByLabelText(/^email/i), 'new.student@university.edu')
-    await user.type(screen.getByLabelText(/^password$/i), 'StudentPass123')
-    await user.type(screen.getByLabelText(/^confirm password$/i), 'StudentPass123')
-    await user.click(screen.getByRole('button', { name: /create account/i }))
-
-    // Active at once: no email to confirm, the app signs them straight in.
-    expect(await screen.findByRole('heading', { name: "Today's Classes" })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /my profile/i })).toHaveAttribute('href', '/student-profile')
   })
 
   it('sends the user back to login when the session expires mid-use', async () => {

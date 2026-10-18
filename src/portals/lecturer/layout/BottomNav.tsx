@@ -21,7 +21,7 @@ export function BottomNav() {
             <>
               <Icon className={clsx('size-5', isActive ? 'text-blue-700' : 'text-muted')} aria-hidden />
               <span className={isActive ? 'text-blue-700' : 'text-muted'}>{label}</span>
-              <span className={clsx('h-0.5 w-6 rounded-full', isActive ? 'bg-blue-600' : 'bg-transparent')} aria-hidden />
+              <span className={clsx('h-0.5 w-6 rounded-full', isActive ? 'bg-blue-700' : 'bg-transparent')} aria-hidden />
             </>
           )}
         </NavLink>

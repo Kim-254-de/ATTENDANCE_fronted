@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, QrCode, RotateCcw, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, MapPin, QrCode, RotateCcw, XCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -7,10 +7,12 @@ import { errorMessage } from '@/lib/api'
 import type { CheckInResult } from '@/types'
 import { checkInFailureKind, looksLikeAttendanceCode, useCheckIn } from './checkInApi'
 import { QrCameraScanner } from './QrCameraScanner'
+import { useCheckInLocation, type LocationStatus } from './useCheckInLocation'
 
 type ScanState =
   | { step: 'scanning'; hint?: string }
-  | { step: 'checking' }
+  /** `locating`: waiting a few seconds for a precise enough position before sending. */
+  | { step: 'checking'; locating: boolean }
   | { step: 'success'; result: CheckInResult }
   | { step: 'already'; message: string }
   | { step: 'failed'; message: string }
@@ -26,11 +28,16 @@ const formatTime = (iso: string) =>
  *
  * The code changes about every minute and is signed by the server, so the page
  * only reads it and posts it to POST /attendance/check-in — every rule (the
- * code is current, the class is open, the student is on the unit's roster,
- * one check-in per class) is enforced there.
+ * code is current, the class is open, the student is in the room, the student
+ * is on the unit's roster, one check-in per class) is enforced there.
+ *
+ * The phone's position is sent with the code, for classes whose lecturer has
+ * the location check on. It is watched from the moment the scanner opens, so
+ * a precise fix is usually ready by the time the code is read.
  */
 export function ScanPage() {
   const checkIn = useCheckIn()
+  const location = useCheckInLocation()
   const [state, setState] = useState<ScanState>({ step: 'scanning' })
   // The camera reads several frames a second; only the first read of a code may submit.
   const busy = useRef(false)
@@ -55,8 +62,13 @@ export function ScanPage() {
       return
     }
     busy.current = true
-    setState({ step: 'checking' })
-    checkIn.mutate(text, {
+    setState({ step: 'checking', locating: true })
+    void location.fixForCheckIn().then((fix) => submit(text, fix))
+  }
+
+  const submit = (text: string, fix: Awaited<ReturnType<typeof location.fixForCheckIn>>) => {
+    setState({ step: 'checking', locating: false })
+    checkIn.mutate({ payload: text, location: fix }, {
       onSuccess: (result) => setState({ step: 'success', result }),
       onError: (error) => {
         const message = errorMessage(error, 'Your attendance could not be recorded. Please try again.')
@@ -98,7 +110,9 @@ export function ScanPage() {
                 <div role="status" className="absolute inset-0 grid place-items-center rounded-2xl bg-navy-900/70 text-sm font-semibold text-white">
                   <span className="flex items-center gap-2">
                     <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
-                    Recording your attendance…
+                    {state.locating
+                      ? `Getting your location…${location.accuracy !== null ? ` ±${Math.round(location.accuracy)} m` : ''}`
+                      : 'Recording your attendance…'}
                   </span>
                 </div>
               )}
@@ -108,6 +122,7 @@ export function ScanPage() {
             ) : (
               <p className="flex items-center gap-2 text-xs text-muted"><QrCode className="size-4" aria-hidden /> Hold steady until the code is inside the frame.</p>
             )}
+            <LocationLine status={location.status} accuracy={location.accuracy} />
           </div>
         )}
 
@@ -133,6 +148,10 @@ export function ScanPage() {
           </Card>
         )}
 
+        {state.step === 'failed' && (location.status === 'denied' || location.status === 'unavailable') && (
+          <LocationLine status={location.status} accuracy={location.accuracy} />
+        )}
+
         {state.step === 'failed' && (
           <Card className="space-y-4 p-6 text-center" role="alert">
             <XCircle className="mx-auto size-12 text-red-600" aria-hidden />
@@ -147,5 +166,39 @@ export function ScanPage() {
         )}
       </div>
     </main>
+  )
+}
+
+/**
+ * Where the phone's position stands, so a student isn't surprised by a refusal:
+ * classes with a location check need it, precise, and over https.
+ */
+function LocationLine({ status, accuracy }: { status: LocationStatus; accuracy: number | null }) {
+  if (status === 'denied') {
+    return (
+      <p role="note" className="flex gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+        <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+        Location is blocked for this site. Most classes need it to check you in: allow location in your browser's site settings, then reload this page.
+      </p>
+    )
+  }
+  if (status === 'unavailable') {
+    return (
+      <p role="note" className="flex gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+        <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+        This browser can't share your location, which most classes need. Open this page in Chrome or Safari over https.
+      </p>
+    )
+  }
+  const precise = accuracy !== null && accuracy <= 20
+  return (
+    <p className="flex items-center gap-2 text-xs text-muted">
+      <MapPin className={`size-4 ${precise ? 'text-green-600' : ''}`} aria-hidden />
+      {accuracy === null
+        ? 'Finding your location…'
+        : precise
+          ? `Location ready (±${Math.round(accuracy)} m)`
+          : `Improving your location… ±${Math.round(accuracy)} m. Make sure precise location is on.`}
+    </p>
   )
 }

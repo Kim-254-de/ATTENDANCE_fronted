@@ -27,43 +27,378 @@ export interface Student {
   avatarUrl: string | null
 }
 
-/** Whoever is signed in. Check `role` before using lecturer- or student-only fields. */
-export type Account = Lecturer | Student
-
-/** POST /auth/student/register */
-export interface StudentRegistrationInput {
+/**
+ * A signed-in department officer: oversees every lecturer, unit and student in
+ * one department, read-only. Not self-registered — the backend provisions these.
+ */
+export interface DepartmentOfficer {
+  id: string
+  role: 'department'
   fullName: string
   email: string
-  registrationNumber: string
-  password: string
-  confirmPassword: string
+  departmentId: string
+  departmentName: string
+  facultyName: string | null
+  status: AccountStatus
+  avatarUrl: string | null
 }
 
-export interface StudentRegistrationResult {
+/**
+ * A signed-in faculty officer: oversees every department, lecturer, unit and
+ * student in one faculty, read-only. The department role one level up.
+ */
+export interface FacultyOfficer {
   id: string
+  role: 'faculty'
   fullName: string
   email: string
-  registrationNumber: string
+  facultyId: string
+  facultyName: string
   status: AccountStatus
-  nextStep: 'SIGN_IN'
-  createdAt: string
-  message: string
+  avatarUrl: string | null
+}
+
+/**
+ * A signed-in administrator: creates faculties and invites faculty officers
+ * and other administrators. Invited, never self-registered.
+ */
+export interface Admin {
+  id: string
+  role: 'admin'
+  fullName: string
+  email: string
+  status: AccountStatus
+  avatarUrl: string | null
+}
+
+/** Whoever is signed in. Check `role` before using lecturer-, student-, department-, faculty- or admin-only fields. */
+export type Account = Lecturer | Student | DepartmentOfficer | FacultyOfficer | Admin
+
+/**
+ * An administrator, faculty officer or department officer as the admin console
+ * and the faculty portal list them. PENDING_VERIFICATION means invited but
+ * not yet accepted.
+ */
+export interface Officer {
+  userId: string
+  role: 'admin' | 'faculty' | 'department'
+  fullName: string
+  email: string
+  status: AccountStatus
+  facultyId: string | null
+  facultyName: string | null
+  departmentId: string | null
+  departmentName: string | null
+  invitedAt: string | null
+  /** When the pending invitation link stops working; null once accepted or withdrawn. */
+  invitationExpiresAt: string | null
+  lastLoginAt: string | null
+}
+
+/** POST /admin/invitations and the faculty's invite: emailSent false means the account exists but the email failed — re-send it. */
+export interface InvitationResult {
+  userId: string
+  emailSent: boolean
+}
+
+/** POST /auth/invitations/lookup — who an invitation link is for. */
+export interface InvitationDetails {
+  fullName: string
+  email: string
+  role: 'admin' | 'faculty' | 'department'
+  /** The faculty's or department's name; null for an administrator. */
+  scopeName: string | null
+  expiresAt: string
+}
+
+/** GET /admin/faculties */
+export interface AdminFaculty {
+  facultyId: string
+  name: string
+  departmentCount: number
+  officerCount: number
+}
+
+/** GET /departments/me — the department the signed-in officer oversees. */
+export interface DepartmentProfile {
+  departmentId: string
+  departmentName: string
+  facultyName: string | null
+}
+
+/** GET /departments/overview — the department dashboard's stat tiles. Rates are 0–100. */
+export interface DepartmentOverview {
+  lecturerCount: number
+  studentCount: number
+  unitCount: number
+  avgAttendanceRate: number
+  sessionsHeld: number
+  /** 0–100; null until any session in the department has a scheduled start to measure against. */
+  onTimeRate: number | null
+}
+
+/** GET /departments/lecturers — one row per lecturer in the department. */
+export interface DepartmentLecturer {
+  userId: string
+  fullName: string
+  staffNumber: string
+  unitsTaught: number
+  studentsTaught: number
+  /** 0–100; null until a session has been held for any of their units. */
+  avgAttendanceRate: number | null
+  sessionsHeld: number
+  /** Mean minutes between a class's scheduled start and when it was actually opened; null with nothing to measure. */
+  avgLateMinutes: number | null
+  /** 0–100; null until a scheduled session has been held. */
+  onTimeRate: number | null
+}
+
+/**
+ * One class meeting as the timekeeping tables read it: when it was meant to
+ * start against when the lecturer actually opened it.
+ */
+export interface LecturerTimekeepingEntry {
+  sessionId: string
+  unitCode: string
+  /** Null for a unit with no issued schedule, so there is nothing to be late against. */
+  scheduledStartAt: string | null
+  opensAt: string
+  /** Minutes after the scheduled start; negative means early. Null when unscheduled. */
+  lateMinutes: number | null
+}
+
+/** GET /departments/lecturers/:lecturerUserId — the drill-down for one lecturer. */
+export interface DepartmentLecturerDetail {
+  userId: string
+  fullName: string
+  staffNumber: string
+  units: { unitId: string; code: string; name: string | null; attendanceRate: number | null }[]
+  recentSessions: LecturerTimekeepingEntry[]
+}
+
+/** GET /departments/timekeeping — recent sessions across the department, newest first. */
+export interface DepartmentTimekeepingEntry extends LecturerTimekeepingEntry {
+  lecturerName: string
+}
+
+/** GET /departments/units — one row per unit taught in the department. */
+export interface DepartmentUnit {
+  id: string
+  code: string
+  name: string | null
+  lecturerName: string
+  studentCount: number
+  /** 0–100; null until a session has been held. */
+  attendanceRate: number | null
+}
+
+/**
+ * Faculty types mirror the backend's faculty.service.ts DTOs field-for-field
+ * (verified against the running API, not inferred) — no renaming/mapping
+ * layer, unlike the department module's unit/lecturer-detail endpoints.
+ */
+
+/** GET /faculties/me — the faculty the signed-in officer oversees. */
+export interface FacultyProfile {
+  facultyId: string
+  facultyName: string
+}
+
+/** GET /faculties/overview — the faculty dashboard's stat tiles. Rates are 0–100. */
+export interface FacultyOverview {
+  facultyId: string
+  facultyName: string
+  departmentCount: number
+  lecturerCount: number
+  studentCount: number
+  unitCount: number
+  avgAttendanceRate: number
+  sessionsHeld: number
+  /** 0–100; null until any session in the faculty has a scheduled start to measure against. */
+  onTimeRate: number | null
+  graceMinutes: number
+  periodLabel: string
+}
+
+/** GET /faculties/departments — one row per department, the faculty's distinguishing view. */
+export interface FacultyDepartment {
+  departmentId: string
+  departmentName: string
+  lecturerCount: number
+  studentCount: number
+  unitCount: number
+  avgAttendanceRate: number
+  sessionsHeld: number
+  onTimeRate: number | null
+}
+
+/** GET /faculties/lecturers — one row per lecturer across the whole faculty. */
+export interface FacultyLecturer {
+  userId: string
+  fullName: string
+  staffNumber: string
+  departmentId: string
+  departmentName: string
+  unitsTaught: number
+  studentsTaught: number
+  avgAttendanceRate: number
+  sessionsHeld: number
+  avgLateMinutes: number | null
+  onTimeRate: number | null
+}
+
+/** A unit as the faculty's lists read it — one row per section (e.g. "CSC102 GR A" is its own row). */
+export interface FacultyUnit {
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  lecturerUserId: string
+  lecturerName: string
+  departmentId: string
+  departmentName: string
+  activeStudents: number
+  sessionsHeld: number
+  avgAttendanceRate: number
+}
+
+/** GET /faculties/departments/:departmentId — the drill-down for one department. */
+export interface FacultyDepartmentDetail {
+  departmentId: string
+  departmentName: string
+  lecturers: FacultyLecturer[]
+  units: FacultyUnit[]
+  courses: CourseOffering[]
+}
+
+/** One class meeting as a faculty lecturer drill-down reads it. */
+export interface FacultyLecturerSession {
+  sessionId: string
+  unitId: string
+  unitCode: string
+  title: string | null
+  status: string
+  opensAt: string
+  closesAt: string
+  /** Null for a unit with no issued schedule, so there is nothing to be late against. */
+  scheduledStartAt: string | null
+  /** Minutes after the scheduled start; negative means early. Null when unscheduled. */
+  lateMinutes: number | null
+  present: number
+  total: number
+  attendanceRate: number | null
+}
+
+/** GET /faculties/lecturers/:lecturerUserId — the drill-down for one lecturer. */
+export interface FacultyLecturerDetail {
+  lecturer: {
+    userId: string
+    fullName: string
+    staffNumber: string
+    title: string | null
+    email: string
+    departmentId: string
+    departmentName: string
+  }
+  units: FacultyUnit[]
+  sessions: FacultyLecturerSession[]
+}
+
+/** GET /faculties/students — one row per (student, unit) across the whole faculty. */
+export interface FacultyStudent {
+  id: string
+  registrationNumber: string | null
+  studentUserId: string | null
+  fullName: string | null
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  lecturerUserId: string
+  lecturerName: string
+  departmentId: string
+  departmentName: string
+  sessionsHeld: number
+  sessionsAttended: number
+  attendanceRate: number | null
+}
+
+/** GET /faculties/timekeeping — recent sessions across the faculty, newest first. */
+export interface FacultyTimekeepingEntry {
+  sessionId: string
+  unitId: string
+  unitCode: string
+  lecturerUserId: string
+  lecturerName: string
+  departmentId: string
+  departmentName: string
+  title: string | null
+  scheduledStartAt: string
+  opensAt: string
+  lateMinutes: number
+  onTime: boolean
+}
+
+/**
+ * Course provisioning: faculty provides a course to a department (manually —
+ * no ERP check), the department decides how many lecturer-taught sections it
+ * needs and allocates its own lecturers to them. Types mirror the real
+ * backend's response shapes field-for-field, same discipline as the rest of
+ * the faculty module.
+ */
+
+/** POST /faculties/departments */
+export interface CreateDepartmentResult {
+  departmentId: string
+  departmentName: string
+}
+
+/** POST /faculties/departments/:departmentId/courses */
+export interface ProvidedCourse {
+  id: string
+  code: string
+  name: string | null
+  departmentId: string
+  segmentsPlanned: number
+}
+
+/** GET /departments/courses — a course offering as the department sees it. */
+export interface CourseOffering {
+  id: string
+  code: string
+  name: string | null
+  segmentsPlanned: number
+  /** How many of segmentsPlanned already have a lecturer. */
+  segmentsFilled: number
+}
+
+/** POST /departments/courses/:offeringId/segments — the unit that allocation just created. */
+export interface AllocatedUnit {
+  unitId: string
+  code: string
 }
 
 /** GET /students/me/units: a unit the student is on, with their attendance in it. */
 export interface StudentUnit {
-  id: string
+  /** Null for a unit known only from the timetable app (onRoster false). */
+  id: string | null
   /** The class: "COSC 103 GR A", or "COSC 103" when not split into groups. */
   code: string
   name: string | null
   baseCode: string | null
   group: string | null
-  lecturerName: string
+  /** Null when the timetable names no lecturer yet. */
+  lecturerName: string | null
   schedule: UnitSchedule | null
   sessionsHeld: number
   sessionsAttended: number
   /** 0–100, one decimal; null until a session has been held. */
   attendanceRate: number | null
+  /**
+   * True when the student is on the unit's class list here, so can check in. False for a unit
+   * they're registered for on the timetable app that their lecturer hasn't set up here yet.
+   */
+  onRoster: boolean
+  /** A split unit they haven't picked a group for on the timetable app yet. */
+  groupRequired: boolean
 }
 
 /** PRESENT: checked in. OPEN: still taking check-ins (not an absence yet). ABSENT: over, no check-in. */
@@ -106,6 +441,31 @@ export interface Overview {
 
 export type SessionStatus = 'OPEN' | 'PAUSED' | 'CLOSED'
 
+/**
+ * Where a session's location check is centred. AWAITING_LOCATION: activated
+ * from a laptop in a room nobody has surveyed, so scans are held until the
+ * lecturer sends the room's position from their phone.
+ */
+export type GeofenceMode = 'ROOM' | 'LECTURER_DEVICE' | 'AWAITING_LOCATION' | 'OFF'
+
+/** The fence as the lecturer's screens see it. Never its coordinates. */
+export interface GeofenceStatus {
+  mode: GeofenceMode
+  radiusMetres: number | null
+  /** The room the timetable puts the class in; null when it names none. */
+  roomCode: string | null
+  anchorAccuracyMetres: number | null
+  hasCentre: boolean
+}
+
+/** A device's position, as the browser's Geolocation API reports it. */
+export interface DeviceLocation {
+  latitude: number
+  longitude: number
+  /** Metres, 68% confidence. */
+  accuracy: number
+}
+
 /** A class meeting. One row for the whole class, however long it runs — the QR rotates without writing anything new. */
 export interface SessionSummary {
   id: string
@@ -117,6 +477,7 @@ export interface SessionSummary {
   opensAt: string
   closesAt: string
   rotationSeconds: number
+  geofence: GeofenceStatus
 }
 
 /** The code to show right now, plus when it next changes. */
@@ -141,7 +502,64 @@ export interface SessionAttendance {
     fullName: string
     registrationNumber: string | null
     recordedAt: string
+    /** What proved they were present: the QR code, a face the lecturer confirmed, a card swipe. */
+    verificationMethod: VerificationMethod
   }[]
+}
+
+export type VerificationMethod = 'QR' | 'FINGERPRINT' | 'FACE' | 'CARD'
+
+/** GET /students/me/face — the student's own face check-in status. */
+export interface FaceStatus {
+  consentGiven: boolean
+  consentedAt: string | null
+  /** A lecturer has registered their face. */
+  enrolled: boolean
+  enrolledAt: string | null
+}
+
+/** Who the face terminal matched, for the lecturer to check against the person. */
+export interface FaceStudentCard {
+  studentUserId: string
+  fullName: string
+  registrationNumber: string | null
+  /** Their profile picture: chosen by the student, so only a fallback. */
+  avatarDataUrl: string | null
+  /** The face photographed when they were registered. Null for registrations made before these were kept. */
+  referencePhotoDataUrl: string | null
+}
+
+/** POST /sessions/:id/face/identify. Nothing is recorded until the lecturer confirms. */
+export type FaceIdentifyResult =
+  | {
+      result: 'MATCH'
+      student: FaceStudentCard
+      /** Cosine similarity, 0..1. */
+      score: number
+      /** Recorded already (by QR or face): no token, nothing to confirm. */
+      alreadyCheckedIn: boolean
+      matchToken: string | null
+      expiresAt: string | null
+      facesInFrame: number
+      enrolledOnUnit: number
+    }
+  | { result: 'NO_MATCH' | 'AMBIGUOUS'; facesInFrame: number; enrolledOnUnit: number }
+
+/** POST /sessions/:id/face/confirm */
+export interface FaceCheckInResult {
+  recordId: string
+  sessionId: string
+  unitCode: string
+  studentUserId: string
+  fullName: string
+  recordedAt: string
+}
+
+/** POST /units/:unitId/students/:studentUserId/face */
+export interface FaceEnrollmentResult {
+  studentUserId: string
+  enrolledAt: string
+  replaced: boolean
 }
 
 /** The unit's issued weekly meeting slot. 0=Sunday..6=Saturday, matches JS Date#getDay(). */
@@ -170,8 +588,10 @@ export interface TaughtUnit {
   /** Legacy: nothing creates a pending allocation now that rosters come from the ERP. */
   pendingCount: number
   createdAt: string
-  /** Null only for units created before schedules existed. */
+  /** The single weekly slot, or (from /units/current) the meeting on now; null for a unit meeting several times a week. */
   schedule: UnitSchedule | null
+  /** Every weekly meeting, Monday first, each with its room. Absent from older backends. */
+  slots?: Array<UnitSchedule & { roomCode: string | null }>
   status: UnitVerificationStatus
   /** The unit this class belongs to ("COSC 103" for "COSC 103 GR A"); null for units only added by code. */
   baseCode: string | null
@@ -206,6 +626,10 @@ export interface Allocation {
   source: 'SMARTTT' | 'ERP' | 'LECTURER' | 'SELF_ENROLLED'
   /** False until the student registers — they are on the list but cannot sign in to check in yet. */
   hasAccount: boolean
+  /** The student turned on face check-in in their app. A lecturer can only register a face after that. */
+  faceConsent: boolean
+  /** A lecturer has registered the student's face. */
+  faceEnrolled: boolean
   createdAt: string
 }
 
@@ -245,25 +669,6 @@ export interface ApiErrorBody {
   message: string
   code?: string
   details?: { field: string; message: string }[]
-}
-
-export interface RegistrationInput {
-  fullName: string
-  email: string
-  staffNumber: string
-  password: string
-  confirmPassword: string
-}
-
-export interface RegistrationResult {
-  id: string
-  fullName: string
-  email: string
-  staffNumber: string
-  /** Always ACTIVE: a lecturer signs in straight after registering. */
-  status: AccountStatus
-  nextStep: 'SIGN_IN'
-  message: string
 }
 
 export interface EmailVerificationResult {

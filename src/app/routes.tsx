@@ -1,40 +1,65 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { RouteError } from '@/components/RouteError'
 import { LoginPage } from '@/auth/LoginPage'
 import { ForgotPasswordPage } from '@/auth/ForgotPasswordPage'
-import { SignupPage } from '@/auth/SignupPage'
 import { RequireAuth } from '@/auth/RequireAuth'
+import { SetPasswordPage } from '@/auth/SetPasswordPage'
 import { VerifyEmailPage } from '@/auth/VerifyEmailPage'
 import { AppLayout } from '@/portals/lecturer/layout/AppLayout'
+import { DepartmentLayout } from '@/portals/department/layout/DepartmentLayout'
+import { FacultyLayout } from '@/portals/faculty/layout/FacultyLayout'
+import { AdminLayout } from '@/portals/admin/layout/AdminLayout'
 import { StudentLayout } from '@/portals/student/layout/StudentLayout'
 import { LandingPage } from '@/pages/LandingPage'
+
+/** Sends an old sign-up link to the matching sign-in page, saying why. */
+function SignupRedirect() {
+  const [searchParams] = useSearchParams()
+  const role = searchParams.get('role') === 'student' ? 'student' : 'lecturer'
+  return (
+    <Navigate
+      to={`/login?role=${role}`}
+      replace
+      state={{ message: 'There is no separate sign-up for attendance. Sign in with your SMARTTT account; if you have none, create it in SMARTTT first.' }}
+    />
+  )
+}
 
 // Pages are code-split so the login screen doesn't download the dashboard.
 export const routes = [
   { path: '/', element: <LandingPage />, errorElement: <RouteError /> },
+  {
+    path: '/terms',
+    lazy: async () => ({ Component: (await import('@/pages/TermsAndConditionsPage')).TermsAndConditionsPage }),
+    errorElement: <RouteError />,
+  },
   { path: '/login', element: <LoginPage />, errorElement: <RouteError /> },
-  { path: '/signup', element: <SignupPage />, errorElement: <RouteError /> },
-  { path: '/register', element: <Navigate to="/signup?role=lecturer" replace /> },
+  // Staff sign-in for administrators and faculty and department officers. Unlisted: given out in
+  // invitation emails, never linked from the public role selector.
+  { path: '/oversight', element: <LoginPage oversight />, errorElement: <RouteError /> },
+  { path: '/accept-invite', element: <SetPasswordPage mode="invite" />, errorElement: <RouteError /> },
+  { path: '/reset-password', element: <SetPasswordPage mode="reset" />, errorElement: <RouteError /> },
+  // No sign-up: students and lecturers sign in with their SMARTTT account. Old links land on sign-in.
+  { path: '/signup', element: <SignupRedirect /> },
+  { path: '/register', element: <SignupRedirect /> },
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <RouteError /> },
   { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteError /> },
   {
-    path: '/admin',
-    lazy: async () => ({ Component: (await import('@/portals/admin/AdminComingSoonPage')).AdminComingSoonPage }),
-    errorElement: <RouteError />,
-  },
-  {
     element: <RequireAuth />,
     errorElement: <RouteError />,
+    // Which role may open each page lives on these route objects: RequireAuth reads
+    // `handle.role` off the matched route rather than keeping its own list of paths.
     children: [
       {
         // Full-bleed: no shell chrome, same reasoning as the lecturer's session/:sessionId below.
         path: 'scan',
         lazy: async () => ({ Component: (await import('@/portals/student/ScanPage')).ScanPage }),
-        handle: { title: 'Scan to check in' },
+        handle: { title: 'Scan to check in', role: 'student' },
       },
       {
         element: <StudentLayout />,
         errorElement: <RouteError />,
+        handle: { role: 'student' },
         children: [
           {
             path: 'student-dashboard',
@@ -66,6 +91,7 @@ export const routes = [
       {
         element: <AppLayout />,
         errorElement: <RouteError />,
+        handle: { role: 'lecturer' },
         children: [
           {
             path: 'lecturer-dashboard',
@@ -75,6 +101,11 @@ export const routes = [
             path: 'profile',
             lazy: async () => ({ Component: (await import('@/portals/lecturer/profile/ProfilePage')).ProfilePage }),
             handle: { title: 'My Profile' },
+          },
+          {
+            path: 'profile/edit',
+            lazy: async () => ({ Component: (await import('@/portals/lecturer/profile/EditProfilePage')).EditProfilePage }),
+            handle: { title: 'Edit Profile' },
           },
           {
             path: 'attendance',
@@ -92,6 +123,12 @@ export const routes = [
             handle: { title: 'Units' },
           },
           {
+            // Opened on the lecturer's phone to send the room's location to a class their laptop is showing.
+            path: 'session/:sessionId/locate',
+            lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/ShareLocationPage')).ShareLocationPage }),
+            handle: { title: 'Share Location' },
+          },
+          {
             path: 'units/:unitId',
             lazy: async () => ({ Component: (await import('@/portals/lecturer/units/UnitStudentsPage')).UnitStudentsPage }),
             handle: { title: 'Unit Students' },
@@ -99,10 +136,117 @@ export const routes = [
         ],
       },
       {
+        // The lecturer's phone as a face check-in terminal. Full-bleed, like the session it belongs to.
+        path: 'session/:sessionId/face',
+        lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/FaceTerminalPage')).FaceTerminalPage }),
+        handle: { title: 'Face Check-in', role: 'lecturer' },
+      },
+      {
+        element: <DepartmentLayout />,
+        errorElement: <RouteError />,
+        handle: { role: 'department' },
+        children: [
+          {
+            path: 'department-dashboard',
+            lazy: async () => ({ Component: (await import('@/portals/department/dashboard/OverviewPage')).OverviewPage }),
+            handle: { title: 'Performance Dashboard' },
+          },
+          {
+            path: 'department-courses',
+            lazy: async () => ({ Component: (await import('@/portals/department/courses/CoursesPage')).CoursesPage }),
+            handle: { title: 'Courses' },
+          },
+          {
+            path: 'department-lecturers',
+            lazy: async () => ({ Component: (await import('@/portals/department/lecturers/LecturersPage')).LecturersPage }),
+            handle: { title: 'Lecturers' },
+          },
+          {
+            path: 'department-lecturers/:lecturerUserId',
+            lazy: async () => ({ Component: (await import('@/portals/department/lecturers/LecturerDetailPage')).LecturerDetailPage }),
+            handle: { title: 'Lecturer' },
+          },
+          {
+            path: 'department-students',
+            lazy: async () => ({ Component: (await import('@/portals/department/students/StudentsPage')).StudentsPage }),
+            handle: { title: 'Students' },
+          },
+          {
+            path: 'department-units',
+            lazy: async () => ({ Component: (await import('@/portals/department/units/UnitsPage')).UnitsPage }),
+            handle: { title: 'Units' },
+          },
+        ],
+      },
+      {
         // Full-bleed: no sidebar/bottom-nav chrome, so this is what's actually projected in the room.
         path: 'session/:sessionId',
         lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/LiveSessionPage')).LiveSessionPage }),
-        handle: { title: 'Live Session' },
+        handle: { title: 'Live Session', role: 'lecturer' },
+      },
+      {
+        element: <FacultyLayout />,
+        errorElement: <RouteError />,
+        handle: { role: 'faculty' },
+        children: [
+          {
+            path: 'faculty-dashboard',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/dashboard/OverviewPage')).OverviewPage }),
+            handle: { title: 'Performance Dashboard' },
+          },
+          {
+            path: 'faculty-departments',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/departments/DepartmentsPage')).DepartmentsPage }),
+            handle: { title: 'Departments' },
+          },
+          {
+            path: 'faculty-departments/:departmentId',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/departments/DepartmentDetailPage')).DepartmentDetailPage }),
+            handle: { title: 'Department' },
+          },
+          {
+            path: 'faculty-lecturers',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/lecturers/LecturersPage')).LecturersPage }),
+            handle: { title: 'Lecturers' },
+          },
+          {
+            path: 'faculty-lecturers/:lecturerUserId',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/lecturers/LecturerDetailPage')).LecturerDetailPage }),
+            handle: { title: 'Lecturer' },
+          },
+          {
+            path: 'faculty-students',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/students/StudentsPage')).StudentsPage }),
+            handle: { title: 'Students' },
+          },
+          {
+            path: 'faculty-units',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/units/UnitsPage')).UnitsPage }),
+            handle: { title: 'Units' },
+          },
+          {
+            path: 'faculty-officers',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/officers/OfficersPage')).OfficersPage }),
+            handle: { title: 'Department Officers' },
+          },
+        ],
+      },
+      {
+        element: <AdminLayout />,
+        errorElement: <RouteError />,
+        handle: { role: 'admin' },
+        children: [
+          {
+            path: 'admin',
+            lazy: async () => ({ Component: (await import('@/portals/admin/OfficersPage')).OfficersPage }),
+            handle: { title: 'Officers' },
+          },
+          {
+            path: 'admin-faculties',
+            lazy: async () => ({ Component: (await import('@/portals/admin/FacultiesPage')).FacultiesPage }),
+            handle: { title: 'Faculties' },
+          },
+        ],
       },
     ],
   },

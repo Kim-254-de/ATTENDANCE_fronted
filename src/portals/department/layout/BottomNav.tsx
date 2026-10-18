@@ -1,0 +1,25 @@
+import clsx from 'clsx'
+import { NavLink } from 'react-router-dom'
+import { nav } from './nav'
+
+/** The small-screen counterpart to Sidebar; both render the same `nav` array. */
+export function BottomNav() {
+  return (
+    <nav
+      aria-label="Primary"
+      className="fixed inset-x-0 bottom-0 z-20 flex border-t border-indigo-100 bg-white pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-6px_24px_rgba(18,48,95,0.06)] lg:hidden"
+    >
+      {nav.map(({ to, label, icon: Icon, end }) => (
+        <NavLink key={to} to={to} end={end} className="flex flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1 text-xs font-medium transition-colors hover:bg-indigo-50">
+          {({ isActive }) => (
+            <>
+              <Icon className={clsx('size-5', isActive ? 'text-indigo-700' : 'text-muted')} aria-hidden />
+              <span className={isActive ? 'text-indigo-700' : 'text-muted'}>{label}</span>
+              <span className={clsx('h-0.5 w-6 rounded-full', isActive ? 'bg-indigo-700' : 'bg-transparent')} aria-hidden />
+            </>
+          )}
+        </NavLink>
+      ))}
+    </nav>
+  )
+}
