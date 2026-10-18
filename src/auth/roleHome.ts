@@ -10,12 +10,13 @@ export const ROLE_HOME: Record<string, string> = {
   department: '/department-dashboard',
   faculty: '/faculty-dashboard',
   admin: '/admin',
+  qa: '/qa-dashboard',
 }
 
 /**
  * Roles that sign in at the unlisted staff page (/oversight) rather than from
  * the public role selector: their accounts are invited, never self-made.
  */
-export const OVERSIGHT_ROLES: ReadonlySet<string> = new Set(['department', 'faculty', 'admin'])
+export const OVERSIGHT_ROLES: ReadonlySet<string> = new Set(['department', 'faculty', 'admin', 'qa'])
 
 export const roleHome = (role: string) => ROLE_HOME[role] ?? '/'

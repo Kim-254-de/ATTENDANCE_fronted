@@ -63,6 +63,10 @@ Code is organized by **portal** — each role's pages, layout and API hooks live
   for the geofence).
 - `src/portals/admin/` — placeholder only for now; the backend has no admin API yet (room surveys, card
   enrolment and unit confirmation are `npm run dev:*` scripts, see the backend README), so this is just a reserved route and folder.
+- `src/portals/qa/` — quality assurance, signed in at `/oversight`: KPI dashboard (incl. the attendance-rate trend),
+  standards catalog, checklist templates, audits (fill the checklist item by item, raise a corrective action from a
+  non-compliant or partial finding) and corrective actions. Every list has department/faculty filters and CSV/PDF
+  export links (`exportLinks.tsx`), which pass the list's filters straight through to the backend's `export.{csv,pdf}`.
 - `src/components/` — shared UI primitives (`ui/`), `FaceCamera` and `RouteError`.
 - `src/pages/` — public pages: landing, terms and conditions.
 - `src/lib/`, `src/mocks/`, `src/types/`, `src/test/` — shared across every portal.

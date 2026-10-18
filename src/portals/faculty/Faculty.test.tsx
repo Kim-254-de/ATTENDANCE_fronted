@@ -111,6 +111,19 @@ describe('faculty portal', () => {
     expect(screen.getAllByText('Software Engineering').length).toBeGreaterThan(0)
   })
 
+  it('lists every course across the faculty, department named, needing-a-lecturer first', async () => {
+    const user = userEvent.setup()
+    await signInAsFaculty(user)
+    await screen.findByRole('region', { name: /key statistics/i })
+    await user.click(navLink(/^courses$/i))
+
+    expect(await screen.findByText('1 course')).toBeInTheDocument()
+    expect(screen.getByText('CS610')).toBeInTheDocument()
+    expect(screen.getByText('Distributed Databases')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Computer Science' })).toBeInTheDocument()
+    expect(screen.getByText('1 / 2')).toBeInTheDocument()
+  })
+
   it('sends a signed-out visitor of a faculty page to the staff sign-in page', async () => {
     renderApp('/faculty-lecturers')
     expect(await screen.findByRole('heading', { name: /staff sign-in/i })).toBeInTheDocument()

@@ -71,8 +71,23 @@ export interface Admin {
   avatarUrl: string | null
 }
 
-/** Whoever is signed in. Check `role` before using lecturer-, student-, department-, faculty- or admin-only fields. */
-export type Account = Lecturer | Student | DepartmentOfficer | FacultyOfficer | Admin
+/**
+ * A signed-in QA officer: institution-wide standards, audits and corrective
+ * actions — no department/faculty scope of its own, unlike every other
+ * officer role. Invited, never self-registered.
+ */
+export interface QaOfficer {
+  id: string
+  role: 'qa'
+  fullName: string
+  email: string
+  title: string | null
+  status: AccountStatus
+  avatarUrl: string | null
+}
+
+/** Whoever is signed in. Check `role` before using lecturer-, student-, department-, faculty-, admin- or qa-only fields. */
+export type Account = Lecturer | Student | DepartmentOfficer | FacultyOfficer | Admin | QaOfficer
 
 /**
  * An administrator, faculty officer or department officer as the admin console
@@ -367,6 +382,17 @@ export interface CourseOffering {
   name: string | null
   segmentsPlanned: number
   /** How many of segmentsPlanned already have a lecturer. */
+  segmentsFilled: number
+}
+
+/** GET /faculties/courses — every course offering across every department, department named. */
+export interface FacultyCourse {
+  id: string
+  code: string
+  name: string | null
+  departmentId: string
+  departmentName: string
+  segmentsPlanned: number
   segmentsFilled: number
 }
 
@@ -689,4 +715,196 @@ export interface RecentSession {
   total: number
   rate: number // 0–100
   reference: string // display-only, derived — not stored under this name; e.g. QR-CS301-0908
+}
+
+/**
+ * Quality assurance: standards, checklist-driven audits, findings and
+ * corrective actions (CAPA), plus a KPI dashboard. Not auto-scoped to the
+ * officer — unlike department/faculty, a QA officer's remit is the whole
+ * institution, so list endpoints take explicit filters instead. Types mirror
+ * the real backend's response shapes field-for-field, verified against the
+ * running API.
+ */
+
+export const QA_STANDARD_CATEGORIES = [
+  'GOVERNANCE',
+  'ACADEMIC_PROGRAMS',
+  'STAFF',
+  'STUDENTS',
+  'FACILITIES',
+  'FINANCE',
+  'RESEARCH',
+  'COMMUNITY_ENGAGEMENT',
+] as const
+export type QaStandardCategory = (typeof QA_STANDARD_CATEGORIES)[number]
+
+/** GET/POST /quality-assurance/standards — the catalog an audit is assessed against. No delete; deactivate via isActive. */
+export interface QaStandard {
+  id: string
+  code: string
+  category: QaStandardCategory
+  title: string
+  description: string | null
+  displayOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/** GET/POST /quality-assurance/checklist-templates — a named, ordered list of items, each mapped to one standard. */
+export interface QaChecklistTemplate {
+  id: string
+  name: string
+  description: string | null
+  isActive: boolean
+  itemCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** One item within a checklist template, as the template-management view reads it. */
+export interface QaChecklistItem {
+  id: string
+  templateId: string
+  standardId: string
+  standardCode: string
+  standardTitle: string
+  standardCategory: QaStandardCategory
+  prompt: string
+  guidance: string | null
+  sortOrder: number
+}
+
+export interface QaChecklistTemplateDetail extends QaChecklistTemplate {
+  items: QaChecklistItem[]
+}
+
+export const QA_AUDIT_STATUSES = ['PLANNED', 'IN_PROGRESS', 'COMPLETED'] as const
+export type QaAuditStatus = (typeof QA_AUDIT_STATUSES)[number]
+
+/** GET/POST /quality-assurance/audits — one audit targets exactly one department or one faculty. */
+export interface QaAudit {
+  id: string
+  title: string
+  auditType: string
+  targetDepartmentId: string | null
+  targetDepartmentName: string | null
+  targetFacultyId: string | null
+  targetFacultyName: string | null
+  checklistTemplateId: string
+  checklistTemplateName: string
+  leadAuditorUserId: string
+  leadAuditorName: string
+  scheduledDate: string
+  status: QaAuditStatus
+  startedAt: string | null
+  completedAt: string | null
+  notes: string | null
+  totalItems: number
+  findingsRecorded: number
+  createdAt: string
+  updatedAt: string
+}
+
+export const QA_FINDING_RATINGS = ['COMPLIANT', 'PARTIAL', 'NON_COMPLIANT', 'NOT_APPLICABLE'] as const
+export type QaFindingRating = (typeof QA_FINDING_RATINGS)[number]
+
+/** One checklist item, left-joined to its finding (if any) — GET /quality-assurance/audits/:id/checklist, the "fill checklist" view. */
+export interface QaChecklistViewItem {
+  checklistItemId: string
+  prompt: string
+  guidance: string | null
+  sortOrder: number
+  standardId: string
+  standardCode: string
+  standardTitle: string
+  standardCategory: QaStandardCategory
+  finding: {
+    id: string
+    rating: QaFindingRating
+    score: number | null
+    evidenceNotes: string | null
+    recordedByUserId: string
+    updatedAt: string
+  } | null
+}
+
+/** GET /quality-assurance/audits/:id/findings; PUT .../findings/:checklistItemId upserts one. */
+export interface QaFinding {
+  id: string
+  auditId: string
+  checklistItemId: string
+  rating: QaFindingRating
+  score: number | null
+  evidenceNotes: string | null
+  recordedByUserId: string
+  createdAt: string
+  updatedAt: string
+}
+
+export const QA_CAPA_STATUSES = ['OPEN', 'IN_PROGRESS', 'VERIFIED', 'CLOSED'] as const
+export type QaCapaStatus = (typeof QA_CAPA_STATUSES)[number]
+
+/** GET/POST /quality-assurance/corrective-actions — raised only against a NON_COMPLIANT/PARTIAL finding. */
+export interface QaCorrectiveAction {
+  id: string
+  findingId: string
+  description: string
+  ownerUserId: string
+  ownerName: string
+  dueDate: string
+  status: QaCapaStatus
+  verifiedByUserId: string | null
+  verifiedByName: string | null
+  verifiedAt: string | null
+  isOverdue: boolean
+  auditId: string
+  auditTitle: string
+  rating: QaFindingRating
+  standardCode: string
+  standardTitle: string
+  targetDepartmentId: string | null
+  targetFacultyId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface QaComplianceByStandard {
+  standardId: string
+  standardCode: string
+  standardTitle: string
+  category: QaStandardCategory
+  avgScore: number | null
+  sampleCount: number
+}
+
+export interface QaComplianceByCategory {
+  category: QaStandardCategory
+  avgScore: number | null
+  sampleCount: number
+}
+
+export interface QaAttendanceTrendPoint {
+  periodStart: string
+  departmentId: string
+  departmentName: string
+  avgAttendanceRate: number
+}
+
+/** GET /quality-assurance/departments and /quality-assurance/faculties — bare id/name lookups for the audit-target picker. */
+export interface QaDirectoryEntry {
+  id: string
+  name: string
+}
+
+/** GET /quality-assurance/dashboard — audit completion, compliance rollups, overdue CAPA, attendance trend. */
+export interface QaDashboard {
+  /** 0–100, one decimal; null when no audit matches the filters yet. */
+  auditCompletionRate: number | null
+  auditsCompleted: number
+  auditsTotal: number
+  complianceByStandard: QaComplianceByStandard[]
+  complianceByCategory: QaComplianceByCategory[]
+  overdueCapaCount: number
+  attendanceTrends: QaAttendanceTrendPoint[]
 }

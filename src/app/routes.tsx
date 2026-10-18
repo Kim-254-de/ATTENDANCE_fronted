@@ -9,6 +9,7 @@ import { AppLayout } from '@/portals/lecturer/layout/AppLayout'
 import { DepartmentLayout } from '@/portals/department/layout/DepartmentLayout'
 import { FacultyLayout } from '@/portals/faculty/layout/FacultyLayout'
 import { AdminLayout } from '@/portals/admin/layout/AdminLayout'
+import { QaLayout } from '@/portals/qa/layout/QaLayout'
 import { StudentLayout } from '@/portals/student/layout/StudentLayout'
 import { LandingPage } from '@/pages/LandingPage'
 
@@ -205,6 +206,11 @@ export const routes = [
             handle: { title: 'Department' },
           },
           {
+            path: 'faculty-courses',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/courses/CoursesPage')).CoursesPage }),
+            handle: { title: 'Courses' },
+          },
+          {
             path: 'faculty-lecturers',
             lazy: async () => ({ Component: (await import('@/portals/faculty/lecturers/LecturersPage')).LecturersPage }),
             handle: { title: 'Lecturers' },
@@ -250,6 +256,48 @@ export const routes = [
             path: 'admin-faculties',
             lazy: async () => ({ Component: (await import('@/portals/admin/FacultiesPage')).FacultiesPage }),
             handle: { title: 'Faculties' },
+          },
+        ],
+      },
+      {
+        element: <QaLayout />,
+        errorElement: <RouteError />,
+        handle: { role: 'qa' },
+        children: [
+          {
+            path: 'qa-dashboard',
+            lazy: async () => ({ Component: (await import('@/portals/qa/dashboard/OverviewPage')).OverviewPage }),
+            handle: { title: 'KPI Dashboard' },
+          },
+          {
+            path: 'qa-standards',
+            lazy: async () => ({ Component: (await import('@/portals/qa/standards/StandardsPage')).StandardsPage }),
+            handle: { title: 'Standards' },
+          },
+          {
+            path: 'qa-checklists',
+            lazy: async () => ({ Component: (await import('@/portals/qa/checklists/ChecklistsPage')).ChecklistsPage }),
+            handle: { title: 'Checklist Templates' },
+          },
+          {
+            path: 'qa-checklists/:templateId',
+            lazy: async () => ({ Component: (await import('@/portals/qa/checklists/ChecklistDetailPage')).ChecklistDetailPage }),
+            handle: { title: 'Checklist Template' },
+          },
+          {
+            path: 'qa-audits',
+            lazy: async () => ({ Component: (await import('@/portals/qa/audits/AuditsPage')).AuditsPage }),
+            handle: { title: 'Audits' },
+          },
+          {
+            path: 'qa-audits/:auditId',
+            lazy: async () => ({ Component: (await import('@/portals/qa/audits/AuditDetailPage')).AuditDetailPage }),
+            handle: { title: 'Audit' },
+          },
+          {
+            path: 'qa-corrective-actions',
+            lazy: async () => ({ Component: (await import('@/portals/qa/capa/CapaPage')).CapaPage }),
+            handle: { title: 'Corrective Actions' },
           },
         ],
       },
