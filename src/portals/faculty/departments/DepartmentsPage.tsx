@@ -30,8 +30,7 @@ export function DepartmentsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <p className="max-w-2xl text-sm text-muted">Every department in your faculty, listed by attendance standing. Open a row for its lecturers and units.</p>
+      <div className="flex justify-end">
         {!adding && (
           <Button onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden /> New department

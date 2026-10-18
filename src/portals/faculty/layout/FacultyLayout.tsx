@@ -1,4 +1,4 @@
-import { Outlet, useMatches } from 'react-router-dom'
+import { Link, Outlet, useMatches } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
 import { formatLongDate, getGreeting, firstName, initials } from '@/lib/format'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
@@ -7,8 +7,8 @@ import { Sidebar } from './Sidebar'
 
 /**
  * Shell for the faculty portal. Desktop-first like the department portal — an
- * officer reads these tables on a laptop — but with no profile page behind
- * the avatar: a provisioned account has nothing here to edit.
+ * officer reads these tables on a laptop. The avatar opens their read-only
+ * account profile.
  */
 export function FacultyLayout() {
   const title = [...useMatches()].reverse().map((m) => (m.handle as { title?: string } | undefined)?.title).find(Boolean)
@@ -30,13 +30,18 @@ export function FacultyLayout() {
             </p>
           </div>
           {user && (
-            <span className="border-l border-line pl-4">
+            <Link
+              to="/faculty-profile"
+              aria-label="View Profile"
+              title="View profile"
+              className="border-l border-line pl-4 focus-visible:rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+            >
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="size-10 rounded-full object-cover" />
               ) : (
                 <span className="grid size-10 place-items-center rounded-full bg-teal-700 text-sm font-bold text-white" title={user.fullName}>{initials(user.fullName)}</span>
               )}
-            </span>
+            </Link>
           )}
         </header>
         <main className="flex-1 bg-teal-50/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8 lg:px-10 lg:py-9">

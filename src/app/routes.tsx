@@ -196,6 +196,11 @@ export const routes = [
             handle: { title: 'Performance Dashboard' },
           },
           {
+            path: 'faculty-profile',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/FacultyProfilePage')).FacultyProfilePage }),
+            handle: { title: 'My Profile' },
+          },
+          {
             path: 'faculty-departments',
             lazy: async () => ({ Component: (await import('@/portals/faculty/departments/DepartmentsPage')).DepartmentsPage }),
             handle: { title: 'Departments' },
