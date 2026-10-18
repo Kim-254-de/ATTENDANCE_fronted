@@ -60,13 +60,13 @@ describe('admin console', () => {
     expect(screen.getByText('admin@university.edu')).toBeInTheDocument()
   })
 
-  it('opens the administrator profile from the header badge without a header sign-out button', async () => {
+  it('opens the administrator profile from the header badge and retains mobile sign-out', async () => {
     const user = userEvent.setup()
     await signInAtOversight(user, 'admin@university.edu')
     await screen.findByRole('table')
 
     const header = screen.getByRole('banner')
-    expect(within(header).queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument()
+    expect(within(header).getByRole('button', { name: /sign out/i })).toHaveClass('lg:hidden')
     await user.click(within(header).getByRole('link', { name: /view profile/i }))
 
     expect(await screen.findByRole('heading', { name: 'My Profile' })).toBeInTheDocument()
