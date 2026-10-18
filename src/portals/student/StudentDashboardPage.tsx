@@ -1,4 +1,4 @@
-import { ScanFace, ScanLine } from 'lucide-react'
+import { ScanLine } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -15,10 +15,7 @@ const HOME_ATTENDANCE_LIMIT = 20
 const formatRate = (rate: number | null) => (rate === null ? '—' : `${Math.round(rate)}%`)
 
 /**
- * The student's home: today's stats at a glance, the two check-in methods, and today's classes.
- * Face ID is a planned, not-yet-built check-in method (only QR exists today), so its card is
- * disabled with the same "coming soon" convention as the lecturer portal's placeholder pages
- * (see src/pages/ComingSoon.tsx) rather than a working button.
+ * The student's home: today's stats at a glance, QR check-in, and today's classes.
  */
 export function StudentDashboardPage() {
   const { data: me } = useMe()
@@ -58,30 +55,6 @@ export function StudentDashboardPage() {
         >
           Start QR Scan
         </Link>
-      </Card>
-
-      <Card className="space-y-4 p-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-blue-50 text-blue-700"><ScanFace className="size-5" aria-hidden /></span>
-            <div><h2 className="font-bold text-navy-900">Face Recognition</h2><p className="text-xs text-muted">Biometric attendance</p></div>
-          </div>
-          <span className="inline-flex items-center rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-muted">Coming soon</span>
-        </div>
-        <div className="grid h-44 place-items-center rounded-2xl border border-line">
-          <div className="text-center text-muted">
-            <span className="mx-auto grid size-16 place-items-center rounded-full border-2 border-line"><ScanFace className="size-7" aria-hidden /></span>
-            <p className="mt-2 text-sm">Center your face in frame</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          disabled
-          className="h-12 w-full cursor-not-allowed rounded-xl bg-line text-sm font-semibold text-muted"
-        >
-          Start Face ID
-        </button>
-        <p className="text-center text-xs text-muted">This feature is planned for the next milestone.</p>
       </Card>
 
       <section aria-labelledby="todays-classes" className="space-y-3">

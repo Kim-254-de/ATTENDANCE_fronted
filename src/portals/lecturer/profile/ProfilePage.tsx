@@ -51,12 +51,13 @@ export function ProfilePage() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
         <Card className="h-fit overflow-hidden">
-          <div className="bg-linear-to-b from-blue-600 to-blue-700 px-5 pb-5 pt-5 text-white sm:px-6">
-            <div className="relative inline-block">
+          <div className="bg-linear-to-b from-blue-600 to-blue-700 px-5 py-4 text-white sm:px-6">
+            <div className="flex items-center gap-4">
+            <div className="relative inline-block shrink-0">
               {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="size-16 rounded-2xl object-cover shadow-lg shadow-black/15" />
+                <img src={user.avatarUrl} alt="" className="size-14 rounded-2xl object-cover shadow-lg shadow-black/15" />
               ) : (
-                <div className="grid size-16 place-items-center rounded-2xl bg-white/15 text-xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
+                <div className="grid size-14 place-items-center rounded-2xl bg-white/15 text-xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
               )}
               <button
                 type="button"
@@ -69,11 +70,12 @@ export function ProfilePage() {
               </button>
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickPhoto} />
             </div>
-            <Link to="/profile/edit" className="group mt-3 block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
-              <span className="flex items-center gap-2 text-lg font-bold group-hover:underline">{user.fullName}<Pencil className="size-4 opacity-80" aria-hidden /></span>
+            <Link to="/profile/edit" className="group min-w-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              <span className="flex items-center gap-2 text-lg font-bold group-hover:underline">{user.fullName}<Pencil className="size-4 shrink-0 opacity-80" aria-hidden /></span>
               <span className="mt-0.5 block text-sm text-blue-200">{user.title || 'Lecturer'} · {user.department}</span>
               <span className="mt-0.5 block text-xs text-blue-200">Edit profile</span>
             </Link>
+            </div>
             {(user.avatarUrl || setAvatar.isPending || removeAvatar.isPending) && (
               <button
                 type="button"

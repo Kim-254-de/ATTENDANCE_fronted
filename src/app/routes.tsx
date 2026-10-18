@@ -237,6 +237,11 @@ export const routes = [
         handle: { role: 'admin' },
         children: [
           {
+            path: 'admin-profile',
+            lazy: async () => ({ Component: (await import('@/portals/admin/AdminProfilePage')).AdminProfilePage }),
+            handle: { title: 'My Profile' },
+          },
+          {
             path: 'admin',
             lazy: async () => ({ Component: (await import('@/portals/admin/OfficersPage')).OfficersPage }),
             handle: { title: 'Officers' },
