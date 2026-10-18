@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Admin, AdminFaculty, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, InvitationDetails, Officer, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import type { Account, Admin, AdminFaculty, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, InvitationDetails, Officer, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -65,6 +65,17 @@ const facultyOfficer: FacultyOfficer = {
   avatarUrl: null,
 }
 
+/** QA accounts are provisioned too: no department/faculty of its own, so nothing org-unit-scoped to resolve here. */
+const qaOfficer: QaOfficer = {
+  id: 'qa-1',
+  role: 'qa',
+  fullName: 'Ms. Susan Achieng',
+  email: 's.achieng@university.edu',
+  title: 'QA Officer',
+  status: 'ACTIVE',
+  avatarUrl: null,
+}
+
 const accounts = new Map<string, { user: Account; password: string }>([
   [lecturer.staffNumber.toLowerCase(), { user: lecturer, password: 'password' }],
   [student.registrationNumber.toLowerCase(), { user: student, password: 'password' }],
@@ -73,6 +84,7 @@ const accounts = new Map<string, { user: Account; password: string }>([
   [departmentOfficer.email.toLowerCase(), { user: departmentOfficer, password: 'password' }],
   [facultyOfficer.email.toLowerCase(), { user: facultyOfficer, password: 'password' }],
   [adminUser.email.toLowerCase(), { user: adminUser, password: 'password' }],
+  [qaOfficer.email.toLowerCase(), { user: qaOfficer, password: 'password' }],
 ])
 
 /** The seeded accounts; accounts registered during a test are removed by resetMocks. */
@@ -167,6 +179,7 @@ export const resetMocks = () => {
   deletedUserIds.clear()
   resetFaceMocks()
   resetOfficerMocks()
+  resetQaMocks()
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -1545,6 +1558,436 @@ const deactivateOfficer = (officer: Officer | undefined) => {
   return new HttpResponse(null, { status: 204 })
 }
 
+/* ------------------------------------------------------------------
+ * Quality assurance portal (GET /quality-assurance/*)
+ *
+ * Not auto-scoped to the officer — a QA officer's remit is the whole
+ * institution — so every list handler below takes explicit filters
+ * instead of resolving a department/faculty from the signed-in account.
+ * One completed audit (with a non-compliant finding and its corrective
+ * action already raised) and one planned audit with nothing filled in yet,
+ * so both the dashboard and the "fill checklist" flow have something real
+ * to show by default.
+ * ------------------------------------------------------------------ */
+
+/** Monthly attendance-rate points, reconciling with what each department's own officer sees. */
+const QA_ATTENDANCE_TRENDS: QaAttendanceTrendPoint[] = [
+  { periodStart: '2026-08-01', departmentId: 'dept-cs', departmentName: 'Computer Science', avgAttendanceRate: 88.2 },
+  { periodStart: '2026-09-01', departmentId: 'dept-cs', departmentName: 'Computer Science', avgAttendanceRate: 91.4 },
+  { periodStart: '2026-10-01', departmentId: 'dept-cs', departmentName: 'Computer Science', avgAttendanceRate: 86.9 },
+  { periodStart: '2026-09-01', departmentId: 'dept-se', departmentName: 'Software Engineering', avgAttendanceRate: 74.5 },
+  { periodStart: '2026-10-01', departmentId: 'dept-se', departmentName: 'Software Engineering', avgAttendanceRate: 47.3 },
+]
+
+const QA_STANDARDS_SEED = (): QaStandard[] => [
+  { id: 'std-gov-1', code: 'STD-GOV-01', category: 'GOVERNANCE', title: 'Institutional governance and leadership', description: null, displayOrder: 0, isActive: true, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
+  { id: 'std-prog-1', code: 'STD-PROG-01', category: 'ACADEMIC_PROGRAMS', title: 'Curriculum design and academic programs', description: null, displayOrder: 0, isActive: true, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
+  { id: 'std-staff-1', code: 'STD-STAFF-01', category: 'STAFF', title: 'Staff qualifications and development', description: null, displayOrder: 0, isActive: true, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
+  { id: 'std-fac-1', code: 'STD-FAC-01', category: 'FACILITIES', title: 'Physical and learning facilities', description: null, displayOrder: 0, isActive: false, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
+]
+
+interface MockQaItem extends QaChecklistItem {}
+const QA_ITEMS_SEED = (): MockQaItem[] => [
+  { id: 'item-1', templateId: 'tmpl-1', standardId: 'std-gov-1', standardCode: 'STD-GOV-01', standardTitle: 'Institutional governance and leadership', standardCategory: 'GOVERNANCE', prompt: 'Does the unit publish an up-to-date governance charter?', guidance: null, sortOrder: 0 },
+  { id: 'item-2', templateId: 'tmpl-1', standardId: 'std-prog-1', standardCode: 'STD-PROG-01', standardTitle: 'Curriculum design and academic programs', standardCategory: 'ACADEMIC_PROGRAMS', prompt: 'Are course outlines reviewed within the last two years?', guidance: null, sortOrder: 1 },
+  { id: 'item-3', templateId: 'tmpl-1', standardId: 'std-staff-1', standardCode: 'STD-STAFF-01', standardTitle: 'Staff qualifications and development', standardCategory: 'STAFF', prompt: 'Do all teaching staff hold the required minimum qualification?', guidance: 'Check staff files against the minimum-qualification policy.', sortOrder: 2 },
+]
+
+interface MockQaTemplate { id: string; name: string; description: string | null; isActive: boolean; createdAt: string; updatedAt: string }
+const QA_TEMPLATES_SEED = (): MockQaTemplate[] => [
+  { id: 'tmpl-1', name: 'General Internal Audit Checklist', description: 'One checklist item per standard, for a routine department/faculty audit.', isActive: true, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
+]
+
+interface MockQaAudit {
+  id: string; title: string; auditType: 'INTERNAL'; targetDepartmentId: string | null; targetFacultyId: string | null;
+  checklistTemplateId: string; leadAuditorUserId: string; scheduledDate: string; status: QaAuditStatus;
+  startedAt: string | null; completedAt: string | null; notes: string | null; createdAt: string; updatedAt: string;
+}
+const QA_AUDITS_SEED = (): MockQaAudit[] => [
+  {
+    id: 'audit-1', title: 'CS Department Q3 Internal Audit', auditType: 'INTERNAL', targetDepartmentId: 'dept-cs', targetFacultyId: null,
+    checklistTemplateId: 'tmpl-1', leadAuditorUserId: qaOfficer.id, scheduledDate: '2026-09-15', status: 'COMPLETED',
+    startedAt: '2026-09-15T08:00:00Z', completedAt: '2026-09-16T10:00:00Z', notes: null, createdAt: '2026-09-10T08:00:00Z', updatedAt: '2026-09-16T10:00:00Z',
+  },
+  {
+    id: 'audit-2', title: 'PET Faculty Annual Review', auditType: 'INTERNAL', targetDepartmentId: null, targetFacultyId: 'fac-pet',
+    checklistTemplateId: 'tmpl-1', leadAuditorUserId: qaOfficer.id, scheduledDate: '2026-12-01', status: 'PLANNED',
+    startedAt: null, completedAt: null, notes: null, createdAt: '2026-10-01T08:00:00Z', updatedAt: '2026-10-01T08:00:00Z',
+  },
+]
+
+interface MockQaFinding { id: string; auditId: string; checklistItemId: string; rating: QaFindingRating; score: number | null; evidenceNotes: string | null; recordedByUserId: string; createdAt: string; updatedAt: string }
+const QA_FINDINGS_SEED = (): MockQaFinding[] => [
+  { id: 'finding-1', auditId: 'audit-1', checklistItemId: 'item-1', rating: 'COMPLIANT', score: null, evidenceNotes: null, recordedByUserId: qaOfficer.id, createdAt: '2026-09-15T09:00:00Z', updatedAt: '2026-09-15T09:00:00Z' },
+  { id: 'finding-2', auditId: 'audit-1', checklistItemId: 'item-2', rating: 'NON_COMPLIANT', score: null, evidenceNotes: 'Several course outlines have not been reviewed since 2022.', recordedByUserId: qaOfficer.id, createdAt: '2026-09-15T09:05:00Z', updatedAt: '2026-09-15T09:05:00Z' },
+  { id: 'finding-3', auditId: 'audit-1', checklistItemId: 'item-3', rating: 'PARTIAL', score: null, evidenceNotes: null, recordedByUserId: qaOfficer.id, createdAt: '2026-09-15T09:10:00Z', updatedAt: '2026-09-15T09:10:00Z' },
+]
+
+interface MockQaCapa {
+  id: string; findingId: string; description: string; ownerUserId: string; ownerName: string; dueDate: string; status: QaCapaStatus;
+  verifiedByUserId: string | null; verifiedByName: string | null; verifiedAt: string | null; createdAt: string; updatedAt: string;
+}
+/** Overdue on purpose: due date in the past, still OPEN — drives the dashboard's overdue count and the Corrective Actions page's "Overdue" badge. */
+const QA_CAPAS_SEED = (): MockQaCapa[] => [
+  { id: 'capa-1', findingId: 'finding-2', description: 'Review and republish every course outline older than two years.', ownerUserId: qaOfficer.id, ownerName: qaOfficer.fullName, dueDate: '2026-10-01', status: 'OPEN', verifiedByUserId: null, verifiedByName: null, verifiedAt: null, createdAt: '2026-09-16T10:30:00Z', updatedAt: '2026-09-16T10:30:00Z' },
+  // Not overdue, so the "overdue only" filter has something to hide.
+  { id: 'capa-2', findingId: 'finding-3', description: 'Run a qualification audit of every part-time lecturer.', ownerUserId: qaOfficer.id, ownerName: qaOfficer.fullName, dueDate: '2027-03-31', status: 'IN_PROGRESS', verifiedByUserId: null, verifiedByName: null, verifiedAt: null, createdAt: '2026-09-16T10:35:00Z', updatedAt: '2026-09-16T10:35:00Z' },
+]
+
+let qaStandards = QA_STANDARDS_SEED()
+let qaItems = QA_ITEMS_SEED()
+let qaTemplates = QA_TEMPLATES_SEED()
+let qaAudits = QA_AUDITS_SEED()
+let qaFindings = QA_FINDINGS_SEED()
+let qaCapas = QA_CAPAS_SEED()
+let qaIdCounter = 0
+
+function resetQaMocks() {
+  qaStandards = QA_STANDARDS_SEED()
+  qaItems = QA_ITEMS_SEED()
+  qaTemplates = QA_TEMPLATES_SEED()
+  qaAudits = QA_AUDITS_SEED()
+  qaFindings = QA_FINDINGS_SEED()
+  qaCapas = QA_CAPAS_SEED()
+}
+
+const requireQa = () => {
+  if (!store.get()) return unauthorized()
+  if (currentAccount.role !== 'qa') return fail(403, 'FORBIDDEN', 'Forbidden')
+  return null
+}
+
+const QA_AUDIT_FORWARD: Record<QaAuditStatus, QaAuditStatus | null> = { PLANNED: 'IN_PROGRESS', IN_PROGRESS: 'COMPLETED', COMPLETED: null }
+const QA_CAPA_FORWARD: Record<QaCapaStatus, QaCapaStatus | null> = { OPEN: 'IN_PROGRESS', IN_PROGRESS: 'VERIFIED', VERIFIED: 'CLOSED', CLOSED: null }
+
+/** COMPLIANT=100, PARTIAL=50, NON_COMPLIANT=0; NOT_APPLICABLE has no fallback and must be excluded first — mirrors kpi.service.ts. */
+function fallbackScoreFor(rating: QaFindingRating): number | null {
+  if (rating === 'COMPLIANT') return 100
+  if (rating === 'PARTIAL') return 50
+  if (rating === 'NON_COMPLIANT') return 0
+  return null
+}
+const round1 = (v: number) => Math.round(v * 10) / 10
+function averageScore(findings: { rating: QaFindingRating; score: number | null }[]): number | null {
+  const values = findings.map((f) => f.score ?? fallbackScoreFor(f.rating)).filter((v): v is number => v !== null)
+  if (values.length === 0) return null
+  return round1(values.reduce((sum, v) => sum + v, 0) / values.length)
+}
+
+function toAuditDto(a: MockQaAudit): QaAudit {
+  const template = qaTemplates.find((t) => t.id === a.checklistTemplateId)
+  const findingsForAudit = qaFindings.filter((f) => f.auditId === a.id)
+  const totalItems = qaItems.filter((i) => i.templateId === a.checklistTemplateId).length
+  return {
+    id: a.id, title: a.title, auditType: a.auditType,
+    targetDepartmentId: a.targetDepartmentId,
+    targetDepartmentName: a.targetDepartmentId ? FACULTY_DEPARTMENTS_SEED.find((d) => d.id === a.targetDepartmentId)?.name ?? null : null,
+    targetFacultyId: a.targetFacultyId,
+    targetFacultyName: a.targetFacultyId ? adminFaculties.find((f) => f.facultyId === a.targetFacultyId)?.name ?? null : null,
+    checklistTemplateId: a.checklistTemplateId, checklistTemplateName: template?.name ?? 'Unknown',
+    leadAuditorUserId: a.leadAuditorUserId, leadAuditorName: a.leadAuditorUserId === qaOfficer.id ? qaOfficer.fullName : 'Unknown',
+    scheduledDate: a.scheduledDate, status: a.status, startedAt: a.startedAt, completedAt: a.completedAt, notes: a.notes,
+    totalItems, findingsRecorded: findingsForAudit.length, createdAt: a.createdAt, updatedAt: a.updatedAt,
+  }
+}
+
+function toCapaDto(c: MockQaCapa): QaCorrectiveAction {
+  const finding = qaFindings.find((f) => f.id === c.findingId)!
+  const item = qaItems.find((i) => i.id === finding.checklistItemId)!
+  const audit = qaAudits.find((a) => a.id === finding.auditId)!
+  const overdue = new Date(c.dueDate) < new Date() && c.status !== 'VERIFIED' && c.status !== 'CLOSED'
+  return {
+    id: c.id, findingId: c.findingId, description: c.description, ownerUserId: c.ownerUserId, ownerName: c.ownerName,
+    dueDate: c.dueDate, status: c.status, verifiedByUserId: c.verifiedByUserId, verifiedByName: c.verifiedByName, verifiedAt: c.verifiedAt,
+    isOverdue: overdue, auditId: audit.id, auditTitle: audit.title, rating: finding.rating, standardCode: item.standardCode, standardTitle: item.standardTitle,
+    targetDepartmentId: audit.targetDepartmentId, targetFacultyId: audit.targetFacultyId, createdAt: c.createdAt, updatedAt: c.updatedAt,
+  }
+}
+
+function toTemplateDto(t: MockQaTemplate): QaChecklistTemplate {
+  return { id: t.id, name: t.name, description: t.description, isActive: t.isActive, itemCount: qaItems.filter((i) => i.templateId === t.id).length, createdAt: t.createdAt, updatedAt: t.updatedAt }
+}
+
+const qaHandlers = [
+  /** Bare id/name lookups so the "create audit" form can offer a name-based picker, the same reasoning the real backend's directory.controller.ts gives. */
+  http.get(`${API}/quality-assurance/departments`, () => requireQa() ?? ok(FACULTY_DEPARTMENTS_SEED.map((d): QaDirectoryEntry => ({ id: d.id, name: d.name })))),
+  http.get(`${API}/quality-assurance/faculties`, () => requireQa() ?? ok(adminFaculties.map((f): QaDirectoryEntry => ({ id: f.facultyId, name: f.name })))),
+
+  http.get(`${API}/quality-assurance/standards`, () => requireQa() ?? ok(qaStandards)),
+  http.post(`${API}/quality-assurance/standards`, async ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const input = (await request.json()) as { code: string; category: QaStandard['category']; title: string; description?: string; displayOrder?: number }
+    if (!input.code?.trim() || !input.title?.trim()) return fail(400, 'VALIDATION_FAILED', 'Enter a code and a title.')
+    const standard: QaStandard = {
+      id: `std-${++qaIdCounter}`, code: input.code.trim(), category: input.category, title: input.title.trim(),
+      description: input.description?.trim() || null, displayOrder: input.displayOrder ?? 0, isActive: true,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }
+    qaStandards.push(standard)
+    return ok(standard, 201)
+  }),
+  http.patch(`${API}/quality-assurance/standards/:id`, async ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const standard = qaStandards.find((s) => s.id === params.id)
+    if (!standard) return fail(404, 'NOT_FOUND', 'No such standard.')
+    const input = (await request.json()) as Partial<Pick<QaStandard, 'code' | 'category' | 'title' | 'description' | 'displayOrder' | 'isActive'>>
+    Object.assign(standard, input, { updatedAt: new Date().toISOString() })
+    return ok(standard)
+  }),
+
+  http.get(`${API}/quality-assurance/checklist-templates`, () => requireQa() ?? ok(qaTemplates.map(toTemplateDto))),
+  http.get(`${API}/quality-assurance/checklist-templates/:id`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const template = qaTemplates.find((t) => t.id === params.id)
+    if (!template) return fail(404, 'NOT_FOUND', 'No such checklist template.')
+    return ok({ ...toTemplateDto(template), items: qaItems.filter((i) => i.templateId === template.id).sort((a, b) => a.sortOrder - b.sortOrder) })
+  }),
+  http.post(`${API}/quality-assurance/checklist-templates`, async ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const input = (await request.json()) as { name: string; description?: string }
+    if (!input.name?.trim()) return fail(400, 'VALIDATION_FAILED', 'Enter a name.')
+    const template: MockQaTemplate = { id: `tmpl-${++qaIdCounter}`, name: input.name.trim(), description: input.description?.trim() || null, isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    qaTemplates.push(template)
+    return ok(toTemplateDto(template), 201)
+  }),
+  http.patch(`${API}/quality-assurance/checklist-templates/:id`, async ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const template = qaTemplates.find((t) => t.id === params.id)
+    if (!template) return fail(404, 'NOT_FOUND', 'No such checklist template.')
+    const input = (await request.json()) as Partial<Pick<MockQaTemplate, 'name' | 'description' | 'isActive'>>
+    Object.assign(template, input, { updatedAt: new Date().toISOString() })
+    return ok(toTemplateDto(template))
+  }),
+  http.post(`${API}/quality-assurance/checklist-templates/:id/items`, async ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const template = qaTemplates.find((t) => t.id === params.id)
+    if (!template) return fail(404, 'NOT_FOUND', 'No such checklist template.')
+    const input = (await request.json()) as { standardId: string; prompt: string; guidance?: string; sortOrder?: number }
+    const standard = qaStandards.find((s) => s.id === input.standardId)
+    if (!standard || !input.prompt?.trim()) return fail(400, 'VALIDATION_FAILED', 'Choose a standard and enter a prompt.')
+    const item: MockQaItem = {
+      id: `item-${++qaIdCounter}`, templateId: template.id, standardId: standard.id, standardCode: standard.code, standardTitle: standard.title, standardCategory: standard.category,
+      prompt: input.prompt.trim(), guidance: input.guidance?.trim() || null, sortOrder: input.sortOrder ?? qaItems.filter((i) => i.templateId === template.id).length,
+    }
+    qaItems.push(item)
+    return ok(item, 201)
+  }),
+  http.delete(`${API}/quality-assurance/checklist-templates/:id/items/:itemId`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const item = qaItems.find((i) => i.id === params.itemId && i.templateId === params.id)
+    if (!item) return fail(404, 'NOT_FOUND', 'No such checklist item.')
+    if (qaFindings.some((f) => f.checklistItemId === item.id)) return fail(409, 'CONFLICT', 'This item already has findings recorded against it and cannot be removed.')
+    qaItems = qaItems.filter((i) => i.id !== item.id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.get(`${API}/quality-assurance/audits`, ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const url = new URL(request.url)
+    const status = url.searchParams.get('status')
+    const targetDepartmentId = url.searchParams.get('targetDepartmentId')
+    const targetFacultyId = url.searchParams.get('targetFacultyId')
+    const rows = qaAudits.filter((a) =>
+      (!status || a.status === status) &&
+      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId) &&
+      (!targetFacultyId || a.targetFacultyId === targetFacultyId))
+    return ok(rows.map(toAuditDto))
+  }),
+  http.get(`${API}/quality-assurance/audits/:id`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const audit = qaAudits.find((a) => a.id === params.id)
+    if (!audit) return fail(404, 'NOT_FOUND', 'No such audit.')
+    return ok(toAuditDto(audit))
+  }),
+  http.post(`${API}/quality-assurance/audits`, async ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const input = (await request.json()) as { title: string; targetDepartmentId?: string; targetFacultyId?: string; checklistTemplateId: string; leadAuditorUserId: string; scheduledDate: string; notes?: string }
+    if (!input.title?.trim() || Boolean(input.targetDepartmentId) === Boolean(input.targetFacultyId) || !qaTemplates.some((t) => t.id === input.checklistTemplateId)) {
+      return fail(400, 'VALIDATION_FAILED', 'The target department/faculty, checklist template or lead auditor does not exist.')
+    }
+    const audit: MockQaAudit = {
+      id: `audit-${++qaIdCounter}`, title: input.title.trim(), auditType: 'INTERNAL',
+      targetDepartmentId: input.targetDepartmentId ?? null, targetFacultyId: input.targetFacultyId ?? null,
+      checklistTemplateId: input.checklistTemplateId, leadAuditorUserId: input.leadAuditorUserId, scheduledDate: input.scheduledDate,
+      status: 'PLANNED', startedAt: null, completedAt: null, notes: input.notes?.trim() || null,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }
+    qaAudits.push(audit)
+    return ok(toAuditDto(audit), 201)
+  }),
+  http.patch(`${API}/quality-assurance/audits/:id`, async ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const audit = qaAudits.find((a) => a.id === params.id)
+    if (!audit) return fail(404, 'NOT_FOUND', 'No such audit.')
+    const input = (await request.json()) as { title?: string; leadAuditorUserId?: string; scheduledDate?: string; notes?: string | null; status?: QaAuditStatus }
+    if (input.title !== undefined) audit.title = input.title
+    if (input.leadAuditorUserId !== undefined) audit.leadAuditorUserId = input.leadAuditorUserId
+    if (input.scheduledDate !== undefined) audit.scheduledDate = input.scheduledDate
+    if (input.notes !== undefined) audit.notes = input.notes
+    if (input.status !== undefined && input.status !== audit.status) {
+      if (QA_AUDIT_FORWARD[audit.status] !== input.status) return fail(400, 'VALIDATION_FAILED', `An audit cannot move from ${audit.status} to ${input.status}.`)
+      if (input.status === 'COMPLETED') {
+        const total = qaItems.filter((i) => i.templateId === audit.checklistTemplateId).length
+        const recorded = qaFindings.filter((f) => f.auditId === audit.id).length
+        if (recorded < total) return fail(400, 'VALIDATION_FAILED', `${total - recorded} checklist item(s) still need a finding before this audit can be completed.`)
+      }
+      audit.status = input.status
+      if (input.status === 'IN_PROGRESS') audit.startedAt = new Date().toISOString()
+      if (input.status === 'COMPLETED') audit.completedAt = new Date().toISOString()
+    }
+    audit.updatedAt = new Date().toISOString()
+    return ok(toAuditDto(audit))
+  }),
+  http.get(`${API}/quality-assurance/audits/:id/checklist`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const audit = qaAudits.find((a) => a.id === params.id)
+    if (!audit) return fail(404, 'NOT_FOUND', 'No such audit.')
+    const rows = qaItems
+      .filter((i) => i.templateId === audit.checklistTemplateId)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((item) => {
+        const finding = qaFindings.find((f) => f.auditId === audit.id && f.checklistItemId === item.id)
+        return {
+          checklistItemId: item.id, prompt: item.prompt, guidance: item.guidance, sortOrder: item.sortOrder,
+          standardId: item.standardId, standardCode: item.standardCode, standardTitle: item.standardTitle, standardCategory: item.standardCategory,
+          finding: finding ? { id: finding.id, rating: finding.rating, score: finding.score, evidenceNotes: finding.evidenceNotes, recordedByUserId: finding.recordedByUserId, updatedAt: finding.updatedAt } : null,
+        }
+      })
+    return ok(rows)
+  }),
+  http.get(`${API}/quality-assurance/audits/:id/findings`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    return ok(qaFindings.filter((f) => f.auditId === params.id))
+  }),
+  http.put(`${API}/quality-assurance/audits/:id/findings/:checklistItemId`, async ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const audit = qaAudits.find((a) => a.id === params.id)
+    if (!audit) return fail(404, 'NOT_FOUND', 'No such audit.')
+    if (audit.status === 'COMPLETED') return fail(400, 'VALIDATION_FAILED', 'This audit is already completed.')
+    const item = qaItems.find((i) => i.id === params.checklistItemId && i.templateId === audit.checklistTemplateId)
+    if (!item) return fail(404, 'NOT_FOUND', 'No such checklist item on this audit.')
+    const input = (await request.json()) as { rating: QaFindingRating; score?: number; evidenceNotes?: string }
+    const existing = qaFindings.find((f) => f.auditId === audit.id && f.checklistItemId === item.id)
+    const now = new Date().toISOString()
+    const finding: MockQaFinding = existing
+      ? Object.assign(existing, { rating: input.rating, score: input.score ?? null, evidenceNotes: input.evidenceNotes?.trim() || null, updatedAt: now })
+      : { id: `finding-${++qaIdCounter}`, auditId: audit.id, checklistItemId: item.id, rating: input.rating, score: input.score ?? null, evidenceNotes: input.evidenceNotes?.trim() || null, recordedByUserId: currentAccount.id, createdAt: now, updatedAt: now }
+    if (!existing) qaFindings.push(finding)
+    return ok(finding, existing ? 200 : 201)
+  }),
+
+  http.get(`${API}/quality-assurance/corrective-actions`, ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const url = new URL(request.url)
+    const status = url.searchParams.get('status')
+    const overdueParam = url.searchParams.get('overdue')
+    const targetDepartmentId = url.searchParams.get('targetDepartmentId')
+    const targetFacultyId = url.searchParams.get('targetFacultyId')
+    const rows = qaCapas.map(toCapaDto).filter((c) =>
+      (!status || c.status === status) &&
+      (overdueParam === null || c.isOverdue === (overdueParam === 'true')) &&
+      (!targetDepartmentId || c.targetDepartmentId === targetDepartmentId) &&
+      (!targetFacultyId || c.targetFacultyId === targetFacultyId))
+    return ok(rows)
+  }),
+  http.post(`${API}/quality-assurance/corrective-actions`, async ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const input = (await request.json()) as { findingId: string; description: string; ownerUserId: string; dueDate: string }
+    const finding = qaFindings.find((f) => f.id === input.findingId)
+    if (!finding) return fail(400, 'VALIDATION_FAILED', 'No such finding.')
+    if (finding.rating !== 'NON_COMPLIANT' && finding.rating !== 'PARTIAL') {
+      return fail(400, 'VALIDATION_FAILED', 'A corrective action can only be raised against a non-compliant or partial finding.')
+    }
+    const capa: MockQaCapa = {
+      id: `capa-${++qaIdCounter}`, findingId: finding.id, description: input.description.trim(), ownerUserId: input.ownerUserId,
+      ownerName: input.ownerUserId === qaOfficer.id ? qaOfficer.fullName : 'Unknown', dueDate: input.dueDate, status: 'OPEN',
+      verifiedByUserId: null, verifiedByName: null, verifiedAt: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }
+    qaCapas.push(capa)
+    return ok(toCapaDto(capa), 201)
+  }),
+  http.patch(`${API}/quality-assurance/corrective-actions/:id`, async ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const capa = qaCapas.find((c) => c.id === params.id)
+    if (!capa) return fail(404, 'NOT_FOUND', 'No such corrective action.')
+    const input = (await request.json()) as { description?: string; ownerUserId?: string; dueDate?: string; status?: QaCapaStatus }
+    if (input.description !== undefined) capa.description = input.description
+    if (input.ownerUserId !== undefined) capa.ownerUserId = input.ownerUserId
+    if (input.dueDate !== undefined) capa.dueDate = input.dueDate
+    if (input.status !== undefined && input.status !== capa.status) {
+      if (QA_CAPA_FORWARD[capa.status] !== input.status) return fail(400, 'VALIDATION_FAILED', `A corrective action cannot move from ${capa.status} to ${input.status}.`)
+      capa.status = input.status
+      // Stamped from the signed-in caller, never from the request body — mirrors capa.service.ts exactly.
+      if (input.status === 'VERIFIED') {
+        capa.verifiedByUserId = currentAccount.id
+        capa.verifiedByName = currentAccount.fullName
+        capa.verifiedAt = new Date().toISOString()
+      }
+    }
+    capa.updatedAt = new Date().toISOString()
+    return ok(toCapaDto(capa))
+  }),
+
+  http.get(`${API}/quality-assurance/dashboard`, ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const url = new URL(request.url)
+    const targetDepartmentId = url.searchParams.get('targetDepartmentId')
+    const targetFacultyId = url.searchParams.get('targetFacultyId')
+    const audits = qaAudits.filter((a) =>
+      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId) &&
+      (!targetFacultyId || a.targetFacultyId === targetFacultyId))
+    const auditIds = new Set(audits.map((a) => a.id))
+    const findings = qaFindings.filter((f) => auditIds.has(f.auditId) && f.rating !== 'NOT_APPLICABLE')
+    const withStandard = findings.map((f) => ({ finding: f, item: qaItems.find((i) => i.id === f.checklistItemId)! }))
+
+    const byStandard = new Map<string, typeof withStandard>()
+    for (const row of withStandard) {
+      const list = byStandard.get(row.item.standardId) ?? []
+      list.push(row)
+      byStandard.set(row.item.standardId, list)
+    }
+    const complianceByStandard = [...byStandard.entries()].map(([standardId, rows]) => {
+      const first = rows[0]!.item
+      return { standardId, standardCode: first.standardCode, standardTitle: first.standardTitle, category: first.standardCategory, avgScore: averageScore(rows.map((r) => r.finding)), sampleCount: rows.length }
+    })
+    const byCategory = new Map<string, typeof withStandard>()
+    for (const row of withStandard) {
+      const list = byCategory.get(row.item.standardCategory) ?? []
+      list.push(row)
+      byCategory.set(row.item.standardCategory, list)
+    }
+    const complianceByCategory = [...byCategory.entries()].map(([category, rows]) => ({ category, avgScore: averageScore(rows.map((r) => r.finding)), sampleCount: rows.length }))
+
+    const completed = audits.filter((a) => a.status === 'COMPLETED').length
+    const overdueCapaCount = qaCapas.map(toCapaDto).filter((c) => c.isOverdue && auditIds.has(c.auditId)).length
+
+    return ok({
+      auditCompletionRate: audits.length === 0 ? null : round1((completed / audits.length) * 100),
+      auditsCompleted: completed, auditsTotal: audits.length,
+      complianceByStandard, complianceByCategory, overdueCapaCount,
+      attendanceTrends: QA_ATTENDANCE_TRENDS.filter((p) => !targetDepartmentId || p.departmentId === targetDepartmentId),
+    })
+  }),
+]
+
 const invitationHandlers = [
   http.get(`${API}/admin/faculties`, () => requireAdmin() ?? ok(adminFaculties)),
   http.post(`${API}/admin/faculties`, async ({ request }) => {
@@ -1617,4 +2060,4 @@ const invitationHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+export const handlers = [...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
