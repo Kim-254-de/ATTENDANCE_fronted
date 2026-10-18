@@ -38,6 +38,7 @@ describe('student home', () => {
     const todaysClasses = screen.getByRole('region', { name: "Today's Classes" })
     expect(within(todaysClasses).getByText(/CS301/)).toBeInTheDocument()
     expect(within(todaysClasses).getByRole('link', { name: /scan now/i })).toBeInTheDocument()
+    expect(within(todaysClasses).queryByRole('link', { name: /my units/i })).not.toBeInTheDocument()
   })
 
   it('marks a class present right after the scan, and drops it from "Scan now"', async () => {

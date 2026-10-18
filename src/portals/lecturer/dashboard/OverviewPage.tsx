@@ -35,7 +35,7 @@ export function OverviewPage() {
           <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
         </Card>
       ) : (
-        <section aria-label="Key statistics" className="grid grid-cols-2 gap-4">
+        <section aria-label="Key statistics" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {isPending || !data ? (
             Array.from({ length: 2 }, (_, i) => <Skeleton key={i} className="h-[104px]" />)
           ) : (

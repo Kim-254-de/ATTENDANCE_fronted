@@ -85,9 +85,8 @@ export function StudentDashboardPage() {
       </Card>
 
       <section aria-labelledby="todays-classes" className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div>
           <h2 id="todays-classes" className="text-lg font-bold text-navy-900">Today's Classes</h2>
-          <Link to="/student-units" className="text-sm font-semibold text-blue-700 hover:underline">My units →</Link>
         </div>
         {attendance.error ? (
           <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(attendance.error, 'Could not load your attendance.')}</Card>
