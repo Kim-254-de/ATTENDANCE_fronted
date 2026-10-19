@@ -1,4 +1,4 @@
-import { ArrowLeft, LocateFixed, Pause, PictureInPicture2, Play, ScanFace, Smartphone, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, LocateFixed, Pause, PictureInPicture2, Play, ScanFace, Smartphone, TabletSmartphone, TriangleAlert, X } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
@@ -8,7 +8,7 @@ import { errorMessage } from '@/lib/api'
 import { formatElapsed } from '@/lib/format'
 import { bestPosition } from '@/lib/geolocation'
 import type { SessionAttendance, SessionStatus, SessionSummary } from '@/types'
-import { useSessionAttendance, useSessionQr, useSetGeofence, useSetSessionStatus } from './sessionApi'
+import { useSessionAttendance, useSessionQr, useSetGeofence, useSetSessionStatus, useTerminalLink } from './sessionApi'
 
 /**
  * Experimental, Chrome/Edge 116+ only — not yet in the standard DOM lib types.
@@ -48,6 +48,7 @@ export function LiveSessionPage() {
   // `override` is the last status we confirmed ourselves (initial nav state, or a pause/resume/close
   // we just made). Until we've made one, the session shown is whatever the QR poll last reported —
   // derived at render time so there's no query-result-into-state effect to keep in sync.
+  const [linkingTerminal, setLinkingTerminal] = useState(false)
   const [override, setOverride] = useState<SessionSummary | null>((location.state as { session?: SessionSummary } | null)?.session ?? null)
   const canPoll = override === null || override.status === 'OPEN'
   const qr = useSessionQr(sessionId, canPoll)
@@ -142,6 +143,11 @@ export function LiveSessionPage() {
                 <ScanFace className="size-4" aria-hidden /> Face check-in
               </Link>
             )}
+            {session.status === 'OPEN' && (
+              <Button variant="secondary" onClick={() => setLinkingTerminal(true)}>
+                <TabletSmartphone className="size-4" aria-hidden /> Link a terminal
+              </Button>
+            )}
             <FloatButton
               payload={session.status === 'OPEN' && !awaitingLocation ? qr.data?.payload : undefined}
               refreshLabel={secondsLeft !== null ? `Refreshes in ${secondsLeft}s` : undefined}
@@ -152,6 +158,43 @@ export function LiveSessionPage() {
           </div>
         )}
       </main>
+
+      {linkingTerminal && sessionId && <TerminalLinkDialog sessionId={sessionId} onClose={() => setLinkingTerminal(false)} />}
+    </div>
+  )
+}
+
+/**
+ * The code a department's portable terminal scans to start recording for this
+ * class. Shown over the student QR, since it is for the device in the
+ * lecturer's hand, not for students. Several terminals can scan the same code.
+ */
+function TerminalLinkDialog({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
+  const link = useTerminalLink(sessionId, true)
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="terminal-link-title" className="fixed inset-0 z-30 grid place-items-center bg-navy-950/90 p-4">
+      <div className="w-full max-w-sm space-y-4 rounded-3xl bg-navy-900 p-6 text-center shadow-2xl ring-1 ring-white/10">
+        <div className="flex items-start justify-between gap-3 text-left">
+          <div>
+            <h2 id="terminal-link-title" className="text-lg font-semibold">Link a terminal</h2>
+            <p className="text-sm text-sky-200">Scan this with your department's ID card or fingerprint terminal. It then records for this class until the class ends.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2 hover:bg-white/10" aria-label="Close">
+            <X className="size-5" aria-hidden />
+          </button>
+        </div>
+        {link.data ? (
+          <div className="mx-auto w-fit rounded-2xl bg-white p-4">
+            <QRCodeCanvas value={link.data.linkCode} size={240} level="M" marginSize={2} />
+          </div>
+        ) : link.error ? (
+          <p role="alert" className="text-sm text-amber-200">{errorMessage(link.error, 'Could not get a link code.')}</p>
+        ) : (
+          <p role="status" className="text-sm text-sky-300">Getting a code…</p>
+        )}
+        <p className="text-xs text-sky-400">Only terminals belonging to your department can link to your classes.</p>
+        <Button variant="secondary" onClick={onClose} className="w-full">Done</Button>
+      </div>
     </div>
   )
 }
