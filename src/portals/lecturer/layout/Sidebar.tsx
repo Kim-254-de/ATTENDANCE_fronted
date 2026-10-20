@@ -5,10 +5,10 @@ import { useLogout } from '@/auth/authApi'
 
 const nav = [
   { to: '/lecturer-dashboard', label: 'Dashboard', icon: LayoutGrid, end: true },
-  { to: '/profile', label: 'My Profile', icon: UserRound },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/units', label: 'Units', icon: BookOpen },
+  { to: '/profile', label: 'Profile', icon: UserRound },
 ]
 
 /**
@@ -28,11 +28,11 @@ export function Sidebar() {
       <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-blue-800/70" aria-hidden />
       <div className="flex items-center gap-3 px-1 py-2">
         <div className="flex-1 leading-tight">
-          <p className="text-sm font-semibold text-blue-800">Lecturer Portal</p>
+          <p className="text-sm font-semibold text-white">Lecturer Portal</p>
         </div>
       </div>
 
-      <p className="mt-6 px-2 text-xs font-semibold tracking-widest text-blue-600">NAVIGATION</p>
+      <p className="mt-6 px-2 text-xs font-semibold tracking-widest text-white/80">NAVIGATION</p>
       <nav className="mt-2 space-y-1">
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink
@@ -40,7 +40,7 @@ export function Sidebar() {
             to={to}
             end={end}
             className={({ isActive }) =>
-              clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-blue-600 text-white' : 'text-blue-100 hover:bg-white/5')
+              clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-blue-600 text-white' : 'text-white hover:bg-white/10')
             }
           >
             {({ isActive }) => (
@@ -57,7 +57,7 @@ export function Sidebar() {
       <div className="mt-auto">
         <button
           onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) })}
-          className="flex w-full items-center gap-3 rounded-xl border border-red-400 px-3 py-2.5 text-sm text-red-300 transition hover:border-red-600 hover:bg-red-600 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-xl border border-red-400 px-3 py-2.5 text-sm text-white transition hover:border-red-600 hover:bg-red-600 hover:text-white"
         >
           <LogOut className="size-4.5" aria-hidden /> Sign Out
         </button>

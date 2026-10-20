@@ -26,6 +26,7 @@ export function OfficersPage() {
         pending={invite.isPending}
         error={invite.error}
         canSubmit={!!departmentId}
+        brightGold
         onInvite={(invitee, done) =>
           invite.mutate({ departmentId, ...invitee }, {
             onSuccess: (result) => {
