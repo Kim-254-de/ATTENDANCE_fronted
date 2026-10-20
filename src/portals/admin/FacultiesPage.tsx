@@ -20,7 +20,7 @@ export function FacultiesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <Card className="p-5 sm:p-6">
-        <h2 className="font-semibold text-navy-900">Add a faculty</h2>
+        <h2 className="font-semibold text-ink">Add a faculty</h2>
         <form onSubmit={onSubmit} className="mt-4 flex flex-wrap gap-3">
           <label className="min-w-[240px] flex-1">
             <span className="sr-only">Faculty name</span>
@@ -28,11 +28,11 @@ export function FacultiesPage() {
           </label>
           <Button type="submit" loading={create.isPending} disabled={name.trim().length < 3}><Plus className="size-4" aria-hidden /> Add faculty</Button>
         </form>
-        {create.isError && <p role="alert" className="mt-2 text-sm text-red-600">{errorMessage(create.error)}</p>}
+        {create.isError && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(create.error)}</p>}
       </Card>
 
       {faculties.error ? (
-        <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(faculties.error, 'Could not load faculties.')}</Card>
+        <Card className="p-5 text-sm text-danger" role="alert">{errorMessage(faculties.error, 'Could not load faculties.')}</Card>
       ) : faculties.isPending ? (
         <Skeleton className="h-40" />
       ) : faculties.data.length === 0 ? (
@@ -50,9 +50,9 @@ export function FacultiesPage() {
             <tbody className="divide-y divide-line">
               {faculties.data.map((f) => (
                 <tr key={f.facultyId}>
-                  <td className="px-5 py-3 font-medium text-navy-900">{f.name}</td>
+                  <td className="px-5 py-3 font-medium text-ink">{f.name}</td>
                   <td className="px-5 py-3">{f.departmentCount}</td>
-                  <td className="px-5 py-3">{f.officerCount === 0 ? <span className="text-orange-700">None yet</span> : f.officerCount}</td>
+                  <td className="px-5 py-3">{f.officerCount === 0 ? <span className="text-warning">None yet</span> : f.officerCount}</td>
                 </tr>
               ))}
             </tbody>

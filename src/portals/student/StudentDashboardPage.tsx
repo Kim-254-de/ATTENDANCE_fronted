@@ -42,9 +42,9 @@ export function StudentDashboardPage() {
       {pendingEvaluations > 0 && (
         <Link to="/student-evaluations" className="block">
           <Card className="flex items-center gap-3 p-4 transition hover:shadow-md">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-700"><MessageSquareQuote className="size-5" aria-hidden /></span>
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-warning-soft text-warning"><MessageSquareQuote className="size-5" aria-hidden /></span>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-navy-900">Course evaluation open</p>
+              <p className="font-semibold text-ink">Course evaluation open</p>
               <p className="text-xs text-muted">{pendingEvaluations} unit{pendingEvaluations === 1 ? '' : 's'} to rate. Anonymous, takes a minute each.</p>
             </div>
             <ChevronRight className="size-4 text-muted" aria-hidden />
@@ -54,8 +54,8 @@ export function StudentDashboardPage() {
 
       <Card className="space-y-4 p-6">
         <div className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-blue-50 text-blue-700"><ScanLine className="size-5" aria-hidden /></span>
-          <div><h2 className="font-bold text-navy-900">Scan QR Code</h2><p className="text-xs text-muted">Point camera at the board</p></div>
+          <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand-ink"><ScanLine className="size-5" aria-hidden /></span>
+          <div><h2 className="font-bold text-ink">Scan QR Code</h2><p className="text-xs text-muted">Point camera at the board</p></div>
         </div>
         <div className="relative grid h-44 place-items-center rounded-2xl border-2 border-dashed border-line">
           <CornerBrackets />
@@ -66,7 +66,7 @@ export function StudentDashboardPage() {
         </div>
         <Link
           to="/scan"
-          className="flex h-12 w-full items-center justify-center rounded-xl bg-linear-to-b from-blue-600 to-blue-700 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
+          className="flex h-12 w-full items-center justify-center rounded-xl bg-linear-to-b from-brand-600 to-brand-800 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
         >
           Start QR Scan
         </Link>
@@ -74,10 +74,10 @@ export function StudentDashboardPage() {
 
       <section aria-labelledby="todays-classes" className="space-y-3">
         <div>
-          <h2 id="todays-classes" className="text-lg font-bold text-navy-900">Today's Classes</h2>
+          <h2 id="todays-classes" className="text-lg font-bold text-ink">Today's Classes</h2>
         </div>
         {attendance.error ? (
-          <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(attendance.error, 'Could not load your attendance.')}</Card>
+          <Card className="p-5 text-sm text-danger" role="alert">{errorMessage(attendance.error, 'Could not load your attendance.')}</Card>
         ) : attendance.isPending ? (
           <Skeleton className="h-[120px]" />
         ) : today.length === 0 ? (
@@ -91,7 +91,7 @@ export function StudentDashboardPage() {
 }
 
 function CornerBrackets() {
-  const corner = 'absolute size-6 border-blue-700'
+  const corner = 'absolute size-6 border-brand-ink'
   return (
     <>
       <span className={`${corner} left-3 top-3 border-l-2 border-t-2`} aria-hidden />
@@ -105,7 +105,7 @@ function CornerBrackets() {
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <p className="text-xl font-bold text-navy-900">{value}</p>
+      <p className="text-xl font-bold text-ink">{value}</p>
       <p className="text-xs text-muted">{label}</p>
     </div>
   )

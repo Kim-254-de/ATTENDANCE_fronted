@@ -37,14 +37,14 @@ export function SocialSignIn() {
         <button
           type="button"
           onClick={() => setNotice('Google sign-in is coming soon.')}
-          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-white text-sm font-semibold text-navy-900 transition hover:bg-surface"
+          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-card text-sm font-semibold text-ink transition hover:bg-surface"
         >
           <GoogleGlyph /> Google
         </button>
         <button
           type="button"
           onClick={() => setNotice('Microsoft sign-in is coming soon.')}
-          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-white text-sm font-semibold text-navy-900 transition hover:bg-surface"
+          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-card text-sm font-semibold text-ink transition hover:bg-surface"
         >
           <MicrosoftGlyph /> Microsoft
         </button>

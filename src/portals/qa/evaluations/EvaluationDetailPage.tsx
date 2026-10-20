@@ -21,14 +21,14 @@ export function EvaluationDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Link to="/qa-evaluations" className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-900 hover:underline">
+      <Link to="/qa-evaluations" className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink hover:underline">
         <ArrowLeft className="size-4" aria-hidden /> All rounds
       </Link>
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load this round.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load this round.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !round ? (
         <Skeleton className="h-40" />
@@ -39,7 +39,7 @@ export function EvaluationDetailPage() {
             <TargetFilters value={filters} onChange={setFilters} dates={false} />
           </div>
           {results.error ? (
-            <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(results.error, 'Could not load the results.')}</Card>
+            <Card className="p-5 text-sm text-danger" role="alert">{errorMessage(results.error, 'Could not load the results.')}</Card>
           ) : results.isPending || !results.data ? (
             <Skeleton className="h-64" />
           ) : (
@@ -62,7 +62,7 @@ function RoundActions({ round }: { round: EvaluationRoundDetail }) {
     return (
       <Card className="p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-semibold text-navy-900">Edit round</h2>
+          <h2 className="font-semibold text-ink">Edit round</h2>
           <button type="button" onClick={() => setEditing(false)} className="rounded-lg p-1.5 text-muted hover:bg-surface" aria-label="Cancel"><X className="size-4" aria-hidden /></button>
         </div>
         <RoundForm
@@ -82,7 +82,7 @@ function RoundActions({ round }: { round: EvaluationRoundDetail }) {
             update.mutate(round.questionsEditable ? { ...rest, questions } : rest, { onSuccess: () => setEditing(false) })
           }}
         />
-        {update.error && <p role="alert" className="mt-2 text-sm text-red-600">{errorMessage(update.error)}</p>}
+        {update.error && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(update.error)}</p>}
       </Card>
     )
   }
@@ -114,7 +114,7 @@ function RoundActions({ round }: { round: EvaluationRoundDetail }) {
           <Trash2 className="size-4" aria-hidden /> Delete
         </Button>
       )}
-      {(close.error || remove.error) && <p role="alert" className="w-full text-sm text-red-600">{errorMessage(close.error ?? remove.error)}</p>}
+      {(close.error || remove.error) && <p role="alert" className="w-full text-sm text-danger">{errorMessage(close.error ?? remove.error)}</p>}
     </Card>
   )
 }

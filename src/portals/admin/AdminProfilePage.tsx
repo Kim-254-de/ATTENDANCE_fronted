@@ -16,7 +16,7 @@ export function AdminProfilePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <Card className="overflow-hidden">
-        <div className="flex items-center gap-4 bg-navy-900 px-6 py-5 text-white">
+        <div className="flex items-center gap-4 bg-brand-800 px-6 py-5 text-white">
           <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/15 text-xl font-bold" aria-hidden>
             {initials(user.fullName)}
           </span>

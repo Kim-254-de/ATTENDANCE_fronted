@@ -31,11 +31,11 @@ export function CapaPage() {
 
       <Card className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-semibold text-navy-900">CAPA register</h2>
+          <h2 className="font-semibold text-ink">CAPA register</h2>
           <ExportLinks basePath="corrective-actions/export" params={{ ...filters }} label="CAPA register" />
         </div>
         <form aria-label="Corrective action filters" className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" onSubmit={(e) => e.preventDefault()}>
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink">
             Status
             <select value={filters.status ?? ''} onChange={(e) => setFilters((f) => ({ ...f, status: (e.target.value || undefined) as QaCapaStatus | undefined }))} className="input">
               <option value="">All statuses</option>
@@ -47,7 +47,7 @@ export function CapaPage() {
             value={filters}
             onChange={(next) => setFilters((f) => ({ ...f, targetDepartmentId: next.targetDepartmentId, targetFacultyId: next.targetFacultyId }))}
           />
-          <label className="flex items-center gap-2 self-end pb-2.5 text-sm font-semibold text-navy-900">
+          <label className="flex items-center gap-2 self-end pb-2.5 text-sm font-semibold text-ink">
             <input type="checkbox" checked={filters.overdue === true} onChange={(e) => setFilters((f) => ({ ...f, overdue: e.target.checked || undefined }))} />
             Overdue only
           </label>
@@ -56,15 +56,15 @@ export function CapaPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load corrective actions.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load corrective actions.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !items ? (
         <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : items.length === 0 ? (
         <Card className="p-10 text-center">
           <Wrench className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">{filtered ? 'No corrective actions match these filters' : 'No corrective actions'}</p>
+          <p className="mt-3 font-semibold text-ink">{filtered ? 'No corrective actions match these filters' : 'No corrective actions'}</p>
           <p className="mt-1 text-sm text-muted">{filtered ? 'Clear a filter to see more.' : "Raise one from a non-compliant or partial finding on an audit's page."}</p>
         </Card>
       ) : (
@@ -76,15 +76,15 @@ export function CapaPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="rounded-md bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-800 ring-1 ring-inset ring-violet-100">{c.standardCode}</span>
-                      {c.isOverdue && <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">Overdue</span>}
+                      <span className="rounded-md bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{c.standardCode}</span>
+                      {c.isOverdue && <span className="rounded-md bg-danger-soft px-2 py-0.5 text-xs font-semibold text-danger">Overdue</span>}
                     </div>
-                    <p className="mt-1.5 font-medium text-navy-900">{c.description}</p>
+                    <p className="mt-1.5 font-medium text-ink">{c.description}</p>
                     <p className="mt-0.5 text-sm text-muted">
                       <Link to={`/qa-audits/${c.auditId}`} className="hover:underline">{c.auditTitle}</Link> · Owner: {c.ownerName} · Due {c.dueDate}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-md bg-line px-2.5 py-1 text-xs font-semibold text-navy-900">{STATUS_LABELS[c.status]}</span>
+                  <span className="shrink-0 rounded-md bg-line px-2.5 py-1 text-xs font-semibold text-ink">{STATUS_LABELS[c.status]}</span>
                 </div>
                 {c.verifiedByName && (
                   <p className="text-xs text-muted">Verified by {c.verifiedByName}{c.verifiedAt ? ` on ${new Date(c.verifiedAt).toLocaleDateString()}` : ''}.</p>
@@ -96,7 +96,7 @@ export function CapaPage() {
                     </Button>
                   </div>
                 )}
-                {update.error && update.variables?.id === c.id && <p role="alert" className="text-sm text-red-600">{errorMessage(update.error)}</p>}
+                {update.error && update.variables?.id === c.id && <p role="alert" className="text-sm text-danger">{errorMessage(update.error)}</p>}
               </Card>
             )
           })}

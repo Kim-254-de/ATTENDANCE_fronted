@@ -77,20 +77,20 @@ export function FaceTerminalPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-navy-950 text-white">
+    <div className="flex min-h-dvh flex-col bg-brand-950 text-white">
       <header className="flex items-center gap-3 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <Link to={`/session/${sessionId}`} className="rounded-lg p-2 hover:bg-white/10" aria-label="Back to the live session">
           <ArrowLeft className="size-5" aria-hidden />
         </Link>
         <div className="min-w-0 flex-1 text-center leading-tight">
-          <p className="text-xs font-semibold uppercase tracking-widest text-sky-300">{session?.unitCode ?? 'Face check-in'}</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-brand-300">{session?.unitCode ?? 'Face check-in'}</p>
           <p className="truncate font-semibold">Face check-in</p>
         </div>
         {checkedIn !== undefined && (
           <p className="text-right text-sm leading-tight">
             <b className="tabular-nums">{checkedIn}</b>
-            {qr.data && <span className="text-sky-300"> / {qr.data.enrolled}</span>}
-            <span className="block text-[10px] uppercase tracking-widest text-sky-400">in</span>
+            {qr.data && <span className="text-brand-300"> / {qr.data.enrolled}</span>}
+            <span className="block text-[10px] uppercase tracking-widest text-brand-400">in</span>
           </p>
         )}
       </header>
@@ -99,8 +99,8 @@ export function FaceTerminalPage() {
         {state.step === 'stopped' ? (
           <div className="space-y-4 py-10 text-center" role="alert">
             <CircleAlert className="mx-auto size-10 text-amber-300" aria-hidden />
-            <p className="text-sky-100">{state.message}</p>
-            <Link to={`/session/${sessionId}`} className="inline-flex h-11 items-center rounded-xl bg-white px-5 text-sm font-semibold text-navy-900">
+            <p className="text-brand-100">{state.message}</p>
+            <Link to={`/session/${sessionId}`} className="inline-flex h-11 items-center rounded-xl bg-white px-5 text-sm font-semibold text-brand-950">
               Back to the class
             </Link>
           </div>
@@ -114,7 +114,7 @@ export function FaceTerminalPage() {
                 onReject={() => setState({ step: 'ready', notice: { tone: 'warn', text: 'Not confirmed. Photograph them again, or they can scan the QR code.' } })}
               />
             ) : (
-              <p className="flex items-start gap-2 text-sm text-sky-200">
+              <p className="flex items-start gap-2 text-sm text-brand-200">
                 <ScanFace className="mt-0.5 size-4 shrink-0" aria-hidden />
                 One student at a time, face in the oval, at arm's length.
               </p>
@@ -130,12 +130,12 @@ export function FaceTerminalPage() {
 
             {recentFace.length > 0 && (
               <section aria-label="Recent face check-ins" className="space-y-1 text-sm">
-                <h2 className="text-xs font-semibold uppercase tracking-widest text-sky-400">Checked in by face</h2>
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-brand-400">Checked in by face</h2>
                 <ul className="space-y-1">
                   {recentFace.map((a) => (
                     <li key={a.id} className="flex justify-between gap-3 rounded-lg bg-white/5 px-3 py-1.5">
                       <span className="truncate">{a.fullName}</span>
-                      <span className="shrink-0 tabular-nums text-sky-300">
+                      <span className="shrink-0 tabular-nums text-brand-300">
                         {new Date(a.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </li>
@@ -165,7 +165,7 @@ function MatchCard({ match, confirming, onConfirm, onReject }: {
   const photo = student.referencePhotoDataUrl ?? student.avatarDataUrl
 
   return (
-    <section aria-label="Match" className="space-y-4 rounded-2xl bg-white p-4 text-navy-900 shadow-xl">
+    <section aria-label="Match" className="space-y-4 rounded-2xl bg-white p-4 text-brand-950 shadow-xl">
       <div className="flex items-center gap-4">
         {photo ? (
           <img
@@ -174,7 +174,7 @@ function MatchCard({ match, confirming, onConfirm, onReject }: {
             className="size-24 shrink-0 rounded-xl object-cover"
           />
         ) : (
-          <span className="grid size-24 shrink-0 place-items-center rounded-xl bg-blue-100 text-2xl font-bold text-blue-800" aria-hidden>
+          <span className="grid size-24 shrink-0 place-items-center rounded-xl bg-brand-100 text-2xl font-bold text-brand-300" aria-hidden>
             {initials(student.fullName)}
           </span>
         )}
@@ -202,7 +202,7 @@ function MatchCard({ match, confirming, onConfirm, onReject }: {
         <Button variant="secondary" onClick={onReject} disabled={confirming}>
           <UserX className="size-4" aria-hidden /> Not them
         </Button>
-        <Button variant="lecturer" onClick={onConfirm} loading={confirming} disabled={expired}>
+        <Button onClick={onConfirm} loading={confirming} disabled={expired}>
           <CheckCircle2 className="size-4" aria-hidden /> Confirm
         </Button>
       </div>

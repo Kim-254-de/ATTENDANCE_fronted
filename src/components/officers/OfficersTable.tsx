@@ -8,11 +8,11 @@ import { useOfficerActions } from './useOfficerActions'
 const ROLE_LABEL: Record<Officer['role'], string> = { admin: 'Administrator', faculty: 'Faculty officer', department: 'Department officer' }
 
 function StatusBadge({ officer }: { officer: Officer }) {
-  if (officer.status === 'ACTIVE') return <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-success">Active</span>
-  if (officer.status === 'DEACTIVATED') return <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">Deactivated</span>
+  if (officer.status === 'ACTIVE') return <span className="rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success">Active</span>
+  if (officer.status === 'DEACTIVATED') return <span className="rounded-full bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger">Deactivated</span>
   const expired = !officer.invitationExpiresAt || new Date(officer.invitationExpiresAt) <= new Date()
   return (
-    <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-700" title={officer.invitationExpiresAt ? `Link expires ${formatDateTime(officer.invitationExpiresAt)}` : undefined}>
+    <span className="rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning" title={officer.invitationExpiresAt ? `Link expires ${formatDateTime(officer.invitationExpiresAt)}` : undefined}>
       {expired ? 'Invitation expired' : 'Invited'}
     </span>
   )
@@ -69,15 +69,15 @@ export function OfficersTable({
             <tr key={o.userId}>
               <td className="px-5 py-3">
                 <div className="flex items-center gap-2.5">
-                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-900 text-xs font-bold text-white">{initials(o.fullName)}</span>
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-white">{initials(o.fullName)}</span>
                   <div className="min-w-0">
-                    <p className="font-medium text-navy-900">{o.fullName}</p>
+                    <p className="font-medium text-ink">{o.fullName}</p>
                     <p className="truncate text-xs text-muted">{o.email}</p>
                   </div>
                 </div>
               </td>
               <td className="px-5 py-3">
-                <p className="text-navy-900">{ROLE_LABEL[o.role]}</p>
+                <p className="text-ink">{ROLE_LABEL[o.role]}</p>
                 <p className="text-xs text-muted">{o.departmentName ?? o.facultyName ?? '—'}</p>
               </td>
               <td className="px-5 py-3"><StatusBadge officer={o} /></td>
@@ -85,12 +85,12 @@ export function OfficersTable({
               <td className="px-5 py-3">
                 <div className="flex justify-end gap-1">
                   {o.status === 'PENDING_VERIFICATION' && (
-                    <button type="button" onClick={() => onResend(o)} disabled={resend.isPending} aria-label={`Re-send ${o.fullName}'s invitation`} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-navy-900 hover:bg-surface disabled:opacity-60">
+                    <button type="button" onClick={() => onResend(o)} disabled={resend.isPending} aria-label={`Re-send ${o.fullName}'s invitation`} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-ink hover:bg-surface disabled:opacity-60">
                       <MailPlus className="size-4" aria-hidden /> Re-send
                     </button>
                   )}
                   {o.status !== 'DEACTIVATED' && o.userId !== currentUserId && (
-                    <button type="button" onClick={() => onDeactivate(o)} disabled={deactivate.isPending} aria-label={`Remove ${o.fullName}'s access`} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60">
+                    <button type="button" onClick={() => onDeactivate(o)} disabled={deactivate.isPending} aria-label={`Remove ${o.fullName}'s access`} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-danger hover:bg-danger-soft disabled:opacity-60">
                       <UserX className="size-4" aria-hidden /> Remove access
                     </button>
                   )}

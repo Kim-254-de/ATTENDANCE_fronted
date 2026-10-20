@@ -24,8 +24,8 @@ export function OverviewPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the faculty overview.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the faculty overview.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : (
         <section aria-label="Key statistics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -59,9 +59,9 @@ function QuickLink({ to, icon: Icon, label, hint }: { to: string; icon: typeof B
   return (
     <Link to={to} className="block">
       <Card className="flex items-center gap-3 p-5 transition hover:shadow-md">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-700"><Icon className="size-5" aria-hidden /></span>
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-ink"><Icon className="size-5" aria-hidden /></span>
         <span className="min-w-0 leading-tight">
-          <span className="block font-semibold text-navy-900">{label}</span>
+          <span className="block font-semibold text-ink">{label}</span>
           <span className="text-xs text-muted">{hint}</span>
         </span>
       </Card>

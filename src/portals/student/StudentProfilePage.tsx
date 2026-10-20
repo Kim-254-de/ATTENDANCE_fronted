@@ -40,33 +40,33 @@ export function StudentProfilePage() {
   return (
     <div className="space-y-6">
       <Card className="overflow-hidden">
-        <div className="bg-navy-900 px-6 pb-7 pt-6 text-white">
+        <div className="bg-brand-800 px-6 pb-7 pt-6 text-white">
           <div className="relative inline-block">
             {user.avatarUrl ? (
               <img src={user.avatarUrl} alt="" className="size-20 rounded-2xl object-cover shadow-lg shadow-black/15" />
             ) : (
-              <div className="grid size-20 place-items-center rounded-2xl bg-gradient-to-b from-blue-600 to-blue-700 text-2xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
+              <div className="grid size-20 place-items-center rounded-2xl bg-gradient-to-b from-brand-600 to-brand-800 text-2xl font-bold shadow-lg shadow-black/15">{initials(user.fullName)}</div>
             )}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={setAvatar.isPending}
               aria-label="Change photo"
-              className="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full bg-blue-700 text-white shadow-md hover:bg-blue-800"
+              className="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full bg-brand text-white shadow-md hover:bg-brand-strong"
             >
               <Camera className="size-4" aria-hidden />
             </button>
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickPhoto} />
           </div>
           <p className="mt-5 text-xl font-bold">{user.fullName}</p>
-          <p className="mt-1 text-sm text-blue-200">{user.programme ?? 'Programme not recorded'}</p>
-          <p className="mt-1 font-mono text-xs text-blue-200">{user.registrationNumber}</p>
+          <p className="mt-1 text-sm text-brand-200">{user.programme ?? 'Programme not recorded'}</p>
+          <p className="mt-1 font-mono text-xs text-brand-200">{user.registrationNumber}</p>
           {(user.avatarUrl || setAvatar.isPending || removeAvatar.isPending) && (
             <button
               type="button"
               onClick={() => removeAvatar.mutate()}
               disabled={removeAvatar.isPending || setAvatar.isPending}
-              className="mt-2 text-xs font-medium text-blue-200 underline hover:text-white"
+              className="mt-2 text-xs font-medium text-brand-200 underline hover:text-white"
             >
               {setAvatar.isPending ? 'Uploading…' : removeAvatar.isPending ? 'Removing…' : 'Remove photo'}
             </button>
@@ -84,10 +84,10 @@ export function StudentProfilePage() {
               <p role="status" className="flex items-center gap-2 text-sm font-medium text-success"><Mail className="size-4" aria-hidden /> Check your inbox for the reset link.</p>
             ) : (
               <>
-                <Button variant="accent" className="w-full" loading={forgotPassword.isPending} onClick={() => forgotPassword.mutate(user.email)}>
+                <Button className="w-full" loading={forgotPassword.isPending} onClick={() => forgotPassword.mutate(user.email)}>
                   Send reset link
                 </Button>
-                {forgotPassword.isError && <p className="text-sm text-red-600">{errorMessage(forgotPassword.error)}</p>}
+                {forgotPassword.isError && <p className="text-sm text-danger">{errorMessage(forgotPassword.error)}</p>}
               </>
             )}
             <Button variant="danger" className="w-full" loading={logout.isPending} onClick={signOut}>

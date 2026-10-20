@@ -17,12 +17,12 @@ export function FacultyLayout() {
   const user = me?.role === 'faculty' ? me : undefined
 
   return (
-    <div className="faculty-portal flex min-h-dvh bg-teal-50/70">
+    <div className="flex min-h-dvh bg-surface">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-teal-100 bg-white px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))] sm:px-10">
+        <header className="flex items-center gap-3 border-b border-line bg-card px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))] sm:px-10">
           <div className="flex-1">
-            <h1 className="text-xl font-bold tracking-tight text-navy-900">
+            <h1 className="text-xl font-bold tracking-tight text-ink">
               {title ?? (user ? `${getGreeting()}, ${firstName(user.fullName)}` : 'Faculty')}
             </h1>
             <p className="mt-0.5 text-sm text-muted">
@@ -34,12 +34,12 @@ export function FacultyLayout() {
               {user.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="size-10 rounded-full object-cover" />
               ) : (
-                <span className="grid size-10 place-items-center rounded-full bg-teal-700 text-sm font-bold text-white" title={user.fullName}>{initials(user.fullName)}</span>
+                <span className="grid size-10 place-items-center rounded-full bg-brand text-sm font-bold text-white" title={user.fullName}>{initials(user.fullName)}</span>
               )}
             </span>
           )}
         </header>
-        <main className="flex-1 bg-teal-50/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8 lg:px-10 lg:py-9">
+        <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8 lg:px-10 lg:py-9">
           <Outlet />
           <div className="h-16 lg:hidden" aria-hidden />
         </main>

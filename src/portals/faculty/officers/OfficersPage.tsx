@@ -36,7 +36,7 @@ export function OfficersPage() {
             },
           })}
       >
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900 md:col-span-2">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink md:col-span-2">
           Department
           <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input">
             <option value="">Choose a department…</option>
@@ -44,10 +44,10 @@ export function OfficersPage() {
           </select>
         </label>
       </InviteForm>
-      {notice && <p role="status" className={`rounded-lg px-3 py-2 text-sm ${notice.warn ? 'bg-orange-50 text-orange-700' : 'bg-emerald-50 text-success'}`}>{notice.text}</p>}
+      {notice && <p role="status" className={`rounded-lg px-3 py-2 text-sm ${notice.warn ? 'bg-warning-soft text-warning' : 'bg-success-soft text-success'}`}>{notice.text}</p>}
 
       {officers.error ? (
-        <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(officers.error, 'Could not load department officers.')}</Card>
+        <Card className="p-5 text-sm text-danger" role="alert">{errorMessage(officers.error, 'Could not load department officers.')}</Card>
       ) : officers.isPending ? (
         <Skeleton className="h-48" />
       ) : (

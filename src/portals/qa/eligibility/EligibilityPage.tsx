@@ -58,14 +58,14 @@ function PolicyFields({ policy }: { policy: AttendancePolicy }) {
 
   return (
     <Card className="p-5">
-      <h2 className="font-semibold text-navy-900">Attendance rule</h2>
+      <h2 className="font-semibold text-ink">Attendance rule</h2>
       <p className="mt-1 text-sm text-muted">Set by the Senate. Applies to every portal; changes are logged.</p>
       <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-3">
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Minimum attendance (%)
           <input type="number" min={1} max={100} step="0.01" value={min} onChange={(e) => setMin(e.target.value)} className="input w-40" required />
         </label>
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">
           At-risk margin (points)
           <input type="number" min={0} max={50} step="0.5" value={margin} onChange={(e) => setMargin(e.target.value)} className="input w-40" required />
         </label>
@@ -74,7 +74,7 @@ function PolicyFields({ policy }: { policy: AttendancePolicy }) {
       {policy.updatedByName && (
         <p className="mt-3 text-xs text-muted">Last changed by {policy.updatedByName} on {new Date(policy.updatedAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}.</p>
       )}
-      {update.error && <p role="alert" className="mt-2 text-sm text-red-600">{errorMessage(update.error)}</p>}
+      {update.error && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(update.error)}</p>}
     </Card>
   )
 }

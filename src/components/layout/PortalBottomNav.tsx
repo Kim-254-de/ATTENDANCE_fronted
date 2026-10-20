@@ -10,15 +10,6 @@ export interface NavItem {
   end?: boolean
 }
 
-type Tone = 'indigo' | 'teal' | 'violet'
-
-// Written out in full so Tailwind sees every class.
-const TONES: Record<Tone, { border: string; hover: string; text: string; bar: string; sheetActive: string }> = {
-  indigo: { border: 'border-indigo-100', hover: 'hover:bg-indigo-50', text: 'text-indigo-700', bar: 'bg-indigo-700', sheetActive: 'bg-indigo-50 text-indigo-700' },
-  teal: { border: 'border-teal-100', hover: 'hover:bg-teal-50', text: 'text-teal-700', bar: 'bg-teal-700', sheetActive: 'bg-teal-50 text-teal-700' },
-  violet: { border: 'border-violet-100', hover: 'hover:bg-violet-50', text: 'text-violet-700', bar: 'bg-violet-700', sheetActive: 'bg-violet-50 text-violet-700' },
-}
-
 /** Five tabs is as many as fit a phone's width with readable labels. */
 const MAX_TABS = 5
 
@@ -27,8 +18,7 @@ const MAX_TABS = 5
  * pages than fit, the first four stay as tabs and the rest go behind "More", so labels never
  * shrink to the point of being unreadable on a phone.
  */
-export function PortalBottomNav({ items, tone }: { items: NavItem[]; tone: Tone }) {
-  const t = TONES[tone]
+export function PortalBottomNav({ items }: { items: NavItem[] }) {
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -45,26 +35,26 @@ export function PortalBottomNav({ items, tone }: { items: NavItem[]; tone: Tone 
     return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onClick) }
   }, [open])
 
-  const tabClass = clsx('flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1 text-xs font-medium transition-colors', t.hover)
+  const tabClass = 'flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1 text-xs font-medium transition-colors hover:bg-brand-soft'
   const content = (Icon: LucideIcon, label: string, active: boolean) => (
     <>
-      <Icon className={clsx('size-5', active ? t.text : 'text-muted')} aria-hidden />
-      <span className={clsx('max-w-full truncate text-center leading-tight', active ? t.text : 'text-muted')}>{label}</span>
-      <span className={clsx('h-0.5 w-6 rounded-full', active ? t.bar : 'bg-transparent')} aria-hidden />
+      <Icon className={clsx('size-5', active ? 'text-brand-ink' : 'text-muted')} aria-hidden />
+      <span className={clsx('max-w-full truncate text-center leading-tight', active ? 'text-brand-ink' : 'text-muted')}>{label}</span>
+      <span className={clsx('h-0.5 w-6 rounded-full', active ? 'bg-brand-ink' : 'bg-transparent')} aria-hidden />
     </>
   )
 
   return (
     <div ref={sheetRef} className="lg:hidden">
       {open && (
-        <div id="more-pages" className={clsx('fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 rounded-2xl border bg-white p-2 shadow-xl', t.border)}>
+        <div id="more-pages" className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 rounded-2xl border border-line bg-card p-2 shadow-xl">
           {overflow.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               onClick={() => setOpen(false)}
-              className={({ isActive }) => clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium', isActive ? t.sheetActive : 'text-navy-900 hover:bg-surface')}
+              className={({ isActive }) => clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium', isActive ? 'bg-brand-soft text-brand-ink' : 'text-ink hover:bg-surface')}
             >
               <Icon className="size-4.5" aria-hidden />
               {label}
@@ -74,7 +64,7 @@ export function PortalBottomNav({ items, tone }: { items: NavItem[]; tone: Tone 
       )}
       <nav
         aria-label="Primary"
-        className={clsx('fixed inset-x-0 bottom-0 z-20 flex border-t bg-white pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-6px_24px_rgba(18,48,95,0.06)]', t.border)}
+        className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-card pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-6px_24px_rgba(18,48,95,0.06)]"
       >
         {tabs.map(({ to, label, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} className={tabClass}>

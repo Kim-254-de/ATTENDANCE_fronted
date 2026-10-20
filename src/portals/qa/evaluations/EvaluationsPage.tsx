@@ -40,7 +40,7 @@ export function EvaluationsPage() {
       {creating && (
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-navy-900">New evaluation round</h2>
+            <h2 className="font-semibold text-ink">New evaluation round</h2>
             <button type="button" onClick={() => setCreating(false)} className="rounded-lg p-1.5 text-muted hover:bg-surface" aria-label="Cancel"><X className="size-4" aria-hidden /></button>
           </div>
           <RoundForm
@@ -49,21 +49,21 @@ export function EvaluationsPage() {
             pending={create.isPending}
             onSubmit={(values) => create.mutate(toInput(values), { onSuccess: (round) => navigate(`/qa-evaluations/${round.id}`) })}
           />
-          {create.error && <p role="alert" className="mt-2 text-sm text-red-600">{errorMessage(create.error)}</p>}
+          {create.error && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(create.error)}</p>}
         </Card>
       )}
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load evaluation rounds.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load evaluation rounds.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !rounds ? (
         <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
       ) : rounds.length === 0 ? (
         <Card className="p-10 text-center">
           <MessageSquareQuote className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No evaluation rounds yet</p>
+          <p className="mt-3 font-semibold text-ink">No evaluation rounds yet</p>
           <p className="mt-1 text-sm text-muted">Create one to open it to students.</p>
         </Card>
       ) : (
@@ -73,7 +73,7 @@ export function EvaluationsPage() {
               <Link to={`/qa-evaluations/${r.id}`} className="block">
                 <Card className="flex items-center gap-4 p-5 transition hover:shadow-md">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-navy-900">{r.title}</p>
+                    <p className="font-semibold text-ink">{r.title}</p>
                     <p className="mt-1 text-sm text-muted">
                       {new Date(r.opensAt).toLocaleDateString([], { day: 'numeric', month: 'short' })} – {new Date(r.closesAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
                       {' · '}{r.questionCount} question{r.questionCount === 1 ? '' : 's'} · {r.responseCount} response{r.responseCount === 1 ? '' : 's'}

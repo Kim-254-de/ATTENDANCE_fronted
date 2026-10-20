@@ -92,17 +92,17 @@ export function QrCameraScanner({ onScan, paused = false }: Props) {
 
   if (problem) {
     return (
-      <div role="alert" className="flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-2xl bg-navy-900 p-6 text-center text-white">
-        <CameraOff className="size-8 text-blue-200" aria-hidden />
+      <div role="alert" className="flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-2xl bg-brand-950 p-6 text-center text-white">
+        <CameraOff className="size-8 text-brand-200" aria-hidden />
         <p className="text-sm leading-6">{PROBLEM_TEXT[problem]}</p>
       </div>
     )
   }
 
   return (
-    <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-navy-900">
+    <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-brand-950">
       <video ref={videoRef} className="size-full object-cover" muted playsInline aria-label="Camera view for scanning the attendance QR code" />
-      {starting && <p role="status" className="absolute inset-0 grid place-items-center text-sm text-blue-200">Starting camera…</p>}
+      {starting && <p role="status" className="absolute inset-0 grid place-items-center text-sm text-brand-200">Starting camera…</p>}
     </div>
   )
 }

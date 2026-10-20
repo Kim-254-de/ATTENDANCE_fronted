@@ -10,13 +10,13 @@ export function Field({ label, error, hint, children, className }: { label: stri
   const id = useId()
   const note = error ?? hint
   return (
-    <div className={`space-y-1.5 text-sm font-medium text-navy-900 ${className ?? ''}`}>
+    <div className={`space-y-1.5 text-sm font-medium text-ink ${className ?? ''}`}>
       <label className="block space-y-1.5">
         <span className="block">{label}</span>
         {cloneElement(children, { 'aria-invalid': error ? true : undefined, 'aria-describedby': note ? id : undefined })}
       </label>
       {error ? (
-        <span id={id} role="alert" className="block text-xs font-normal text-red-600">{error}</span>
+        <span id={id} role="alert" className="block text-xs font-normal text-danger">{error}</span>
       ) : (
         hint && <span id={id} className="block text-xs font-normal text-muted">{hint}</span>
       )}
@@ -50,7 +50,7 @@ export function IconField({
   const noteId = `${id}-note`
   const note = error ?? hint
   return (
-    <div className="space-y-1.5 text-sm font-medium text-navy-900">
+    <div className="space-y-1.5 text-sm font-medium text-ink">
       <label htmlFor={id} className="block">{label}</label>
       <div className="relative">
         <Icon className="pointer-events-none absolute inset-y-0 left-3 my-auto size-4 text-muted" aria-hidden />
@@ -64,7 +64,7 @@ export function IconField({
         {trailing}
       </div>
       {error ? (
-        <span id={noteId} role="alert" className="block text-xs font-normal text-red-600">{error}</span>
+        <span id={noteId} role="alert" className="block text-xs font-normal text-danger">{error}</span>
       ) : (
         hint && <span id={noteId} className="block text-xs font-normal text-muted">{hint}</span>
       )}

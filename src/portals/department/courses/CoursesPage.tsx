@@ -25,15 +25,15 @@ export function CoursesPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load your courses.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load your courses.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !courses ? (
         <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : courses.length === 0 ? (
         <Card className="p-10 text-center">
           <Library className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No courses yet</p>
+          <p className="mt-3 font-semibold text-ink">No courses yet</p>
           <p className="mt-1 text-sm text-muted">Courses appear here once your faculty provides one to this department.</p>
         </Card>
       ) : (
@@ -74,8 +74,8 @@ function CourseCard({ course }: { course: CourseOffering }) {
     <Card className="p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-800 ring-1 ring-inset ring-indigo-100">{course.code}</span>
-          <h3 className="mt-2 font-semibold text-navy-900">{course.name ?? course.code}</h3>
+          <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{course.code}</span>
+          <h3 className="mt-2 font-semibold text-ink">{course.name ?? course.code}</h3>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted">Sections</span>
@@ -83,17 +83,17 @@ function CourseCard({ course }: { course: CourseOffering }) {
             type="button"
             onClick={() => changeSegments(-1)}
             disabled={course.segmentsPlanned <= 1 || course.segmentsPlanned <= course.segmentsFilled || setSegmentCount.isPending}
-            className="grid size-7 place-items-center rounded-full border border-line text-navy-900 transition hover:bg-surface disabled:opacity-40"
+            className="grid size-7 place-items-center rounded-full border border-line text-ink transition hover:bg-surface disabled:opacity-40"
             aria-label="Fewer sections"
           >
             <Minus className="size-3.5" aria-hidden />
           </button>
-          <span className="w-16 text-center text-sm font-semibold text-navy-900">{course.segmentsFilled} / {course.segmentsPlanned}</span>
+          <span className="w-16 text-center text-sm font-semibold text-ink">{course.segmentsFilled} / {course.segmentsPlanned}</span>
           <button
             type="button"
             onClick={() => changeSegments(1)}
             disabled={course.segmentsPlanned >= 26 || setSegmentCount.isPending}
-            className="grid size-7 place-items-center rounded-full border border-line text-navy-900 transition hover:bg-surface disabled:opacity-40"
+            className="grid size-7 place-items-center rounded-full border border-line text-ink transition hover:bg-surface disabled:opacity-40"
             aria-label="More sections"
           >
             <Plus className="size-3.5" aria-hidden />
@@ -107,7 +107,7 @@ function CourseCard({ course }: { course: CourseOffering }) {
           <Button type="button" onClick={assign} disabled={!lecturerUserId} loading={allocate.isPending}>
             Assign to next open section
           </Button>
-          {allocate.error && <p role="alert" className="w-full text-sm text-red-600">{errorMessage(allocate.error)}</p>}
+          {allocate.error && <p role="alert" className="w-full text-sm text-danger">{errorMessage(allocate.error)}</p>}
         </div>
       ) : (
         <p className="mt-4 border-t border-line pt-4 text-sm text-success">Every section has a lecturer.</p>

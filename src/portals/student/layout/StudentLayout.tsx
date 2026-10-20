@@ -44,13 +44,13 @@ export function StudentLayout() {
   }
 
   return (
-    <div className="student-portal min-h-dvh bg-surface sm:bg-line/60">
+    <div className="min-h-dvh bg-surface sm:bg-line/60">
       <div onClick={onDoubleTapArea} className="mx-auto min-h-dvh max-w-md space-y-6 bg-surface p-4 pb-20 sm:border-x sm:border-line sm:p-8 sm:pb-20 sm:shadow-xl">
         {showHomeHeader && (
           <header
-            className={`sticky top-0 z-20 flex items-center gap-3 rounded-2xl bg-linear-to-b from-blue-600 to-blue-700 px-5 py-4 text-white shadow-lg transition-transform duration-300 ease-in-out sm:px-7 ${headerHidden ? 'translate-y-[-150%]' : 'translate-y-0'}`}
+            className={`sticky top-0 z-20 flex items-center gap-3 rounded-2xl bg-linear-to-b from-brand-600 to-brand-800 px-5 py-4 text-white shadow-lg transition-transform duration-300 ease-in-out sm:px-7 ${headerHidden ? 'translate-y-[-150%]' : 'translate-y-0'}`}
           >
-            <div><p className="font-bold">{user ? getGreeting() : 'Smart Attendance'}</p><p className="text-sm text-blue-200">{user ? user.fullName : 'Student Portal'}</p></div>
+            <div><p className="font-bold">{user ? getGreeting() : 'Smart Attendance'}</p><p className="text-sm text-brand-200">{user ? user.fullName : 'Student Portal'}</p></div>
             {user && (
               <Link to="/student-profile" aria-label="My profile" className="ml-auto flex items-center text-white hover:text-gold-300">
                 {user.avatarUrl ? (

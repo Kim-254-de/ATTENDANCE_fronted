@@ -31,8 +31,8 @@ export function OverviewPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load your statistics.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load your statistics.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : (
         <section aria-label="Key statistics" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -62,10 +62,10 @@ export function OverviewPage() {
 function AwaitingLocationBanner({ sessionId, unitCode }: { sessionId: string; unitCode: string }) {
   return (
     <Link to={`/session/${sessionId}/locate`} className="block">
-      <Card className="flex items-center gap-3 border border-amber-200 bg-amber-50 p-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-amber-600"><MapPin className="size-5" aria-hidden /></span>
+      <Card className="flex items-center gap-3 border border-warning/30 bg-warning-soft p-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-card text-warning"><MapPin className="size-5" aria-hidden /></span>
         <span className="flex-1 leading-tight">
-          <span className="block font-semibold text-navy-900">{unitCode} is waiting for its location</span>
+          <span className="block font-semibold text-ink">{unitCode} is waiting for its location</span>
           <span className="text-sm text-muted">Tap to share location from this phone, standing in the room</span>
         </span>
         <span className="text-muted" aria-hidden>›</span>
@@ -80,10 +80,10 @@ function ActiveSessionBanner({ sessionId }: { sessionId: string }) {
 
   return (
     <Link to={`/session/${sessionId}`} className="block">
-      <Card className="flex items-center gap-3 border border-blue-200 bg-blue-50 p-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-blue-700"><Radio className="size-5" aria-hidden /></span>
+      <Card className="flex items-center gap-3 border border-line bg-brand-soft p-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-card text-brand-ink"><Radio className="size-5" aria-hidden /></span>
         <span className="flex-1 leading-tight">
-          <span className="block font-semibold text-navy-900">Class in progress</span>
+          <span className="block font-semibold text-ink">Class in progress</span>
           <span className="text-sm text-muted">
             {qr.data ? `${qr.data.checkedIn}${capacity !== undefined ? `/${capacity}` : ''} checked in — tap to reopen` : 'Tap to reopen the live QR code'}
           </span>
@@ -98,8 +98,8 @@ function QuickAction({ to, icon: Icon, label }: { to: string; icon: typeof Plus;
   return (
     <Link to={to} className="block">
       <Card className="flex flex-col items-center gap-2 p-4 text-center transition hover:shadow-md">
-        <span className="grid size-11 place-items-center rounded-xl bg-blue-50 text-blue-800"><Icon className="size-5" aria-hidden /></span>
-        <span className="text-sm font-medium text-navy-900">{label}</span>
+        <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-ink"><Icon className="size-5" aria-hidden /></span>
+        <span className="text-sm font-medium text-ink">{label}</span>
       </Card>
     </Link>
   )

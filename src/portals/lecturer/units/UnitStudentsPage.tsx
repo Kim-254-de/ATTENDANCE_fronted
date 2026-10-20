@@ -45,31 +45,31 @@ export function UnitStudentsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <Link to="/units" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-navy-900">
+        <Link to="/units" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
           <ArrowLeft className="size-4" aria-hidden /> All units
         </Link>
-        <p className="mt-3 text-sm font-semibold text-orange-600">{unit?.code ?? 'UNIT'}</p>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">{unit?.name ?? unit?.code ?? 'Students'}</h2>
+        <p className="mt-3 text-sm font-semibold text-warning">{unit?.code ?? 'UNIT'}</p>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight text-ink sm:text-3xl">{unit?.name ?? unit?.code ?? 'Students'}</h2>
         {students && <p className="mt-2 text-sm text-muted">{active.length} {active.length === 1 ? 'student' : 'students'} can check in</p>}
         <p className="mt-2 text-xs text-muted">Registered for this unit on the timetable, refreshed each time you open this page. Speak to your department if someone is missing or shouldn't be here.</p>
       </div>
 
       {ungrouped && (
-        <Card className="flex items-start gap-3 border border-orange-500/40 bg-orange-100/50 p-4" role="status">
-          <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-orange-500 text-white"><Users className="size-3.5" aria-hidden /></span>
+        <Card className="flex items-start gap-3 border border-warning/40 bg-warning-soft/50 p-4" role="status">
+          <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-warning-solid text-white"><Users className="size-3.5" aria-hidden /></span>
           <p className="text-sm">
-            <span className="font-semibold text-navy-900">{ungrouped}.</span>{' '}
+            <span className="font-semibold text-ink">{ungrouped}.</span>{' '}
             <span className="text-muted">They aren't on any group's list, so they can't check in until they pick their group on the timetable app.</span>
           </p>
         </Card>
       )}
 
-      {faceNotice && <p role="status" className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800">{faceNotice}</p>}
+      {faceNotice && <p role="status" className="rounded-xl bg-success-soft px-4 py-3 text-sm text-success">{faceNotice}</p>}
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the students on this unit.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the students on this unit.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !students ? (
         <Skeleton className="h-[200px]" />
@@ -120,7 +120,7 @@ function StudentSection({ title, hint, empty, students, faceActions }: {
     <section aria-label={title}>
       <Card className="overflow-hidden">
         <div className="border-b border-line px-5 py-4">
-          <h3 className="font-semibold text-navy-900">{title} <span className="font-normal text-muted">({students.length})</span></h3>
+          <h3 className="font-semibold text-ink">{title} <span className="font-normal text-muted">({students.length})</span></h3>
           {hint && <p className="mt-0.5 text-sm text-muted">{hint}</p>}
         </div>
         {students.length === 0 ? (
@@ -161,11 +161,11 @@ function FaceStatus({ student, actions }: { student: Allocation & { studentUserI
   if (student.faceEnrolled) {
     return (
       <span className="flex items-center gap-3 text-sm">
-        <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
+        <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success">
           <ScanFace className="size-3.5" aria-hidden /> Face registered
         </span>
-        <button onClick={() => actions.register(student)} className="font-semibold text-navy-900 underline">Retake</button>
-        <button onClick={() => actions.remove(student)} className="font-semibold text-red-600 underline">Remove face</button>
+        <button onClick={() => actions.register(student)} className="font-semibold text-ink underline">Retake</button>
+        <button onClick={() => actions.remove(student)} className="font-semibold text-danger underline">Remove face</button>
       </span>
     )
   }
@@ -173,7 +173,7 @@ function FaceStatus({ student, actions }: { student: Allocation & { studentUserI
     return (
       <button
         onClick={() => actions.register(student)}
-        className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-navy-900 hover:bg-surface"
+        className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink hover:bg-surface"
       >
         <ScanFace className="size-4" aria-hidden /> Register face
       </button>

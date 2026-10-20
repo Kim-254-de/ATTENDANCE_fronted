@@ -22,7 +22,7 @@ export function TargetFilters({ value, onChange, dates = true }: { value: Target
 
   return (
     <>
-      <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+      <label className="block space-y-1.5 text-sm font-semibold text-ink">
         Department
         <select
           value={value.targetDepartmentId ?? ''}
@@ -33,7 +33,7 @@ export function TargetFilters({ value, onChange, dates = true }: { value: Target
           {departments?.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </label>
-      <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+      <label className="block space-y-1.5 text-sm font-semibold text-ink">
         Faculty
         <select
           value={value.targetFacultyId ?? ''}
@@ -46,11 +46,11 @@ export function TargetFilters({ value, onChange, dates = true }: { value: Target
       </label>
       {dates && (
         <>
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink">
             From
             <input type="date" value={value.from ?? ''} max={value.to} onChange={(e) => set({ from: e.target.value || undefined })} className="input" />
           </label>
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink">
             To
             <input type="date" value={value.to ?? ''} min={value.from} onChange={(e) => set({ to: e.target.value || undefined })} className="input" />
           </label>

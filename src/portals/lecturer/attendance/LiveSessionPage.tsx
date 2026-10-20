@@ -75,7 +75,7 @@ export function LiveSessionPage() {
   const checkedIn = attendance.data?.checkedIn ?? qr.data?.checkedIn
 
   return (
-    <div className="flex min-h-dvh flex-col bg-navy-950 text-white">
+    <div className="flex min-h-dvh flex-col bg-brand-950 text-white">
       <header className="flex items-center gap-3 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <button
           onClick={() => navigate('/lecturer-dashboard')}
@@ -87,7 +87,7 @@ export function LiveSessionPage() {
         <div className="min-w-0 flex-1 text-center leading-tight">
           {session ? (
             <>
-              <p className="text-xs font-semibold uppercase tracking-widest text-sky-300">{session.unitCode}</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-brand-300">{session.unitCode}</p>
               <p className="truncate font-semibold">{session.unitName ?? session.title ?? 'Class session'}</p>
             </>
           ) : (
@@ -110,16 +110,16 @@ export function LiveSessionPage() {
           <>
             <QrPanel payload={qr.data.payload} />
             <div>
-              <p className="text-sm text-sky-300" role="timer" aria-live="off">
+              <p className="text-sm text-brand-300" role="timer" aria-live="off">
                 Refreshes in <b className="tabular-nums text-white">{secondsLeft}s</b>
               </p>
-              {elapsed && <p className="text-xs text-sky-400">Class running for {elapsed}</p>}
+              {elapsed && <p className="text-xs text-brand-400">Class running for {elapsed}</p>}
             </div>
           </>
         ) : qr.error ? (
           <ErrorState message={errorMessage(qr.error, 'Could not load this session.')} onBack={() => navigate('/lecturer-dashboard')} />
         ) : (
-          <p className="text-sky-300" role="status">Starting session…</p>
+          <p className="text-brand-300" role="status">Starting session…</p>
         )}
 
         {attendance.data && attendance.data.attendees.length > 0 && <Attendees attendees={attendance.data.attendees} />}
@@ -137,7 +137,7 @@ export function LiveSessionPage() {
             {session.status === 'OPEN' && (
               <Link
                 to={`/session/${session.id}/face`}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 text-sm font-semibold text-navy-900 transition hover:bg-surface"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 text-sm font-semibold text-brand-950 transition hover:bg-surface"
               >
                 <ScanFace className="size-4" aria-hidden /> Face check-in
               </Link>
@@ -164,9 +164,9 @@ function CheckedInStat({ checkedIn, capacity }: { checkedIn: number; capacity?: 
       <div className="mx-auto max-w-xs">
         <p className="text-center text-3xl font-bold tabular-nums">
           {checkedIn}
-          {capacity !== undefined && <span className="text-lg font-medium text-sky-300"> / {capacity}</span>}
+          {capacity !== undefined && <span className="text-lg font-medium text-brand-300"> / {capacity}</span>}
         </p>
-        <p className="text-center text-xs uppercase tracking-widest text-sky-400">Checked in</p>
+        <p className="text-center text-xs uppercase tracking-widest text-brand-400">Checked in</p>
         {pct !== null && (
           <div className="mt-2 h-1.5 w-full rounded-full bg-white/10" role="img" aria-label={`${pct}% checked in`}>
             <div className="h-full rounded-full bg-emerald-400 transition-[width]" style={{ width: `${pct}%` }} />
@@ -186,9 +186,9 @@ function Attendees({ attendees }: { attendees: SessionAttendance['attendees'] })
         {attendees.slice(0, SHOWN).map((a) => (
           <li key={a.id} className="flex justify-between gap-3 rounded-lg bg-white/5 px-3 py-1.5">
             <span className="truncate">{a.fullName}</span>
-            <span className="flex shrink-0 items-center gap-2 tabular-nums text-sky-300">
+            <span className="flex shrink-0 items-center gap-2 tabular-nums text-brand-300">
               {a.verificationMethod === 'FACE' && (
-                <span className="flex items-center gap-1 rounded-full bg-sky-400/15 px-1.5 text-[10px] font-semibold uppercase tracking-wide">
+                <span className="flex items-center gap-1 rounded-full bg-brand-400/15 px-1.5 text-[10px] font-semibold uppercase tracking-wide">
                   <ScanFace className="size-3" aria-hidden /> Face
                 </span>
               )}
@@ -197,7 +197,7 @@ function Attendees({ attendees }: { attendees: SessionAttendance['attendees'] })
           </li>
         ))}
       </ul>
-      {attendees.length > SHOWN && <p className="mt-1 text-center text-xs text-sky-400">and {attendees.length - SHOWN} more</p>}
+      {attendees.length > SHOWN && <p className="mt-1 text-center text-xs text-brand-400">and {attendees.length - SHOWN} more</p>}
     </section>
   )
 }
@@ -238,9 +238,9 @@ function AwaitingLocation({ session }: { session: SessionSummary }) {
   return (
     <div className="w-full max-w-md space-y-5">
       <div className="space-y-2">
-        <Smartphone className="mx-auto size-8 text-sky-300" aria-hidden />
+        <Smartphone className="mx-auto size-8 text-brand-300" aria-hidden />
         <p className="text-lg font-semibold">Share the room's location from your phone</p>
-        <p className="text-sm text-sky-200">
+        <p className="text-sm text-brand-200">
           {room ? `Room ${room} hasn't` : "This room hasn't"} been mapped yet, and a laptop can't tell where it is precisely.
           The QR code appears here as soon as your phone sends it.
         </p>
@@ -255,7 +255,7 @@ function AwaitingLocation({ session }: { session: SessionSummary }) {
         <QRCodeCanvas value={phoneLink} size={148} level="M" marginSize={1} />
       </div>
 
-      <p className="flex items-center justify-center gap-2 text-sm text-sky-300" role="status">
+      <p className="flex items-center justify-center gap-2 text-sm text-brand-300" role="status">
         <span className="size-2 animate-pulse rounded-full bg-amber-300" aria-hidden /> Waiting for your phone…
       </p>
 
@@ -269,7 +269,7 @@ function AwaitingLocation({ session }: { session: SessionSummary }) {
         <Button variant="secondary" onClick={useThisDevice} loading={locating} disabled={busy}>
           <LocateFixed className="size-4" aria-hidden /> Use this device's location
         </Button>
-        <Button variant="ghost" onClick={skip} disabled={busy} className="text-sky-200 hover:bg-white/10">
+        <Button variant="ghost" onClick={skip} disabled={busy} className="text-brand-200 hover:bg-white/10">
           Open without a location check
         </Button>
       </div>
@@ -291,7 +291,7 @@ function StatusBadge({ status }: { status?: SessionStatus }) {
   const style = {
     OPEN: 'bg-emerald-400/15 text-emerald-300',
     PAUSED: 'bg-amber-400/15 text-amber-300',
-    CLOSED: 'bg-white/10 text-sky-300',
+    CLOSED: 'bg-white/10 text-brand-300',
   }[status]
   const label = { OPEN: 'Live', PAUSED: 'Paused', CLOSED: 'Ended' }[status]
   return (
@@ -306,7 +306,7 @@ function PausedState() {
   return (
     <div className="space-y-3">
       <p className="text-lg font-semibold">Class is paused</p>
-      <p className="text-sm text-sky-300">Students can't check in until you resume, below.</p>
+      <p className="text-sm text-brand-300">Students can't check in until you resume, below.</p>
     </div>
   )
 }
@@ -315,7 +315,7 @@ function ClosedState({ onDone }: { onDone: () => void }) {
   return (
     <div className="space-y-3">
       <p className="text-lg font-semibold">Class ended</p>
-      <p className="text-sm text-sky-300">This session no longer accepts check-ins.</p>
+      <p className="text-sm text-brand-300">This session no longer accepts check-ins.</p>
       <Button onClick={onDone}>Back to dashboard</Button>
     </div>
   )
@@ -325,7 +325,7 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
   return (
     <div className="space-y-3" role="alert">
       <TriangleAlert className="mx-auto size-8 text-amber-300" aria-hidden />
-      <p className="text-sm text-sky-100">{message}</p>
+      <p className="text-sm text-brand-100">{message}</p>
       <Button variant="secondary" onClick={onBack}>Back to dashboard</Button>
     </div>
   )
@@ -385,7 +385,7 @@ function FloatButton({ payload, refreshLabel }: { payload?: string; refreshLabel
       const win = await window.documentPictureInPicture!.requestWindow({ width: 360, height: 420 })
       copyStylesInto(win.document)
       win.document.body.style.margin = '0'
-      win.document.body.style.background = '#0f1b33'
+      win.document.body.style.background = '#0d1321'
       setPipWindow(win)
     } catch {
       // Refused (missing gesture, disabled setting) — button just stays put so they can retry.
@@ -428,9 +428,9 @@ function FloatButton({ payload, refreshLabel }: { payload?: string; refreshLabel
       </Button>
       {pipWindow &&
         createPortal(
-          <div className="flex h-dvh flex-col items-center justify-center gap-3 bg-navy-950 p-4 text-white">
+          <div className="flex h-dvh flex-col items-center justify-center gap-3 bg-brand-950 p-4 text-white">
             <QrPanel payload={payload} />
-            {refreshLabel && <p className="text-sm text-sky-300">{refreshLabel}</p>}
+            {refreshLabel && <p className="text-sm text-brand-300">{refreshLabel}</p>}
           </div>,
           pipWindow.document.body,
         )}

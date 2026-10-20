@@ -5,8 +5,8 @@ import type { EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, E
 
 const STATUS_STYLE: Record<EvaluationRoundStatus, string> = {
   UPCOMING: 'bg-surface text-muted ring-line',
-  OPEN: 'bg-emerald-50 text-success ring-emerald-200',
-  CLOSED: 'bg-slate-100 text-slate-700 ring-slate-200',
+  OPEN: 'bg-success-soft text-success ring-success/30',
+  CLOSED: 'bg-line text-ink ring-line',
 }
 const STATUS_LABEL: Record<EvaluationRoundStatus, string> = { UPCOMING: 'Upcoming', OPEN: 'Open', CLOSED: 'Closed' }
 
@@ -34,7 +34,7 @@ export function EvaluationResultsView({ results, showDepartment }: { results: Ev
       <Card className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-navy-900">{round.title}</h2>
+            <h2 className="text-lg font-semibold text-ink">{round.title}</h2>
             <p className="mt-1 text-sm text-muted">{formatWindow(round.opensAt, round.closesAt)} · {results.totalResponses} response{results.totalResponses === 1 ? '' : 's'}</p>
           </div>
           <RoundStatusBadge status={round.status} />
@@ -52,7 +52,7 @@ export function EvaluationResultsView({ results, showDepartment }: { results: Ev
       {results.units.length === 0 ? (
         <Card className="p-10 text-center">
           <MessageSquareQuote className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No responses yet</p>
+          <p className="mt-3 font-semibold text-ink">No responses yet</p>
           <p className="mt-1 text-sm text-muted">Results appear here as students evaluate their units.</p>
         </Card>
       ) : (
@@ -61,12 +61,12 @@ export function EvaluationResultsView({ results, showDepartment }: { results: Ev
             <Card key={`${u.unitId}:${u.lecturerName ?? ''}`} className="p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-800 ring-1 ring-inset ring-indigo-100">{u.unitCode}</span>
-                  <p className="mt-2 font-semibold text-navy-900">{u.unitName ?? u.unitCode}</p>
+                  <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{u.unitCode}</span>
+                  <p className="mt-2 font-semibold text-ink">{u.unitName ?? u.unitCode}</p>
                   <p className="text-sm text-muted">{u.lecturerName ?? 'Former lecturer'}{showDepartment && u.departmentName ? ` · ${u.departmentName}` : ''}</p>
                 </div>
                 <p className="w-full text-sm text-muted sm:w-auto sm:text-right">
-                  <span className="text-navy-900 sm:block sm:text-xl sm:font-bold">{u.responses}<span className="sm:hidden"> response{u.responses === 1 ? '' : 's'}</span></span>
+                  <span className="text-ink sm:block sm:text-xl sm:font-bold">{u.responses}<span className="sm:hidden"> response{u.responses === 1 ? '' : 's'}</span></span>
                   {' '}of {u.enrolled} student{u.enrolled === 1 ? '' : 's'}{u.responseRate !== null ? ` (${u.responseRate}%)` : ''}
                 </p>
               </div>
@@ -111,13 +111,13 @@ function Withheld({ minResponses, className }: { minResponses: number; className
 
 function RatingRow({ question, result, detailed }: { question: EvaluationQuestion; result: EvaluationQuestionResult | undefined; detailed?: boolean }) {
   const average = result?.average ?? null
-  const tone = average === null ? 'bg-line' : average >= 4 ? 'bg-success' : average >= 3 ? 'bg-amber-500' : 'bg-red-500'
+  const tone = average === null ? 'bg-line' : average >= 4 ? 'bg-success-solid' : average >= 3 ? 'bg-warning-solid' : 'bg-danger-solid'
   return (
     <div>
       <div className="flex items-start justify-between gap-3 text-sm">
         <span className="text-ink">{question.prompt}</span>
-        <span className="inline-flex shrink-0 items-center gap-1 font-semibold text-navy-900">
-          <Star className="size-3.5 text-gold-500" aria-hidden />
+        <span className="inline-flex shrink-0 items-center gap-1 font-semibold text-ink">
+          <Star className="size-3.5 text-accent" aria-hidden />
           {average === null ? '—' : average.toFixed(2)}
         </span>
       </div>

@@ -7,9 +7,9 @@ import { errorMessage } from '@/lib/api'
 import type { EligibilityReport as Report, EligibilityStatus } from '@/types'
 
 const STATUS: Record<EligibilityStatus, { label: string; className: string }> = {
-  NOT_ELIGIBLE: { label: 'Not eligible', className: 'bg-red-50 text-red-700 ring-red-200' },
-  AT_RISK: { label: 'At risk', className: 'bg-amber-50 text-amber-800 ring-amber-200' },
-  ELIGIBLE: { label: 'Eligible', className: 'bg-emerald-50 text-success ring-emerald-200' },
+  NOT_ELIGIBLE: { label: 'Not eligible', className: 'bg-danger-soft text-danger ring-danger/30' },
+  AT_RISK: { label: 'At risk', className: 'bg-warning-soft text-warning ring-warning/30' },
+  ELIGIBLE: { label: 'Eligible', className: 'bg-success-soft text-success ring-success/30' },
   NOT_YET_MEASURED: { label: 'No classes yet', className: 'bg-surface text-muted ring-line' },
 }
 
@@ -50,8 +50,8 @@ export function EligibilityReport({ data, isPending, error, refetch, showAll, on
   if (error) {
     return (
       <Card className="flex items-center justify-between p-5" role="alert">
-        <p className="text-sm text-red-700">{errorMessage(error, 'Could not load exam eligibility.')}</p>
-        <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+        <p className="text-sm text-danger">{errorMessage(error, 'Could not load exam eligibility.')}</p>
+        <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
       </Card>
     )
   }
@@ -62,15 +62,15 @@ export function EligibilityReport({ data, isPending, error, refetch, showAll, on
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted">
-        Minimum to sit an exam: <strong className="text-navy-900">{policy ? `${policy.minAttendancePercent}%` : '…'}</strong> of a unit’s classes so far.
+        Minimum to sit an exam: <strong className="text-ink">{policy ? `${policy.minAttendancePercent}%` : '…'}</strong> of a unit’s classes so far.
       </p>
 
       {filters && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{filters}</div>}
 
       <section aria-label="Eligibility summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <SummaryTile icon={ShieldAlert} label="Not eligible" value={summary?.notEligible} tone="text-red-700 bg-red-50" />
-        <SummaryTile icon={AlertTriangle} label="At risk" value={summary?.atRisk} tone="text-amber-700 bg-amber-50" />
-        <SummaryTile icon={CheckCircle2} label="Eligible" value={summary?.eligible} tone="text-success bg-emerald-50" />
+        <SummaryTile icon={ShieldAlert} label="Not eligible" value={summary?.notEligible} tone="text-danger bg-danger-soft" />
+        <SummaryTile icon={AlertTriangle} label="At risk" value={summary?.atRisk} tone="text-warning bg-warning-soft" />
+        <SummaryTile icon={CheckCircle2} label="Eligible" value={summary?.eligible} tone="text-success bg-success-soft" />
         <SummaryTile icon={Clock} label="No classes yet" value={summary?.notYetMeasured} tone="text-muted bg-surface" />
       </section>
 
@@ -79,8 +79,8 @@ export function EligibilityReport({ data, isPending, error, refetch, showAll, on
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search student, unit or lecturer…" aria-label="Search student, unit or lecturer" className="input pl-10" />
         </label>
-        <label className="inline-flex items-center gap-2 text-sm text-navy-900">
-          <input type="checkbox" checked={showAll} onChange={(e) => onShowAllChange(e.target.checked)} className="size-4 accent-navy-900" />
+        <label className="inline-flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={showAll} onChange={(e) => onShowAllChange(e.target.checked)} className="size-4 accent-brand" />
           Show every student
         </label>
       </div>
@@ -90,7 +90,7 @@ export function EligibilityReport({ data, isPending, error, refetch, showAll, on
       ) : data.rows.length === 0 ? (
         <Card className="p-10 text-center">
           <CheckCircle2 className="mx-auto size-8 text-success" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">{showAll ? 'No students yet' : 'Nobody is at risk'}</p>
+          <p className="mt-3 font-semibold text-ink">{showAll ? 'No students yet' : 'Nobody is at risk'}</p>
           <p className="mt-1 text-sm text-muted">{showAll ? 'Students appear here once they are registered on a unit.' : 'Every student with classes held is comfortably above the minimum.'}</p>
         </Card>
       ) : rows.length === 0 ? (
@@ -104,18 +104,18 @@ export function EligibilityReport({ data, isPending, error, refetch, showAll, on
                 <Card className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium text-navy-900">{r.fullName ?? 'Not signed up yet'}</p>
+                      <p className="font-medium text-ink">{r.fullName ?? 'Not signed up yet'}</p>
                       <p className="font-mono text-xs text-muted">{r.registrationNumber ?? '—'}</p>
                     </div>
                     <EligibilityStatusBadge status={r.status} />
                   </div>
                   <div className="mt-3 flex items-end justify-between gap-3 border-t border-line pt-3 text-sm">
                     <div className="min-w-0">
-                      <p className="font-semibold text-navy-900">{r.unitCode}</p>
+                      <p className="font-semibold text-ink">{r.unitCode}</p>
                       <p className="truncate text-xs text-muted">{r.lecturerName}{showDepartment && r.departmentName ? ` · ${r.departmentName}` : ''}</p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="font-semibold text-navy-900">{r.attendanceRate === null ? '—' : `${r.attendanceRate}%`}</p>
+                      <p className="font-semibold text-ink">{r.attendanceRate === null ? '—' : `${r.attendanceRate}%`}</p>
                       <p className="text-xs text-muted">{r.sessionsAttended} of {r.sessionsHeld} classes</p>
                     </div>
                   </div>
@@ -138,15 +138,15 @@ export function EligibilityReport({ data, isPending, error, refetch, showAll, on
                 {rows.map((r) => (
                   <tr key={r.allocationId}>
                     <td className="px-5 py-3">
-                      <span className="block font-medium text-navy-900">{r.fullName ?? 'Not signed up yet'}</span>
+                      <span className="block font-medium text-ink">{r.fullName ?? 'Not signed up yet'}</span>
                       <span className="font-mono text-xs text-muted">{r.registrationNumber ?? '—'}</span>
                     </td>
                     <td className="px-5 py-3">
-                      <span className="block font-semibold text-navy-900">{r.unitCode}</span>
+                      <span className="block font-semibold text-ink">{r.unitCode}</span>
                       <span className="text-xs text-muted">{r.lecturerName}</span>
                     </td>
-                    {showDepartment && <td className="px-5 py-3 text-navy-900">{r.departmentName ?? '—'}</td>}
-                    <td className="px-5 py-3 text-navy-900">
+                    {showDepartment && <td className="px-5 py-3 text-ink">{r.departmentName ?? '—'}</td>}
+                    <td className="px-5 py-3 text-ink">
                       <span className="font-semibold">{r.attendanceRate === null ? '—' : `${r.attendanceRate}%`}</span>
                       <span className="block text-xs text-muted">{r.sessionsAttended} of {r.sessionsHeld} classes</span>
                     </td>
@@ -168,7 +168,7 @@ function SummaryTile({ icon: Icon, label, value, tone }: { icon: typeof Clock; l
       <span className={clsx('grid size-10 shrink-0 place-items-center rounded-xl', tone)}><Icon className="size-5" aria-hidden /></span>
       <div className="min-w-0">
         <p className="text-xs text-muted">{label}</p>
-        <p className="text-2xl font-bold leading-tight text-navy-900">{value ?? '—'}</p>
+        <p className="text-2xl font-bold leading-tight text-ink">{value ?? '—'}</p>
       </div>
     </Card>
   )

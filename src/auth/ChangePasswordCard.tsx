@@ -16,25 +16,23 @@ export function ChangePasswordCard() {
   const forgotPassword = useForgotPassword()
 
   if (!me) return null
-  // The student portal uses blue as its accent, the lecturer portal green.
-  const variant = me.role === 'student' ? 'accent' : 'lecturer'
   // Their password is their SMARTTT one: a reset link from here would change nothing.
   const viaSmarttt = smartttAccounts() && (me.role === 'student' || me.role === 'lecturer')
 
   return (
     <Card className="p-6 sm:p-8">
       <div className="flex items-start gap-3">
-        <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${me.role === 'student' ? 'bg-blue-50 text-blue-700' : 'bg-navy-900/5 text-navy-900'}`}><ShieldCheck className="size-5" aria-hidden /></span>
-        <div><h3 className="font-bold text-navy-900">Change password</h3>{!viaSmarttt && <p className="mt-1 text-sm text-muted">We'll email a secure reset link to {me.email}. Signs you out on every other device once used.</p>}</div>
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-ink"><ShieldCheck className="size-5" aria-hidden /></span>
+        <div><h3 className="font-bold text-ink">Change password</h3>{!viaSmarttt && <p className="mt-1 text-sm text-muted">We'll email a secure reset link to {me.email}. Signs you out on every other device once used.</p>}</div>
       </div>
       {viaSmarttt ? (
-        <p className="mt-5 text-sm text-muted">You sign in with your <strong className="text-navy-900">SMARTTT</strong> password. Change or reset it in SMARTTT, then use the new one here.</p>
+        <p className="mt-5 text-sm text-muted">You sign in with your <strong className="text-ink">SMARTTT</strong> password. Change or reset it in SMARTTT, then use the new one here.</p>
       ) : forgotPassword.isSuccess ? (
         <p role="status" className="mt-5 flex items-center gap-2 text-sm font-medium text-success"><Mail className="size-4" aria-hidden /> Check your inbox for the reset link.</p>
       ) : (
         <>
-          <Button variant={variant} className="mt-5" loading={forgotPassword.isPending} onClick={() => forgotPassword.mutate(me.email)}>Send reset link</Button>
-          {forgotPassword.isError && <p className="mt-2 text-sm text-red-600">{errorMessage(forgotPassword.error)}</p>}
+          <Button className="mt-5" loading={forgotPassword.isPending} onClick={() => forgotPassword.mutate(me.email)}>Send reset link</Button>
+          {forgotPassword.isError && <p className="mt-2 text-sm text-danger">{errorMessage(forgotPassword.error)}</p>}
         </>
       )}
     </Card>
@@ -62,10 +60,10 @@ export function Field({
   const id = useId()
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-semibold text-navy-900">{label}</label>
+      <label htmlFor={id} className="block text-sm font-semibold text-ink">{label}</label>
       <input
         id={id}
-        className={`input mt-2 ${readOnly ? 'cursor-not-allowed bg-navy-900/5 text-muted' : ''}`}
+        className={`input mt-2 ${readOnly ? 'cursor-not-allowed bg-brand-soft text-muted' : ''}`}
         type={type}
         value={value}
         onChange={(event) => onChange?.(event.target.value)}

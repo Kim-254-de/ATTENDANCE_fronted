@@ -42,15 +42,15 @@ export function UnitsPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the department’s units.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the department’s units.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !units ? (
         <div className="space-y-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-14" />)}</div>
       ) : units.length === 0 ? (
         <Card className="p-10 text-center">
           <BookOpen className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No units yet</p>
+          <p className="mt-3 font-semibold text-ink">No units yet</p>
           <p className="mt-1 text-sm text-muted">Units appear here once a lecturer in this department is timetabled to teach one.</p>
         </Card>
       ) : rows.length === 0 ? (
@@ -75,13 +75,13 @@ export function UnitsPage() {
 
 function UnitRow({ unit }: { unit: DepartmentUnit }) {
   return (
-    <tr className="transition-colors hover:bg-indigo-50/60">
+    <tr className="transition-colors hover:bg-brand-soft/60">
       <td className="px-5 py-3">
-        <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-800 ring-1 ring-inset ring-indigo-100">{unit.code}</span>
+        <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{unit.code}</span>
       </td>
-      <td className="px-5 py-3 text-navy-900">{unit.name ?? '—'}</td>
-      <td className="px-5 py-3 text-navy-900">{unit.lecturerName}</td>
-      <td className="px-5 py-3 text-navy-900">{unit.studentCount}</td>
+      <td className="px-5 py-3 text-ink">{unit.name ?? '—'}</td>
+      <td className="px-5 py-3 text-ink">{unit.lecturerName}</td>
+      <td className="px-5 py-3 text-ink">{unit.studentCount}</td>
       <td className="px-5 py-3"><RateBar rate={unit.attendanceRate} label={`${unit.code} average attendance`} /></td>
     </tr>
   )

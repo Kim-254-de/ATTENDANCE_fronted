@@ -41,10 +41,10 @@ function RoleCard({ icon, label, detail, onClick }: { icon: React.ReactNode; lab
     <button
       type="button"
       onClick={onClick}
-      className="flex cursor-pointer flex-col items-start gap-3 rounded-2xl border border-line bg-white p-6 text-left shadow-[0_1px_3px_rgba(18,48,95,0.08)] transition-transform hover:scale-[1.01] hover:shadow-md active:scale-[0.99]"
+      className="flex cursor-pointer flex-col items-start gap-3 rounded-2xl border border-line bg-card p-6 text-left shadow-[0_1px_3px_rgba(18,48,95,0.08)] transition-transform hover:scale-[1.01] hover:shadow-md active:scale-[0.99]"
     >
-      <span className="grid size-12 place-items-center rounded-xl bg-gold-100 text-gold-600">{icon}</span>
-      <span className="font-bold text-navy-900">{label}</span>
+      <span className="grid size-12 place-items-center rounded-xl bg-accent-soft text-accent-ink">{icon}</span>
+      <span className="font-bold text-ink">{label}</span>
       <span className="text-sm text-muted">{detail}</span>
     </button>
   )

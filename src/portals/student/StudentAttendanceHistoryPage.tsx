@@ -67,30 +67,30 @@ export function StudentAttendanceHistoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">Attendance Report</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Attendance Report</h1>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total" value={heldRecords.length} className="text-navy-900" />
+        <StatCard label="Total" value={heldRecords.length} className="text-ink" />
         <StatCard label="Present" value={counts.present} className="text-success" />
-        <StatCard label="Late" value={counts.late} className="text-orange-600" />
-        <StatCard label="Absent" value={counts.absent} className="text-red-700" />
+        <StatCard label="Late" value={counts.late} className="text-warning" />
+        <StatCard label="Absent" value={counts.absent} className="text-danger" />
       </div>
 
       <Card className="p-5">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-navy-900">Overall Attendance Rate</p>
-          <p className="text-sm font-bold text-navy-900">{summary ? formatRate(rate) : '…'}</p>
+          <p className="text-sm font-bold text-ink">Overall Attendance Rate</p>
+          <p className="text-sm font-bold text-ink">{summary ? formatRate(rate) : '…'}</p>
         </div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface">
           <div
-            className="h-full rounded-full bg-linear-to-r from-blue-600 to-blue-400 transition-[width] duration-1000 ease-out motion-reduce:transition-none"
+            className="h-full rounded-full bg-linear-to-r from-brand-600 to-brand-400 transition-[width] duration-1000 ease-out motion-reduce:transition-none"
             style={{ width: `${animatedRate}%` }}
           />
         </div>
         <div className="mt-2 flex items-center justify-between text-xs">
           <span className="text-muted">Min required: {minimum}%</span>
-          {summary && (atRisk ? <span className="font-semibold text-red-600">⚠ At Risk</span> : <span className="font-semibold text-success">On Track</span>)}
+          {summary && (atRisk ? <span className="font-semibold text-danger">⚠ At Risk</span> : <span className="font-semibold text-success">On Track</span>)}
         </div>
       </Card>
 
@@ -101,7 +101,7 @@ export function StudentAttendanceHistoryPage() {
             role="tab"
             aria-selected={status === f.value}
             onClick={() => setStatus(f.value)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${status === f.value ? 'bg-blue-700 text-white shadow-sm' : 'bg-white text-navy-900 ring-1 ring-blue-100 hover:bg-blue-50'}`}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${status === f.value ? 'bg-brand text-white shadow-sm' : 'bg-card text-ink ring-1 ring-brand-ink/15 hover:bg-brand-soft'}`}
           >
             {f.label}
           </button>
@@ -121,8 +121,8 @@ export function StudentAttendanceHistoryPage() {
 
       {attendance.error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(attendance.error, 'Could not load your attendance.')}</p>
-          <button onClick={() => attendance.refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(attendance.error, 'Could not load your attendance.')}</p>
+          <button onClick={() => attendance.refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : attendance.isPending ? (
         <Skeleton className="h-[240px]" />

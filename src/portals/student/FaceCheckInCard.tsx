@@ -27,9 +27,9 @@ export function FaceCheckInCard() {
   return (
     <Card className="space-y-4 p-6" aria-labelledby="face-checkin-title">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700"><ScanFace className="size-5" aria-hidden /></span>
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-ink"><ScanFace className="size-5" aria-hidden /></span>
         <div>
-          <h2 id="face-checkin-title" className="font-semibold text-navy-900">Face check-in</h2>
+          <h2 id="face-checkin-title" className="font-semibold text-ink">Face check-in</h2>
           <p className="mt-0.5 text-sm text-muted">
             If you can't scan the QR code, your lecturer can check you in by photographing your face on their phone.
           </p>
@@ -37,12 +37,12 @@ export function FaceCheckInCard() {
       </div>
 
       {error ? (
-        <p role="alert" className="text-sm text-red-600">{errorMessage(error, 'Could not load your face check-in settings.')}</p>
+        <p role="alert" className="text-sm text-danger">{errorMessage(error, 'Could not load your face check-in settings.')}</p>
       ) : isPending || !status ? (
         <p className="text-sm text-muted">Loading…</p>
       ) : status.consentGiven ? (
         <div className="space-y-3">
-          <p className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800" role="status">
+          <p className="rounded-xl bg-success-soft px-4 py-3 text-sm text-success" role="status">
             <b>On.</b>{' '}
             {status.enrolled && status.enrolledAt
               ? `Your face was registered on ${formatDate(status.enrolledAt)}.`
@@ -60,12 +60,12 @@ export function FaceCheckInCard() {
             <li>You can turn this off at any time here, which deletes your face data straight away.</li>
           </ul>
           <label className="flex items-start gap-2 text-sm text-ink">
-            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 accent-blue-600" />
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 accent-brand" />
             I agree to my face being used to check me in to class.
           </label>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="secondary" onClick={() => { setAgreeing(false); setAgreed(false) }}>Cancel</Button>
-            <Button variant="accent" disabled={!agreed} loading={setConsent.isPending} onClick={() => setConsent.mutate(true, { onSuccess: () => setAgreeing(false) })}>
+            <Button disabled={!agreed} loading={setConsent.isPending} onClick={() => setConsent.mutate(true, { onSuccess: () => setAgreeing(false) })}>
               Turn on
             </Button>
           </div>
@@ -73,10 +73,10 @@ export function FaceCheckInCard() {
       ) : (
         <div className="space-y-2">
           <p className="text-sm text-muted"><b className="text-ink">Off.</b> You check in by scanning the QR code only.</p>
-          <Button variant="accent" className="w-full" onClick={() => setAgreeing(true)}>Turn on face check-in</Button>
+          <Button className="w-full" onClick={() => setAgreeing(true)}>Turn on face check-in</Button>
         </div>
       )}
-      {setConsent.isError && <p role="alert" className="text-sm text-red-600">{errorMessage(setConsent.error)}</p>}
+      {setConsent.isError && <p role="alert" className="text-sm text-danger">{errorMessage(setConsent.error)}</p>}
     </Card>
   )
 }

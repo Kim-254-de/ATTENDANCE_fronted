@@ -26,7 +26,7 @@ type Values = z.infer<typeof schema>
 
 const ROLE_LABEL = { admin: 'an administrator', faculty: 'faculty officer', department: 'department officer' } as const
 
-const CARD = 'space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8'
+const CARD = 'space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8'
 
 /**
  * Where an emailed link lands to choose a password:
@@ -49,9 +49,9 @@ export function SetPasswordPage({ mode }: { mode: 'invite' | 'reset' }) {
   const brokenLink = (message: string) => (
     <AuthShell title={title}>
       <div className={CARD} role="alert">
-        <div className="grid size-14 place-items-center rounded-2xl bg-orange-100 text-orange-600"><TriangleAlert className="size-7" aria-hidden /></div>
+        <div className="grid size-14 place-items-center rounded-2xl bg-warning-soft text-warning"><TriangleAlert className="size-7" aria-hidden /></div>
         <p className="text-sm leading-6 text-muted">{message}</p>
-        <Link to={mode === 'invite' ? '/oversight' : '/'} className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">
+        <Link to={mode === 'invite' ? '/oversight' : '/'} className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-ink hover:bg-surface">
           {mode === 'invite' ? 'Go to staff sign-in' : 'Back to sign in'}
         </Link>
       </div>
@@ -68,9 +68,9 @@ export function SetPasswordPage({ mode }: { mode: 'invite' | 'reset' }) {
     return (
       <AuthShell title="Password changed">
         <div className={CARD} role="status">
-          <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><CheckCircle2 className="size-7" aria-hidden /></div>
+          <div className="grid size-14 place-items-center rounded-full bg-success-soft text-success"><CheckCircle2 className="size-7" aria-hidden /></div>
           <p className="text-sm leading-6 text-muted">{reset.data.message}</p>
-          <Link to="/" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to sign in</Link>
+          <Link to="/" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-ink hover:bg-surface">Go to sign in</Link>
         </div>
       </AuthShell>
     )
@@ -94,14 +94,14 @@ export function SetPasswordPage({ mode }: { mode: 'invite' | 'reset' }) {
     <AuthShell
       title={title}
       subtitle={details
-        ? <>Welcome, <strong className="text-navy-900">{details.fullName}</strong>. You have been invited as {ROLE_LABEL[details.role]}{details.scopeName ? <> for <strong className="text-navy-900">{details.scopeName}</strong></> : null}.</>
+        ? <>Welcome, <strong className="text-ink">{details.fullName}</strong>. You have been invited as {ROLE_LABEL[details.role]}{details.scopeName ? <> for <strong className="text-ink">{details.scopeName}</strong></> : null}.</>
         : undefined}
     >
       <form onSubmit={onSubmit} className={CARD} noValidate>
-        <div className="grid size-14 place-items-center rounded-2xl bg-navy-900/5 text-navy-900"><KeyRound className="size-7" aria-hidden /></div>
-        {details && <p className="text-sm text-muted">You will sign in as <strong className="text-navy-900">{details.email}</strong>.</p>}
+        <div className="grid size-14 place-items-center rounded-2xl bg-brand-soft text-ink"><KeyRound className="size-7" aria-hidden /></div>
+        {details && <p className="text-sm text-muted">You will sign in as <strong className="text-ink">{details.email}</strong>.</p>}
         {submit.isError && Object.keys(serverErrors).length === 0 && (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage(submit.error)}</p>
+          <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{errorMessage(submit.error)}</p>
         )}
         <Field label="New password" error={errors.password?.message ?? serverErrors['password']} hint="At least 6 characters, with an uppercase letter, a lowercase letter and a digit.">
           <input {...register('password')} type="password" autoComplete="new-password" className="input" />

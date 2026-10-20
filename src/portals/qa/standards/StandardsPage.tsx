@@ -43,44 +43,44 @@ export function StandardsPage() {
       <p className="max-w-2xl text-sm text-muted">The catalog every checklist item and audit finding is measured against.</p>
 
       <Card className="p-5">
-        <h2 className="font-semibold text-navy-900">Add a standard</h2>
+        <h2 className="font-semibold text-ink">Add a standard</h2>
         <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink">
             Code
             <input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder="STD-GOV-02" className="input" required />
           </label>
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink">
             Category
             <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as QaStandardCategory }))} className="input">
               {QA_STANDARD_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
             </select>
           </label>
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900 sm:col-span-2">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink sm:col-span-2">
             Title
             <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="input" required />
           </label>
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900 sm:col-span-2">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink sm:col-span-2">
             Description (optional)
             <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} className="input min-h-20" />
           </label>
           <div className="sm:col-span-2">
             <Button type="submit" loading={create.isPending} disabled={!form.code.trim() || !form.title.trim()}>Add standard</Button>
-            {create.error && <p role="alert" className="mt-2 text-sm text-red-600">{errorMessage(create.error)}</p>}
+            {create.error && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(create.error)}</p>}
           </div>
         </form>
       </Card>
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the standards catalog.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the standards catalog.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !standards ? (
         <div className="space-y-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-16" />)}</div>
       ) : standards.length === 0 ? (
         <Card className="p-10 text-center">
           <ShieldCheck className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No standards yet</p>
+          <p className="mt-3 font-semibold text-ink">No standards yet</p>
           <p className="mt-1 text-sm text-muted">Add the first one above.</p>
         </Card>
       ) : (
@@ -89,11 +89,11 @@ export function StandardsPage() {
             <Card key={s.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-md bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-800 ring-1 ring-inset ring-violet-100">{s.code}</span>
+                  <span className="rounded-md bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{s.code}</span>
                   <span className="text-xs text-muted">{CATEGORY_LABELS[s.category] ?? s.category}</span>
                   {!s.isActive && <span className="rounded-md bg-line px-2 py-0.5 text-xs font-semibold text-muted">Inactive</span>}
                 </div>
-                <p className="mt-1 font-medium text-navy-900">{s.title}</p>
+                <p className="mt-1 font-medium text-ink">{s.title}</p>
               </div>
               <Button
                 type="button"

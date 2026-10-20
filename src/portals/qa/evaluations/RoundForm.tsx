@@ -34,31 +34,31 @@ export function RoundForm({ initial, questionsLocked, submitLabel, pending, onSu
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900 sm:col-span-2">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink sm:col-span-2">
           Title
           <input value={v.title} onChange={(e) => set({ title: e.target.value })} placeholder="Semester 1 2026/27 course evaluation" className="input" required />
         </label>
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900 sm:col-span-2">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink sm:col-span-2">
           Note to students (optional)
           <textarea value={v.instructions} onChange={(e) => set({ instructions: e.target.value })} className="input min-h-20 py-2" placeholder="Your answers are anonymous. Lecturers never see who said what." />
         </label>
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Opens
           <input type="datetime-local" value={v.opensAt} onChange={(e) => set({ opensAt: e.target.value })} className="input" required />
         </label>
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Closes
           <input type="datetime-local" value={v.closesAt} min={v.opensAt} onChange={(e) => set({ closesAt: e.target.value })} className="input" required />
         </label>
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Minimum responses before results show
           <input type="number" min={1} max={50} value={v.minResponses} onChange={(e) => set({ minResponses: Math.max(1, Math.min(50, Number(e.target.value) || 1)) })} className="input" />
         </label>
       </div>
-      {!windowValid && v.opensAt && v.closesAt && <p role="alert" className="text-sm text-red-600">The round must close after it opens.</p>}
+      {!windowValid && v.opensAt && v.closesAt && <p role="alert" className="text-sm text-danger">The round must close after it opens.</p>}
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-semibold text-navy-900">Questions</legend>
+        <legend className="text-sm font-semibold text-ink">Questions</legend>
         {questionsLocked && <p className="text-sm text-muted">Students have already answered, so the questions are fixed.</p>}
         <ol className="space-y-3">
           {v.questions.map((q, i) => (
@@ -85,14 +85,14 @@ export function RoundForm({ initial, questionsLocked, submitLabel, pending, onSu
               </div>
               {!questionsLocked && (
                 <div className="mt-2 flex flex-wrap items-center gap-3 pl-7 text-sm">
-                  <label className="inline-flex items-center gap-2 text-navy-900">
-                    <input type="checkbox" checked={q.required} onChange={(e) => setQuestion(i, { required: e.target.checked })} className="size-4 accent-navy-900" />
+                  <label className="inline-flex items-center gap-2 text-ink">
+                    <input type="checkbox" checked={q.required} onChange={(e) => setQuestion(i, { required: e.target.checked })} className="size-4 accent-brand" />
                     Required
                   </label>
                   <span className="flex-1" />
                   <button type="button" onClick={() => moveQuestion(i, -1)} disabled={i === 0} className="rounded-lg p-1.5 text-muted hover:bg-surface disabled:opacity-30" aria-label={`Move question ${i + 1} up`}><ArrowUp className="size-4" aria-hidden /></button>
                   <button type="button" onClick={() => moveQuestion(i, 1)} disabled={i === v.questions.length - 1} className="rounded-lg p-1.5 text-muted hover:bg-surface disabled:opacity-30" aria-label={`Move question ${i + 1} down`}><ArrowDown className="size-4" aria-hidden /></button>
-                  <button type="button" onClick={() => set({ questions: v.questions.filter((_, j) => j !== i) })} disabled={v.questions.length === 1} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-30" aria-label={`Remove question ${i + 1}`}><Trash2 className="size-4" aria-hidden /></button>
+                  <button type="button" onClick={() => set({ questions: v.questions.filter((_, j) => j !== i) })} disabled={v.questions.length === 1} className="rounded-lg p-1.5 text-danger hover:bg-danger-soft disabled:opacity-30" aria-label={`Remove question ${i + 1}`}><Trash2 className="size-4" aria-hidden /></button>
                 </div>
               )}
             </li>

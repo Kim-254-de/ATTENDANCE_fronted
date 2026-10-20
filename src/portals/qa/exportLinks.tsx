@@ -28,7 +28,7 @@ export function ExportLinks({ basePath, params, label }: { basePath: string; par
         <a
           key={format}
           href={qaExportUrl(`${basePath}.${format}`, params)}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-navy-900 transition hover:bg-surface"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-card px-3 py-2 text-sm font-semibold text-ink transition hover:bg-surface"
         >
           <Download className="size-4" aria-hidden /> {format.toUpperCase()}
         </a>

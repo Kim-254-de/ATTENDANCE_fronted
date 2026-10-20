@@ -37,22 +37,22 @@ export function InviteForm({
 
   return (
     <Card className="p-5 sm:p-6">
-      <h2 className="font-semibold text-navy-900">{title}</h2>
+      <h2 className="font-semibold text-ink">{title}</h2>
       <p className="mt-1 text-sm text-muted">{description}</p>
       <form onSubmit={onSubmit} className="mt-4 grid gap-4 md:grid-cols-2" noValidate>
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Full name
           <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="input" autoComplete="off" required />
-          {errors['fullName'] && <span role="alert" className="block text-xs font-normal text-red-600">{errors['fullName']}</span>}
+          {errors['fullName'] && <span role="alert" className="block text-xs font-normal text-danger">{errors['fullName']}</span>}
         </label>
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Work email
           <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="input" autoComplete="off" required />
-          {errors['email'] && <span role="alert" className="block text-xs font-normal text-red-600">{errors['email']}</span>}
+          {errors['email'] && <span role="alert" className="block text-xs font-normal text-danger">{errors['email']}</span>}
         </label>
         {children}
         {error && Object.keys(errors).length === 0 ? (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 md:col-span-2">{errorMessage(error, 'Could not send the invitation.')}</p>
+          <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger md:col-span-2">{errorMessage(error, 'Could not send the invitation.')}</p>
         ) : null}
         <div className="md:col-span-2">
           <Button type="submit" loading={pending} disabled={!fullName.trim() || !email.trim() || !canSubmit}>
