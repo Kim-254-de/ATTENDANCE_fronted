@@ -4,7 +4,8 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import type { StudentUnit } from '@/types'
-import { attendanceStreak, MIN_REQUIRED_ATTENDANCE, thisMonthsWeeks, thisWeeksDays, type DayAttendance, type WeekRate } from './attendanceStats'
+import { useMinAttendance } from '@/lib/attendancePolicy'
+import { attendanceStreak, thisMonthsWeeks, thisWeeksDays, type DayAttendance, type WeekRate } from './attendanceStats'
 import { formatRate, rateTone } from './StudentUnitCard'
 import { useMyAttendance, useMyStudentUnits } from './studentApi'
 import { useAnimated, useFirstVisit } from './useAnimated'
@@ -28,7 +29,8 @@ export function StudentProgressPage() {
   const records = attendance.data?.records ?? []
   const streak = attendance.data ? attendanceStreak(records) : 0
   const rate = summary?.attendanceRate ?? null
-  const goodStanding = rate === null || rate >= MIN_REQUIRED_ATTENDANCE
+  const minimum = useMinAttendance()
+  const goodStanding = rate === null || rate >= minimum
 
   const week = thisWeeksDays(records)
   const month = thisMonthsWeeks(records)
@@ -49,7 +51,7 @@ export function StudentProgressPage() {
             {goodStanding ? 'Good Standing' : 'At Risk'}
           </span>
           <Row label="Classes attended" value={summary ? `${summary.attended} / ${summary.sessionsHeld}` : '…'} />
-          <Row label="Min required" value={`${MIN_REQUIRED_ATTENDANCE}%`} />
+          <Row label="Min required" value={`${minimum}%`} />
           <Row label="Streak" value={`${streak} ${streak === 1 ? 'day' : 'days'} 🔥`} />
         </div>
       </Card>
@@ -58,7 +60,7 @@ export function StudentProgressPage() {
         <div className="flex items-center justify-between">
           <h2 id="by-subject" className="text-lg font-bold text-navy-900">By Units</h2>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-muted">Min {MIN_REQUIRED_ATTENDANCE}%</span>
+            <span className="text-xs font-semibold text-muted">Min {minimum}%</span>
             <Link to="/student-units" className="text-sm font-semibold text-navy-900 hover:underline">
               My units →
             </Link>
@@ -213,7 +215,8 @@ function MonthlyTrendChart({ weeks, animate }: { weeks: WeekRate[]; animate: boo
   const padding = 16
   const known = weeks.filter((w) => w.rate !== null)
   const lastKnown = known.at(-1) ?? null
-  const atRisk = lastKnown !== null && lastKnown.rate! < MIN_REQUIRED_ATTENDANCE
+  const minimum = useMinAttendance()
+  const atRisk = lastKnown !== null && lastKnown.rate! < minimum
 
   const step = weeks.length > 1 ? (width - padding * 2) / (weeks.length - 1) : 0
   const points = weeks.map((w, i) => ({

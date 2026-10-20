@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import { RecordRow } from './AttendanceRecordRow'
-import { displayMark, groupByDay, MIN_REQUIRED_ATTENDANCE } from './attendanceStats'
+import { useMinAttendance } from '@/lib/attendancePolicy'
+import { displayMark, groupByDay } from './attendanceStats'
 import { useMyAttendance } from './studentApi'
 import { useAnimated, useFirstVisit } from './useAnimated'
 
@@ -58,7 +59,8 @@ export function StudentAttendanceHistoryPage() {
   const groups = useMemo(() => groupByDay(visibleRecords), [visibleRecords])
 
   const rate = summary?.attendanceRate ?? null
-  const atRisk = rate !== null && rate < MIN_REQUIRED_ATTENDANCE
+  const minimum = useMinAttendance()
+  const atRisk = rate !== null && rate < minimum
   const animate = useFirstVisit('student-history')
   const animatedRate = useAnimated(rate ?? 0, animate)
 
@@ -87,7 +89,7 @@ export function StudentAttendanceHistoryPage() {
           />
         </div>
         <div className="mt-2 flex items-center justify-between text-xs">
-          <span className="text-muted">Min required: {MIN_REQUIRED_ATTENDANCE}%</span>
+          <span className="text-muted">Min required: {minimum}%</span>
           {summary && (atRisk ? <span className="font-semibold text-red-600">⚠ At Risk</span> : <span className="font-semibold text-success">On Track</span>)}
         </div>
       </Card>

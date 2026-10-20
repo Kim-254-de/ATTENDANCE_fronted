@@ -129,6 +129,17 @@ describe('admin console', () => {
     expect(await screen.findByText('Faculty of Education')).toBeInTheDocument()
   })
 
+  it('verifies a unit the timetable does not list its lecturer for', async () => {
+    const user = userEvent.setup()
+    await signInAtOversight(user, 'admin@university.edu')
+    await screen.findByRole('table')
+    await user.click(navLink(/^units$/i))
+    expect(await screen.findByText('MATH 210')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /verify cosc 340 for dr\. brian otieno/i }))
+    await screen.findByRole('button', { name: /verify math 210/i })
+    await vi.waitFor(() => expect(screen.queryByText('COSC 340')).not.toBeInTheDocument())
+  })
+
   it('sends a signed-out visitor of the console to the staff sign-in page', async () => {
     renderApp('/admin')
     expect(await screen.findByRole('heading', { name: /staff sign-in/i })).toBeInTheDocument()

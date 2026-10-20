@@ -1,4 +1,4 @@
-import { ScanLine } from 'lucide-react'
+import { ChevronRight, MessageSquareQuote, ScanLine } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -6,6 +6,7 @@ import { useMe } from '@/auth/authApi'
 import { errorMessage } from '@/lib/api'
 import { RecordRow } from './AttendanceRecordRow'
 import { attendanceStreak, todaysRecords } from './attendanceStats'
+import { usePendingEvaluationCount } from './evaluationsApi'
 import { useMyAttendance } from './studentApi'
 
 // Wide enough to reliably cover "today" and a short back-streak on a typical timetable, without
@@ -20,6 +21,7 @@ const formatRate = (rate: number | null) => (rate === null ? '—' : `${Math.rou
 export function StudentDashboardPage() {
   const { data: me } = useMe()
   const attendance = useMyAttendance({ limit: HOME_ATTENDANCE_LIMIT })
+  const pendingEvaluations = usePendingEvaluationCount()
   const user = me?.role === 'student' ? me : undefined
   if (!user) return null
 
@@ -36,6 +38,19 @@ export function StudentDashboardPage() {
         <Stat value={summary ? formatRate(summary.attendanceRate) : '…'} label="overall" />
         <Stat value={`${streak} 🔥`} label="days" />
       </Card>
+
+      {pendingEvaluations > 0 && (
+        <Link to="/student-evaluations" className="block">
+          <Card className="flex items-center gap-3 p-4 transition hover:shadow-md">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-700"><MessageSquareQuote className="size-5" aria-hidden /></span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-navy-900">Course evaluation open</p>
+              <p className="text-xs text-muted">{pendingEvaluations} unit{pendingEvaluations === 1 ? '' : 's'} to rate. Anonymous, takes a minute each.</p>
+            </div>
+            <ChevronRight className="size-4 text-muted" aria-hidden />
+          </Card>
+        </Link>
+      )}
 
       <Card className="space-y-4 p-6">
         <div className="flex items-center gap-3">

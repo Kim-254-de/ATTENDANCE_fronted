@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { History, Home, LineChart } from 'lucide-react'
+import { History, Home, LineChart, MessageSquareQuote } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 // Units are one tap away from Home ("My units →"), and Profile lives behind the avatar.
@@ -7,6 +7,7 @@ const nav = [
   { to: '/student-dashboard', label: 'Home', icon: Home },
   { to: '/student-attendance', label: 'History', icon: History },
   { to: '/student-progress', label: 'Progress', icon: LineChart },
+  { to: '/student-evaluations', label: 'Evaluate', icon: MessageSquareQuote },
 ]
 
 /**

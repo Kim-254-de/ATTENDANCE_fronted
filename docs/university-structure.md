@@ -1,8 +1,8 @@
 # Faculties, departments and QA: how the system compares to the university
 
 This note explains how the attendance system models faculties, departments and quality assurance (QA), how those
-work at a Kenyan university and at Tharaka University in particular, and where the two differ. It ends with one
-backend bug and the questions the team needs answered.
+work at a Kenyan university and at Tharaka University in particular, and where the two differ. Section 5 lists
+what has since been resolved, and section 6 what is still open.
 
 Written 18 October 2026, from the backend's own READMEs, migrations and code (`wayler` branch) and from public
 sources listed at the end. Tharaka's Charter and statutes could not be read online, so the Tharaka-specific points
@@ -29,19 +29,19 @@ QA officer       outside the chain: institution-wide standards, audits and corre
   signs in at `/oversight`. Students and lecturers sign in with their SMARTTT accounts instead.
 - Apart from course provisioning, invitations and account deletion, every one of them is read-only.
 
-### A unit's department is derived, never stored
+### A unit's department is stored on the unit
 
-`units` has no `department_id` column. A unit belongs to its lecturer's department:
+*Changed on 19 October 2026; see section 5.* When this note was first written, a unit had no department of its own:
+it belonged to its lecturer's department, so a lecturer with no department made all their units invisible. Now
+`units.department_id` records the department that owns the curriculum:
 
 ```
-units.lecturer_user_id → lecturer_profiles.department_id → departments.faculty_id
+units.department_id → departments.faculty_id
 ```
 
-Every department query starts from "the lecturers in this department", and every faculty query widens that by one
-join. Storing the department on the unit as well would allow the two copies to disagree when a unit changes hands.
-
-The consequence: **a lecturer with no `department_id` is invisible** to every department and faculty figure, along
-with all their units, sessions and students. See section 4.
+A unit gets its department from the course offering it was allocated from. Otherwise it takes its lecturer's
+department when it is created. A lecturer's own department (`lecturer_profiles.department_id`) now decides only
+whose staff they are.
 
 ### Scoping
 
@@ -193,41 +193,27 @@ University, Kirinyaga University); over 25% absence is an automatic fail (Daysta
 
 ---
 
-## 5. Open bug: new lecturers never get a department
+## 5. Resolved on 19 October 2026
 
-**Nothing in the running backend sets `lecturer_profiles.department_id`.** It is written in only two places:
+These were open when this note was written. All of them are now built in `ATTENDANCE_backend`, with tests, and in this frontend.
 
-- the one-off backfill in `ATTENDANCE_backend/db/migrations/021_departments.sql` (lecturers who existed then);
-- the development script `ATTENDANCE_backend/scripts/dev-seed-department.mjs`.
-
-Every SMARTTT sign-in copies the department and faculty **names** onto the profile
-(`ATTENDANCE_backend/src/modules/auth/auth.smarttt.repository.ts`, around line 124) but never looks up the id.
-
-In production, every lecturer who signs in for the first time after migration 021 therefore has
-`department_id = NULL`. They and all their classes drop out of every department and faculty figure, and their
-department cannot allocate them to a course. It does not show up locally because the seed script links the test
-lecturers.
-
-**Possible fix**, in the same SMARTTT sign-in update:
-
-```sql
-department_id = COALESCE((SELECT id FROM departments WHERE name = $4), department_id)
-```
-
----
+| Item | What was decided and built |
+|---|---|
+| New lecturers never got a department | Registration and SMARTTT sign-in now match SMARTTT's department name against the departments here, ignoring case and spaces. When nothing matches, the lecturer is left **unassigned** instead of a department being invented from the spelling. Sign-in never overrides a manual placement. Creating a department also picks up unassigned lecturers whose name matches it. |
+| Moving a lecturer by hand | A faculty officer places unassigned lecturers in its departments and moves staff between them (Placement page). An administrator can move anyone, across faculties too (Lecturers page). Every move is audited as `LECTURER_DEPARTMENT_CHANGED`. |
+| Mismatch 1: a unit's department followed its lecturer | `units.department_id` (migration 033) is now the department that owns the curriculum. Every department, faculty and QA figure is scoped by it. A department can allocate a lecturer from another department; the unit stays with the owning department and the lecturer is shown as "From …". Moving a lecturer does not move their units. |
+| Exam-eligibility rule | A single institution-wide setting (migration 034). It defaults to 75%, with a 10-point at-risk margin. QA edits it and the change is audited. Departments, faculties and QA each have an Exam Eligibility report. Students' and lecturers' pages now read the same value instead of a hard-coded 75. |
+| Student course evaluations | QA opens rounds with 1–5 rating and comment questions (migration 035). Students rate each of their units once. QA, faculties and departments read the results for their own scope. Responses are stored with no link to the student and no timestamp, and a unit's results stay hidden below a minimum number of responses. |
 
 ## 6. Questions for the team
 
-**About the bug**
-- When SMARTTT names a department that does not exist yet, should sign-in create it, or leave the lecturer
-  unlinked until a faculty officer creates it?
-- Do SMARTTT's department names exactly match the names faculty officers type? (`departments.name` is unique and
-  matched exactly.)
-- Should an officer be able to move a lecturer between departments by hand?
+**Spelling (resolved 20 October 2026)**
+- Department names are now matched on a canonical form that ignores punctuation, "Department of", `&` versus "and",
+  and common abbreviations. A spelling that still does not match is learned the first time an officer places a
+  lecturer who uses it. Duplicate departments, such as "Computer Science" and "Department of Computer Science" in
+  the development database, are merged on the administrator's Departments page.
 
-**About the model**
-- Should a unit belong to the department that owns it rather than to its lecturer's, so that service teaching
-  (e.g. Basic Sciences) counts correctly and cross-department allocation becomes possible?
+**Still open**
 - Should courses come from approved programmes (from SMARTTT or the ERP) instead of being typed in by faculty
   officers?
 

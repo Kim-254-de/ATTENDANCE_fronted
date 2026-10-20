@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { LecturerStudent, Overview, RecentSession, Unit } from '@/types'
+import type { LecturerStudent, Overview, RecentSession } from '@/types'
 
 /**
  * Real backend data: units taught, total students, avg. attendance, sessions
@@ -22,13 +22,6 @@ export const useLecturerStudents = () =>
     queryKey: ['lecturer', 'students'],
     queryFn: async () => (await api.get<LecturerStudent[]>('/lecturers/students')).data,
     staleTime: 60_000,
-  })
-
-export const useUnits = () =>
-  useQuery({
-    queryKey: ['lecturer', 'units'],
-    queryFn: async () => (await api.get<Unit[]>('/lecturer/units')).data,
-    staleTime: 5 * 60_000,
   })
 
 /**

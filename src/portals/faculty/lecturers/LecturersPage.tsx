@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { AvgLateMinutes, RateBar } from '@/components/attendance/RateBar'
+import { BorrowedBadge } from '@/components/attendance/BorrowedBadge'
 import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
 import type { FacultyLecturer } from '@/types'
@@ -22,7 +23,7 @@ export function LecturersPage() {
       .filter((l) => !query
         || l.fullName.toLowerCase().includes(query)
         || l.staffNumber.toLowerCase().includes(query)
-        || l.departmentName.toLowerCase().includes(query))
+        || (l.departmentName ?? '').toLowerCase().includes(query))
       // Null rates (nothing held yet) sort last: there is nothing to act on there.
       .sort((a, b) => (a.avgAttendanceRate ?? 101) - (b.avgAttendanceRate ?? 101))
   }, [lecturers, search])
@@ -87,9 +88,14 @@ function LecturerRow({ lecturer }: { lecturer: FacultyLecturer }) {
       </td>
       <td className="px-5 py-3 font-mono text-xs text-muted">{lecturer.staffNumber}</td>
       <td className="px-5 py-3">
-        <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{lecturer.departmentName}</span>
+        {lecturer.isOwnStaff
+          ? <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{lecturer.departmentName}</span>
+          : <BorrowedBadge homeDepartmentName={lecturer.departmentName} />}
       </td>
-      <td className="px-5 py-3 text-navy-900">{lecturer.unitsTaught}</td>
+      <td className="px-5 py-3 text-navy-900">
+        {lecturer.unitsTaught}
+        {lecturer.unitsElsewhere > 0 && <span className="block text-xs text-muted">+{lecturer.unitsElsewhere} elsewhere</span>}
+      </td>
       <td className="px-5 py-3 text-navy-900">{lecturer.studentsTaught}</td>
       <td className="px-5 py-3"><RateBar rate={lecturer.avgAttendanceRate} label={`${lecturer.fullName} average attendance`} /></td>
       <td className="px-5 py-3 text-navy-900">{lecturer.sessionsHeld}</td>

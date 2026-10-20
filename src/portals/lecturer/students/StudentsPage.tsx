@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
-import { MIN_REQUIRED_ATTENDANCE } from '@/lib/attendancePolicy'
+import { useMinAttendance } from '@/lib/attendancePolicy'
 import { initials } from '@/lib/format'
 import type { LecturerStudent } from '@/types'
 import { useLecturerStudents } from '@/portals/lecturer/dashboard/dashboardApi'
@@ -13,7 +13,7 @@ type SortDir = 'asc' | 'desc'
 
 const formatRate = (rate: number | null) => (rate === null ? '—' : `${rate.toFixed(0)}%`)
 /** Below the minimum required to sit the exam counts as At Risk; no sessions yet is given the benefit of the doubt. */
-const isAtRisk = (rate: number | null) => rate !== null && rate < MIN_REQUIRED_ATTENDANCE
+const isAtRisk = (rate: number | null, minimum: number) => rate !== null && rate < minimum
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'name', label: 'Full Name' },
@@ -127,7 +127,7 @@ export function StudentsPage() {
 }
 
 function StudentRow({ student }: { student: LecturerStudent }) {
-  const atRisk = isAtRisk(student.attendanceRate)
+  const atRisk = isAtRisk(student.attendanceRate, useMinAttendance())
   return (
     <tr>
       <td className="px-5 py-3 font-mono text-xs text-muted">{student.registrationNumber ?? '—'}</td>

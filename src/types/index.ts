@@ -134,6 +134,19 @@ export interface AdminFaculty {
   officerCount: number
 }
 
+/** A unit the timetable does not list its lecturer for, waiting for an administrator (GET /admin/units/pending). */
+export interface PendingUnit {
+  unitId: string
+  code: string
+  name: string | null
+  lecturerName: string
+  staffNumber: string | null
+  departmentName: string | null
+  createdAt: string
+  /** Weekly meetings; dayOfWeek 0 = Sunday. */
+  slots: { dayOfWeek: number; startTime: string; endTime: string; roomCode: string | null }[]
+}
+
 /** GET /departments/me — the department the signed-in officer oversees. */
 export interface DepartmentProfile {
   departmentId: string
@@ -157,7 +170,13 @@ export interface DepartmentLecturer {
   userId: string
   fullName: string
   staffNumber: string
+  /** False for a lecturer from another department (or unassigned) who teaches one of this department's units. */
+  isOwnStaff: boolean
+  homeDepartmentName: string | null
+  /** This department's units only; every figure on the row is over these. */
   unitsTaught: number
+  /** Units the lecturer teaches for other departments — workload, not counted in this department's figures. */
+  unitsElsewhere: number
   studentsTaught: number
   /** 0–100; null until a session has been held for any of their units. */
   avgAttendanceRate: number | null
@@ -252,9 +271,13 @@ export interface FacultyLecturer {
   userId: string
   fullName: string
   staffNumber: string
-  departmentId: string
-  departmentName: string
+  /** Home department; null while unassigned, and possibly outside the faculty for a borrowed lecturer. */
+  departmentId: string | null
+  departmentName: string | null
+  /** False for a lecturer from elsewhere teaching one of the faculty's units. */
+  isOwnStaff: boolean
   unitsTaught: number
+  unitsElsewhere: number
   studentsTaught: number
   avgAttendanceRate: number
   sessionsHeld: number
@@ -311,8 +334,9 @@ export interface FacultyLecturerDetail {
     staffNumber: string
     title: string | null
     email: string
-    departmentId: string
-    departmentName: string
+    /** Home department; null while unassigned. */
+    departmentId: string | null
+    departmentName: string | null
   }
   units: FacultyUnit[]
   sessions: FacultyLecturerSession[]
@@ -907,4 +931,203 @@ export interface QaDashboard {
   complianceByCategory: QaComplianceByCategory[]
   overdueCapaCount: number
   attendanceTrends: QaAttendanceTrendPoint[]
+}
+
+/** GET /departments/lecturer-directory — anyone who can be allocated to a section, own staff first. */
+export interface LecturerDirectoryEntry {
+  userId: string
+  fullName: string
+  staffNumber: string
+  title: string | null
+  departmentId: string | null
+  departmentName: string | null
+}
+
+/** GET /faculties/lecturer-placement and /admin/lecturers — a lecturer and the department they belong to, if any. */
+export interface PlacementLecturer {
+  userId: string
+  fullName: string
+  staffNumber: string
+  title: string | null
+  email: string
+  /** Null while unassigned: SMARTTT's department name matched no department here. */
+  departmentId: string | null
+  departmentName: string | null
+  facultyId: string | null
+  facultyName: string | null
+  /** What SMARTTT/ERP called their department and faculty, to help decide where they belong. */
+  reportedDepartment: string | null
+  reportedFaculty: string | null
+  unitCount: number
+}
+
+/** GET /admin/departments */
+export interface AdminDepartment {
+  departmentId: string
+  name: string
+  facultyId: string | null
+  facultyName: string | null
+  lecturerCount: number
+}
+
+/** GET /attendance-policy — the minimum attendance to sit exams, one setting for the institution. */
+export interface AttendancePolicy {
+  minAttendancePercent: number
+  atRiskMarginPercent: number
+  updatedAt: string
+  updatedByName: string | null
+}
+
+export type EligibilityStatus = 'ELIGIBLE' | 'AT_RISK' | 'NOT_ELIGIBLE' | 'NOT_YET_MEASURED'
+
+/** One (student, unit) pair judged against the attendance policy. */
+export interface EligibilityRow {
+  allocationId: string
+  studentUserId: string | null
+  registrationNumber: string | null
+  fullName: string | null
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  lecturerName: string
+  departmentId: string | null
+  departmentName: string | null
+  sessionsHeld: number
+  sessionsAttended: number
+  attendanceRate: number | null
+  status: EligibilityStatus
+}
+
+/** GET /departments/eligibility, /faculties/eligibility, /quality-assurance/eligibility */
+export interface EligibilityReport {
+  policy: AttendancePolicy
+  summary: { total: number; eligible: number; atRisk: number; notEligible: number; notYetMeasured: number }
+  /** At-risk and not-eligible rows only, worst first, unless asked for all. */
+  rows: EligibilityRow[]
+}
+
+export type EvaluationQuestionKind = 'RATING' | 'TEXT'
+export type EvaluationRoundStatus = 'UPCOMING' | 'OPEN' | 'CLOSED'
+
+export interface EvaluationQuestion {
+  id: string
+  position: number
+  prompt: string
+  kind: EvaluationQuestionKind
+  required: boolean
+}
+
+export interface EvaluationQuestionInput {
+  prompt: string
+  kind: EvaluationQuestionKind
+  required: boolean
+}
+
+/** A course evaluation round as listed. */
+export interface EvaluationRound {
+  id: string
+  title: string
+  instructions: string | null
+  opensAt: string
+  closesAt: string
+  status: EvaluationRoundStatus
+  /** Below this many responses a unit's results are withheld, so a small class cannot be read off. */
+  minResponses: number
+  questionCount: number
+  responseCount: number
+  createdAt: string
+}
+
+export interface EvaluationRoundDetail extends EvaluationRound {
+  questions: EvaluationQuestion[]
+  /** False once any student has answered: the questions are then fixed. */
+  questionsEditable: boolean
+}
+
+export interface EvaluationRoundInput {
+  title: string
+  instructions?: string
+  opensAt: string
+  closesAt: string
+  minResponses?: number
+  questions: EvaluationQuestionInput[]
+}
+
+export interface EvaluationQuestionResult {
+  questionId: string
+  answered: number
+  /** 1–5, two decimals. */
+  average: number
+  /** How many 1s, 2s, 3s, 4s and 5s. */
+  distribution: [number, number, number, number, number]
+}
+
+export interface EvaluationUnitResult {
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  lecturerName: string | null
+  departmentId: string | null
+  departmentName: string | null
+  responses: number
+  enrolled: number
+  responseRate: number | null
+  /** False below the round's minimum responses: ratings and comments are withheld. */
+  reportable: boolean
+  ratings: EvaluationQuestionResult[]
+  comments: { questionId: string; text: string }[]
+}
+
+/** GET …/evaluations/:id(/results) */
+export interface EvaluationResults {
+  round: EvaluationRoundDetail
+  totalResponses: number
+  overall: EvaluationQuestionResult[]
+  units: EvaluationUnitResult[]
+}
+
+/** GET /students/me/evaluations — an open round with the student's units in it. */
+export interface StudentEvaluationRound {
+  id: string
+  title: string
+  instructions: string | null
+  closesAt: string
+  questions: EvaluationQuestion[]
+  units: { unitId: string; unitCode: string; unitName: string | null; lecturerName: string; submitted: boolean }[]
+}
+
+export interface EvaluationAnswerInput {
+  questionId: string
+  rating?: number
+  text?: string
+}
+
+/** PATCH …/lecturers/:id/department — the lecturer as placed, plus what the system learned from it. */
+export interface PlacementResult extends PlacementLecturer {
+  /** SMARTTT's spelling, now recognised as this department; null when nothing new was learned. */
+  learnedSpelling: string | null
+  /** Other unassigned lecturers with the same spelling, placed along with this one. */
+  alsoPlaced: number
+}
+
+/** GET /admin/department-aliases — another spelling of a department, learned from a placement or a merge. */
+export interface DepartmentAlias {
+  aliasId: string
+  alias: string
+  departmentId: string
+  departmentName: string
+  facultyName: string | null
+  source: 'PLACEMENT' | 'MERGE'
+  createdByName: string | null
+  createdAt: string
+}
+
+/** GET /admin/department-duplicates — one of a group of departments whose names mean the same thing. */
+export interface DuplicateDepartment {
+  departmentId: string
+  name: string
+  facultyId: string | null
+  facultyName: string | null
+  lecturerCount: number
+  unitCount: number
 }

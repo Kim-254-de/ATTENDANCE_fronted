@@ -1,4 +1,4 @@
-import { MIN_REQUIRED_ATTENDANCE } from '@/lib/attendancePolicy'
+import { useMinAttendance } from '@/lib/attendancePolicy'
 
 /** Minutes past a class's scheduled start before the officer's eye should be drawn to it. */
 const LATE_MINUTES_THRESHOLD = 5
@@ -14,7 +14,8 @@ const formatRate = (rate: number | null) => (rate === null ? '—' : `${rate.toF
  * than green, so a column of rates can be scanned without reading any of them.
  */
 export function RateBar({ rate, label }: { rate: number | null; label: string }) {
-  const below = rate !== null && rate < MIN_REQUIRED_ATTENDANCE
+  const minimum = useMinAttendance()
+  const below = rate !== null && rate < minimum
   const tone = rate === null ? 'text-muted' : below ? 'text-orange-600' : 'text-success'
   return (
     <div className="flex items-center gap-3">
