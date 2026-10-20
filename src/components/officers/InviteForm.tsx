@@ -17,6 +17,7 @@ export function InviteForm({
   onInvite,
   children,
   canSubmit = true,
+  brightGold = false,
 }: {
   title: string
   description: string
@@ -25,6 +26,7 @@ export function InviteForm({
   onInvite: (invitee: { fullName: string; email: string }, done: () => void) => void
   children?: ReactNode
   canSubmit?: boolean
+  brightGold?: boolean
 }) {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -55,7 +57,7 @@ export function InviteForm({
           <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 md:col-span-2">{errorMessage(error, 'Could not send the invitation.')}</p>
         ) : null}
         <div className="md:col-span-2">
-          <Button type="submit" loading={pending} disabled={!fullName.trim() || !email.trim() || !canSubmit}>
+          <Button type="submit" variant={brightGold ? 'brightGold' : 'primary'} loading={pending} disabled={!fullName.trim() || !email.trim() || !canSubmit}>
             <MailPlus className="size-4" aria-hidden /> Send invitation
           </Button>
         </div>

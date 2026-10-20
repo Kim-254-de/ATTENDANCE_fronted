@@ -151,11 +151,11 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
 
         <div className="flex justify-end"><Link to={`/forgot-password?role=${role}`} className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
 
-        <Button type="submit" variant={isStudent ? 'accent' : isOfficer ? 'primary' : 'lecturer'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
+        <Button type="submit" variant={isOfficer ? 'primary' : 'accent'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
         {isStudent && <SocialSignIn />}
       </form>
       {/* Nobody signs up here: students and lecturers use their SMARTTT account, officers are provisioned. */}
-      {viaSmarttt && <SmartttAccountNotice className="mt-6" />}
+      {isStudent && viaSmarttt && <SmartttAccountNotice className="mt-6" />}
     </AuthShell>
   )
 }

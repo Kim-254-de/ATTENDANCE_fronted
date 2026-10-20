@@ -32,7 +32,7 @@ export function DepartmentsPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex justify-end">
         {!adding && (
-          <Button onClick={() => setAdding(true)}>
+          <Button variant="brightGold" onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden /> New department
           </Button>
         )}

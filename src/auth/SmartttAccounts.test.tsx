@@ -20,6 +20,7 @@ describe('signing in with a SMARTTT account', () => {
     renderApp('/login?role=lecturer')
     expect(await screen.findByLabelText('SMARTTT staff ID or email')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /create an account/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/no account yet\?/i)).not.toBeInTheDocument()
   })
 
   it('leaves officers on their attendance password', async () => {
