@@ -53,6 +53,12 @@ describe('admin console', () => {
     expect(within(table).getByText('Prof. Grace N. Mutiso')).toBeInTheDocument()
     // No way to remove your own access.
     expect(within(table).queryByRole('button', { name: /remove ms\. aisha njeri's access/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /account menu/i }))
+    await user.click(screen.getByRole('link', { name: /my profile/i }))
+    expect(await screen.findByRole('heading', { name: 'My Profile' })).toBeInTheDocument()
+    expect(screen.getByText('Ms. Aisha Njeri')).toBeInTheDocument()
+    expect(screen.getByText('admin@university.edu')).toBeInTheDocument()
   })
 
   it('opens the account menu from the header avatar, with the profile and sign-out', async () => {

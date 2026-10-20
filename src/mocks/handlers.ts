@@ -1,5 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
-import type { Account, Admin, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AdminFaculty, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, LecturerDirectoryEntry, PlacementLecturer, StudentEvaluationRound, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, InvitationDetails, Officer, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import type { EnrolmentStudent, Terminal, TerminalCapability } from '@/portals/department/terminals/terminalsApi'
+import type { Account, Admin, AdminDepartment, AdminFaculty, Allocation, AttendanceMark, AttendancePolicy, CheckInResult, CourseOffering, CreateSessionInput, CreateUnitInput, CurrentQr, DepartmentAlias, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, DuplicateDepartment, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, GeofenceStatus, InvitationDetails, Lecturer, LecturerDirectoryEntry, LecturerStudent, Officer, Overview, PlacementLecturer, PlacementResult, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaCapaStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentEvaluationRound, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -181,6 +182,7 @@ export const resetMocks = () => {
   resetOfficerMocks()
   resetQaMocks()
   resetOversightMocks()
+  resetTerminalMocks()
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -2494,4 +2496,119 @@ const oversightHandlers = [
   }),
 ]
 
-export const handlers = [...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+// --- Portable terminals and fingerprint enrolment (backend docs/terminals.md) ---
+
+const seedTerminals = (): Terminal[] => [
+  {
+    id: 'term-1', code: 'CS-TERM-01', label: 'Department office pool', capabilities: ['BARCODE', 'FINGERPRINT'], status: 'ACTIVE',
+    pairingExpiresAt: null, pairedAt: '2026-10-01T08:00:00Z', lastSeenAt: new Date().toISOString(), batteryPercent: 82,
+    network: 'WIFI', appVersion: '1.0.0', linkedSession: null, createdAt: '2026-10-01T07:55:00Z',
+  },
+  {
+    id: 'term-2', code: 'CS-TERM-02', label: null, capabilities: ['BARCODE'], status: 'PENDING',
+    pairingExpiresAt: new Date(Date.now() + 20 * 60_000).toISOString(), pairedAt: null, lastSeenAt: null, batteryPercent: null,
+    network: null, appVersion: null, linkedSession: null, createdAt: '2026-10-18T09:00:00Z',
+  },
+]
+let mockTerminals = seedTerminals()
+const seedEnrolment = (): EnrolmentStudent[] => DEPARTMENT_EXTRA_STUDENTS.map((st, i) => ({
+  registrationNumber: st.registrationNumber, studentUserId: `dept-stu-${i}`, fullName: st.fullName,
+  unitCodes: [DEPARTMENT_UNITS.find((u) => u.id === st.unitId)?.code ?? st.unitId],
+  fingerprints: i === 0 ? [{ id: 'fp-0', terminalCode: 'CS-TERM-01', label: 'right index', enrolledAt: '2026-10-02T10:00:00Z' }] : [],
+  pending: [],
+}))
+let mockEnrolment = seedEnrolment()
+let mockIds = 0
+function resetTerminalMocks() { mockTerminals = seedTerminals(); mockEnrolment = seedEnrolment(); mockIds = 0 }
+const mockPairingCode = () => `${String(++mockIds).padStart(5, '0')}-ABCDE`
+const pairingFor = (t: Terminal) => ({ terminal: t, pairingCode: mockPairingCode(), expiresAt: new Date(Date.now() + 30 * 60_000).toISOString() })
+
+const terminalHandlers = [
+  http.get(`${API}/departments/terminals`, () => requireDepartment() ?? ok(mockTerminals)),
+
+  http.post(`${API}/departments/terminals`, async ({ request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const body = (await request.json()) as { code: string; label?: string; capabilities: TerminalCapability[] }
+    const code = body.code.trim().toUpperCase()
+    if (mockTerminals.some((t) => t.code === code)) return fail(409, 'CONFLICT', `A terminal called ${code} already exists. Pick another name.`)
+    const terminal: Terminal = {
+      id: `term-new-${++mockIds}`, code, label: body.label ?? null, capabilities: [...new Set(body.capabilities)], status: 'PENDING',
+      pairingExpiresAt: new Date(Date.now() + 30 * 60_000).toISOString(), pairedAt: null, lastSeenAt: null, batteryPercent: null,
+      network: null, appVersion: null, linkedSession: null, createdAt: new Date().toISOString(),
+    }
+    mockTerminals = [...mockTerminals, terminal]
+    return ok(pairingFor(terminal), 201)
+  }),
+
+  http.post(`${API}/departments/terminals/:id/:action`, ({ params }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const terminal = mockTerminals.find((t) => t.id === params.id)
+    if (!terminal) return fail(404, 'NOT_FOUND', 'Terminal not found.')
+    const action = params.action as string
+    if (action === 'pairing') {
+      if (terminal.status === 'RETIRED') return fail(409, 'CONFLICT', 'This terminal is retired. Add a new one instead.')
+      const next: Terminal = { ...terminal, status: 'PENDING', linkedSession: null, pairingExpiresAt: new Date(Date.now() + 30 * 60_000).toISOString() }
+      mockTerminals = mockTerminals.map((t) => (t.id === next.id ? next : t))
+      return ok(pairingFor(next))
+    }
+    if (action === 'lost' || action === 'retire') {
+      const next: Terminal = { ...terminal, status: action === 'lost' ? 'LOST' : 'RETIRED', linkedSession: null, pairingExpiresAt: null }
+      mockTerminals = mockTerminals.map((t) => (t.id === next.id ? next : t))
+      return ok(next)
+    }
+    if (action === 'enrolments') return undefined
+    return fail(404, 'NOT_FOUND', 'Not found.')
+  }),
+
+  http.post(`${API}/departments/terminals/:id/enrolments`, async ({ params, request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const terminal = mockTerminals.find((t) => t.id === params.id)
+    if (!terminal) return fail(404, 'NOT_FOUND', 'Terminal not found.')
+    const { registrationNumber } = (await request.json()) as { registrationNumber: string }
+    const student = mockEnrolment.find((st) => st.registrationNumber === registrationNumber.toUpperCase())
+    if (!student) return fail(404, 'NOT_FOUND', "No student with that number is on your department's class lists.")
+    const commandId = `cmd-${++mockIds}`
+    student.pending = [...student.pending, { id: commandId, kind: 'ENROL_FINGERPRINT', terminalCode: terminal.code, label: null, createdAt: new Date().toISOString() }]
+    return ok({ commandId, studentUserId: student.studentUserId }, 201)
+  }),
+
+  http.get(`${API}/departments/enrolment/students`, ({ request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const q = (new URL(request.url).searchParams.get('q') ?? '').toLowerCase()
+    return ok(mockEnrolment.filter((st) => !q || st.registrationNumber.toLowerCase().includes(q) || (st.fullName ?? '').toLowerCase().includes(q)))
+  }),
+
+  http.post(`${API}/departments/enrolment/commands/:id/cancel`, ({ params }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const student = mockEnrolment.find((st) => st.pending.some((p) => p.id === params.id))
+    if (!student) return fail(404, 'NOT_FOUND', 'Request not found.')
+    student.pending = student.pending.filter((p) => p.id !== params.id)
+    return ok({ cancelled: true })
+  }),
+
+  http.delete(`${API}/departments/enrolment/fingerprints/:id`, ({ params }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const student = mockEnrolment.find((st) => st.fingerprints.some((f) => f.id === params.id))
+    const fingerprint = student?.fingerprints.find((f) => f.id === params.id)
+    if (!student || !fingerprint) return fail(404, 'NOT_FOUND', 'Enrolment not found.')
+    student.fingerprints = student.fingerprints.filter((f) => f.id !== params.id)
+    student.pending = [...student.pending, { id: `cmd-${++mockIds}`, kind: 'DELETE_FINGERPRINT', terminalCode: fingerprint.terminalCode, label: null, createdAt: new Date().toISOString() }]
+    return ok({ revoked: true })
+  }),
+
+  http.get(`${API}/sessions/:id/terminal-link`, ({ params }) => {
+    if (!store.get()) return unauthorized()
+    const session = sessions.get(params.id as string)
+    if (!session) return fail(404, 'NOT_FOUND', 'Session not found.')
+    if (session.status === 'CLOSED') return fail(409, 'CONFLICT', 'This class session has ended.')
+    return ok({ linkCode: `ATL1.${session.id}.${Math.floor(Date.now() / 1000) + 300}.mocksignature`, expiresAt: new Date(Date.now() + 300_000).toISOString() })
+  }),
+]
+
+export const handlers = [...terminalHandlers, ...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

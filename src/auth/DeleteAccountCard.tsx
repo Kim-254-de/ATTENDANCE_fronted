@@ -46,12 +46,6 @@ export function DeleteAccountCard() {
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-danger-soft text-danger"><AlertTriangle className="size-5" aria-hidden /></span>
         <div>
           <h3 className="font-bold text-ink">Delete account</h3>
-          <p className="mt-1 text-sm text-muted">
-            {role === 'student'
-              ? 'Removes your name, email, photo, passkeys and any registered face, fingerprint or card. Classes you attended still count in your lecturers’ figures, without your name.'
-              : 'Removes your name, email, photo and passkeys, and closes any class still open. Your units and past sessions stay in the department’s figures, without your name.'}{' '}
-            This cannot be undone.
-          </p>
         </div>
       </div>
       {open ? (
@@ -79,14 +73,14 @@ export function DeleteAccountCard() {
               loading={deleteAccount.isPending}
               disabled={!password}
             >
-              <Trash2 className="size-4" aria-hidden /> Delete my account
+              <Trash2 className="size-4" aria-hidden /> {role === 'lecturer' ? 'Delete account' : 'Delete my account'}
             </Button>
             <Button type="button" variant="secondary" onClick={close} disabled={deleteAccount.isPending}>Cancel</Button>
           </div>
         </form>
       ) : (
         <Button variant="danger" className="mt-5" onClick={() => setOpen(true)}>
-          <Trash2 className="size-4" aria-hidden /> Delete account…
+          <Trash2 className="size-4" aria-hidden /> Delete account
         </Button>
       )}
     </Card>

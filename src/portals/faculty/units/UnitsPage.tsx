@@ -33,8 +33,6 @@ export function UnitsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <p className="max-w-2xl text-sm text-muted">Units taught across your faculty this semester, with who teaches each, which department, and how well its classes are attended.</p>
-
       <div className="flex flex-wrap items-center gap-3">
         <label className="relative min-w-[240px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />

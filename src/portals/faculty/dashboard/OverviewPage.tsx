@@ -1,10 +1,9 @@
 import { BookOpen, Building2, ClipboardCheck, GraduationCap, Radio, Timer, Users } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { StatCard } from '@/components/ui/StatCard'
 import { errorMessage } from '@/lib/api'
-import { useFacultyProfile, useOverview } from './dashboardApi'
+import { useOverview } from './dashboardApi'
 
 /**
  * What a faculty officer wants in one glance: how big the faculty is, how
@@ -14,14 +13,9 @@ import { useFacultyProfile, useOverview } from './dashboardApi'
  */
 export function OverviewPage() {
   const { data, isPending, error, refetch } = useOverview()
-  const faculty = useFacultyProfile()
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
-      <p className="max-w-2xl text-sm text-muted">
-        Attendance across every department in {faculty.data?.facultyName ?? 'your faculty'}, and how punctually its classes are opened.
-      </p>
-
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
           <p className="text-sm text-danger">{errorMessage(error, 'Could not load the faculty overview.')}</p>
@@ -45,26 +39,6 @@ export function OverviewPage() {
         </section>
       )}
 
-      <section aria-label="Explore" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <QuickLink to="/faculty-departments" icon={Building2} label="Departments" hint="Compare load and attendance" />
-        <QuickLink to="/faculty-lecturers" icon={GraduationCap} label="Lecturers" hint="Load, attendance and punctuality" />
-        <QuickLink to="/faculty-students" icon={Users} label="Students" hint="Every student, every unit" />
-        <QuickLink to="/faculty-units" icon={BookOpen} label="Units" hint="Who teaches what, and how well attended" />
-      </section>
     </div>
-  )
-}
-
-function QuickLink({ to, icon: Icon, label, hint }: { to: string; icon: typeof BookOpen; label: string; hint: string }) {
-  return (
-    <Link to={to} className="block">
-      <Card className="flex items-center gap-3 p-5 transition hover:shadow-md">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-ink"><Icon className="size-5" aria-hidden /></span>
-        <span className="min-w-0 leading-tight">
-          <span className="block font-semibold text-ink">{label}</span>
-          <span className="text-xs text-muted">{hint}</span>
-        </span>
-      </Card>
-    </Link>
   )
 }

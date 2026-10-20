@@ -208,6 +208,16 @@ export const routes = [
             lazy: async () => ({ Component: (await import('@/portals/department/evaluations/EvaluationResultsPage')).EvaluationResultsPage }),
             handle: { title: 'Evaluation Results' },
           },
+          {
+            path: 'department-terminals',
+            lazy: async () => ({ Component: (await import('@/portals/department/terminals/TerminalsPage')).TerminalsPage }),
+            handle: { title: 'Terminals' },
+          },
+          {
+            path: 'department-enrolment',
+            lazy: async () => ({ Component: (await import('@/portals/department/terminals/EnrolmentPage')).EnrolmentPage }),
+            handle: { title: 'Fingerprint Enrolment' },
+          },
         ],
       },
       {

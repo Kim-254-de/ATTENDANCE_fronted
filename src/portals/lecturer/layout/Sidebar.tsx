@@ -5,10 +5,10 @@ import { useLogout } from '@/auth/authApi'
 
 const nav = [
   { to: '/lecturer-dashboard', label: 'Dashboard', icon: LayoutGrid, end: true },
-  { to: '/profile', label: 'My Profile', icon: UserRound },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/units', label: 'Units', icon: BookOpen },
+  { to: '/profile', label: 'Profile', icon: UserRound },
 ]
 
 /**
@@ -57,7 +57,7 @@ export function Sidebar() {
       <div className="mt-auto">
         <button
           onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) })}
-          className="flex w-full items-center gap-3 rounded-xl border border-red-400 px-3 py-2.5 text-sm text-red-300 transition hover:border-red-600 hover:bg-red-600 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-xl border border-red-400 px-3 py-2.5 text-sm text-white transition hover:border-red-600 hover:bg-red-600 hover:text-white"
         >
           <LogOut className="size-4.5" aria-hidden /> Sign Out
         </button>

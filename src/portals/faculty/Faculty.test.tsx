@@ -33,8 +33,15 @@ describe('faculty portal', () => {
     // Departments and Lecturers both happen to read 3 here, so count distinct stat values instead of a specific one.
     expect(within(stats).getAllByText('3').length).toBe(2)
     expect(within(stats).getByText('260')).toBeInTheDocument()
-    // The faculty's own name comes from GET /faculties/me.
-    expect(await screen.findByText(/attendance across every department in physical engineering and technologies/i)).toBeInTheDocument()
+    // The dashboard now opens directly on the statistics without an intro sentence.
+    expect(screen.queryByText(/attendance across every department in physical engineering and technologies/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /account menu/i }))
+    await user.click(screen.getByRole('link', { name: /my profile/i }))
+    expect(await screen.findByRole('heading', { name: 'My Profile' })).toBeInTheDocument()
+    expect(screen.getByText('Prof. Daniel K. Rotich')).toBeInTheDocument()
+    expect(screen.getByText('d.rotich@university.edu')).toBeInTheDocument()
+    expect(screen.getByText('Faculty officer · Physical Engineering and Technologies')).toBeInTheDocument()
   })
 
   it('does not offer self-registration on the staff sign-in form', async () => {

@@ -77,3 +77,17 @@ export const useSetGeofence = (sessionId: string | undefined) => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['sessions'] }),
   })
 }
+
+/**
+ * The code a department terminal scans to link itself to this class. Valid for
+ * five minutes, so it is re-fetched every four while it is on screen.
+ */
+export const useTerminalLink = (sessionId: string | undefined, enabled: boolean) =>
+  useQuery({
+    queryKey: ['sessions', sessionId, 'terminal-link'],
+    queryFn: async () => (await api.get<{ linkCode: string; expiresAt: string }>(`/sessions/${sessionId}/terminal-link`)).data,
+    enabled: enabled && !!sessionId,
+    refetchInterval: 4 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  })
