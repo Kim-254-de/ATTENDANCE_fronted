@@ -30,9 +30,6 @@ export function FaceCheckInCard() {
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-700"><ScanFace className="size-5" aria-hidden /></span>
         <div>
           <h2 id="face-checkin-title" className="font-semibold text-navy-900">Face check-in</h2>
-          <p className="mt-0.5 text-sm text-muted">
-            If you can't scan the QR code, your lecturer can check you in by photographing your face on their phone.
-          </p>
         </div>
       </div>
 

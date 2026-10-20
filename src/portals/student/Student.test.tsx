@@ -111,6 +111,11 @@ describe('deleting the account', () => {
   it('asks for the password, then signs the student out for good', async () => {
     const user = await signInAsStudent('/student-profile')
 
+    expect(await screen.findByRole('heading', { name: 'Face check-in' })).toBeInTheDocument()
+    expect(screen.queryByText(/If you can't scan the QR code/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Removes your name, email, photo/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/This cannot be undone/i)).not.toBeInTheDocument()
+
     await user.click(await screen.findByRole('button', { name: /delete account/i }))
     await user.type(screen.getByLabelText(/your password/i), 'wrong')
     await user.click(screen.getByRole('button', { name: /delete my account/i }))

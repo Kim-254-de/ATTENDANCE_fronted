@@ -8,12 +8,12 @@ beforeEach(() => { vi.stubEnv('VITE_SMARTTT_ACCOUNTS', 'true') })
 afterEach(() => { vi.unstubAllEnvs() })
 
 describe('signing in with a SMARTTT account', () => {
-  it('tells students to use their SMARTTT login, with no Register tab', async () => {
+  it('tells students to use their SMARTTT login without a sign-up notice or Register tab', async () => {
     renderApp('/login?role=student')
     expect(await screen.findByText(/sign in with your smarttt account/i)).toBeInTheDocument()
     expect(screen.getByLabelText('SMARTTT admission number or email')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /^register$/i })).not.toBeInTheDocument()
-    expect(screen.getByText(/no separate sign-up/i)).toBeInTheDocument()
+    expect(screen.queryByText(/no separate sign-up/i)).not.toBeInTheDocument()
   })
 
   it('tells lecturers the same, with no Create an account link', async () => {

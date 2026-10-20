@@ -46,11 +46,6 @@ export function DeleteAccountCard() {
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-50 text-red-600"><AlertTriangle className="size-5" aria-hidden /></span>
         <div>
           <h3 className="font-bold text-navy-900">Delete account</h3>
-          {role === 'student' && (
-            <p className="mt-1 text-sm text-muted">
-              Removes your name, email, photo, passkeys and any registered face, fingerprint or card. Classes you attended still count in your lecturers’ figures, without your name. This cannot be undone.
-            </p>
-          )}
         </div>
       </div>
       {open ? (

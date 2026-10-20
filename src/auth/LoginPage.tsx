@@ -11,7 +11,6 @@ import { Field, IconField } from './AuthCard'
 import { AuthShell } from './AuthShell'
 import { useLogin, useMe } from './authApi'
 import { OVERSIGHT_ROLES, roleHome } from './roleHome'
-import { SmartttAccountNotice } from './SmartttAccountNotice'
 import { SocialSignIn } from './StudentAuthChrome'
 
 const schema = z.object({
@@ -155,7 +154,6 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
         {isStudent && <SocialSignIn />}
       </form>
       {/* Nobody signs up here: students and lecturers use their SMARTTT account, officers are provisioned. */}
-      {isStudent && viaSmarttt && <SmartttAccountNotice className="mt-6" />}
     </AuthShell>
   )
 }
