@@ -1,7 +1,4 @@
-import { MIN_REQUIRED_ATTENDANCE } from '@/lib/attendancePolicy'
 import type { AttendanceMark, StudentAttendanceRecord } from '@/types'
-
-export { MIN_REQUIRED_ATTENDANCE }
 
 /** A check-in more than this many minutes after the session opened counts as late. */
 const LATE_THRESHOLD_MINUTES = 30

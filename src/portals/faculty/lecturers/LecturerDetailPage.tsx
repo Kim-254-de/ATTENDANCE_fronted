@@ -40,7 +40,7 @@ export function LecturerDetailPage() {
               <h2 className="truncate text-lg font-bold text-navy-900">{data.lecturer.fullName}</h2>
               <p className="font-mono text-xs text-muted">{data.lecturer.staffNumber}</p>
             </div>
-            <span className="ml-auto shrink-0 rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{data.lecturer.departmentName}</span>
+            <span className="ml-auto shrink-0 rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{data.lecturer.departmentName ?? 'Unassigned'}</span>
             {lecturerUserId && (
               <DeleteAccountButton scope="faculty" kind="lecturer" userId={lecturerUserId} name={data.lecturer.fullName} onDeleted={() => navigate('/faculty-lecturers', { replace: true })} />
             )}

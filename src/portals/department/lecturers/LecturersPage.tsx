@@ -7,6 +7,7 @@ import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
 import type { DepartmentLecturer } from '@/types'
 import { AvgLateMinutes, RateBar } from '@/components/attendance/RateBar'
+import { BorrowedBadge } from '@/components/attendance/BorrowedBadge'
 import { useDepartmentLecturers } from './lecturersApi'
 
 const HEADERS = ['LECTURER', 'STAFF NO.', 'UNITS', 'STUDENTS', 'AVG. ATTENDANCE', 'SESSIONS', 'ON TIME']
@@ -84,10 +85,14 @@ function LecturerRow({ lecturer }: { lecturer: DepartmentLecturer }) {
         <Link to={`/department-lecturers/${lecturer.userId}`} className="flex items-center gap-2.5 hover:underline">
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-indigo-700 text-xs font-bold text-white">{initials(lecturer.fullName)}</span>
           <span className="font-medium text-navy-900">{lecturer.fullName}</span>
+          {!lecturer.isOwnStaff && <BorrowedBadge homeDepartmentName={lecturer.homeDepartmentName} />}
         </Link>
       </td>
       <td className="px-5 py-3 font-mono text-xs text-muted">{lecturer.staffNumber}</td>
-      <td className="px-5 py-3 text-navy-900">{lecturer.unitsTaught}</td>
+      <td className="px-5 py-3 text-navy-900">
+        {lecturer.unitsTaught}
+        {lecturer.unitsElsewhere > 0 && <span className="block text-xs text-muted">+{lecturer.unitsElsewhere} elsewhere</span>}
+      </td>
       <td className="px-5 py-3 text-navy-900">{lecturer.studentsTaught}</td>
       <td className="px-5 py-3"><RateBar rate={lecturer.avgAttendanceRate} label={`${lecturer.fullName} average attendance`} /></td>
       <td className="px-5 py-3 text-navy-900">{lecturer.sessionsHeld}</td>
