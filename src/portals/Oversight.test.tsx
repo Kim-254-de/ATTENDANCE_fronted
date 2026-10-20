@@ -46,7 +46,7 @@ describe('exam eligibility', () => {
     expect(screen.queryByText('John Mutua Kilonzo')).not.toBeInTheDocument()
 
     await user.click(screen.getByLabelText(/show every student/i))
-    expect(await screen.findByText('Ama Mensah')).toBeInTheDocument()
+    expect(await within(screen.getByRole('table')).findByText('Ama Mensah')).toBeInTheDocument()
   })
 
   it('lets QA change the rule, and the report follows it', async () => {
@@ -54,14 +54,16 @@ describe('exam eligibility', () => {
     await user.click(await screen.findByText('Exam Eligibility', { selector: 'span' }))
 
     const min = await screen.findByLabelText(/minimum attendance/i)
-    expect(await screen.findByText('Brian Otieno')).toBeInTheDocument()
+    // Phones get cards and wider screens a table; jsdom applies no CSS and renders both, so read the table.
+    const table = await screen.findByRole('table')
+    expect(await within(table).findByText('Brian Otieno')).toBeInTheDocument()
     await user.clear(min)
     await user.type(min, '66.67')
     await user.click(screen.getByRole('button', { name: /save rule/i }))
 
     // 70% (14 of 20) is now above two-thirds, but within the 10-point margin.
     await waitFor(() => {
-      const row = screen.getByText('Brian Otieno').closest('tr')!
+      const row = within(screen.getByRole('table')).getByText('Brian Otieno').closest('tr')!
       expect(within(row).getByText('At risk')).toBeInTheDocument()
     })
     expect(await screen.findByText(/last changed by ms\. susan achieng/i)).toBeInTheDocument()
@@ -127,7 +129,7 @@ describe('unifying department spellings', () => {
     await user.selectOptions(place, 'Computer Science')
     const card = screen.getByText('Dr. Samuel Kiprono').closest('li')!
     await user.click(within(card).getByRole('button', { name: /^place$/i }))
-    expect(await within(card).findByRole('status')).toHaveTextContent(/smarttt’s “comp\. sci & it” means computer science/i)
+    expect(await within(card).findByRole('status')).toHaveTextContent(/smarttt’s “comp\. sci & it” now means computer science/i)
   })
 
   it('lets an administrator merge a department created under a second spelling', async () => {
@@ -156,7 +158,7 @@ describe('course evaluations', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     await user.click(await screen.findByRole('link', { name: /course evaluation open/i }))
-    expect(await screen.findByText(/nothing you submit is stored with your name/i)).toBeInTheDocument()
+    expect(await screen.findByText(/your name is never stored with your answers/i)).toBeInTheDocument()
 
     const submit = screen.getByRole('button', { name: /submit evaluation/i })
     expect(submit).toBeDisabled()

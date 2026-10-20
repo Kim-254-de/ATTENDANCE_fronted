@@ -27,11 +27,7 @@ function Duplicates() {
     <section aria-labelledby="duplicates" className="space-y-3">
       <div>
         <h2 id="duplicates" className="font-semibold text-navy-900">Duplicate departments</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          Departments whose names mean the same thing once spelling, punctuation and abbreviations are ignored. Merging moves the
-          duplicate’s lecturers, officers, courses, units, audits and evaluation results into the department you keep. Its name stays
-          recognised as a spelling of the kept one. A merge cannot be undone.
-        </p>
+        <p className="mt-1 text-sm text-muted">The same department under different names. Merge them into one.</p>
       </div>
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
@@ -59,7 +55,8 @@ function DuplicateGroup({ group }: { group: DuplicateDepartment[] }) {
 
   const mergeAll = async () => {
     const others = group.filter((d) => d.departmentId !== keepId)
-    if (!window.confirm(`Merge ${others.map((d) => `“${d.name}”`).join(', ')} into “${keep.name}”? This cannot be undone.`)) return
+    const names = others.map((d) => `“${d.name}”`).join(', ')
+    if (!window.confirm(`Merge ${names} into “${keep.name}”?\n\nIts lecturers, officers, courses, units, audits and evaluation results move to “${keep.name}”. This cannot be undone.`)) return
     for (const d of others) await merge.mutateAsync({ duplicateId: d.departmentId, intoDepartmentId: keepId })
   }
 
@@ -74,7 +71,7 @@ function DuplicateGroup({ group }: { group: DuplicateDepartment[] }) {
                 <input type="radio" name={`keep-${group[0]!.departmentId}`} checked={keepId === d.departmentId} onChange={() => setKeepId(d.departmentId)} className="mt-1 accent-navy-900" />
                 <span className="min-w-0">
                   <span className="block font-medium text-navy-900">{d.name}</span>
-                  <span className="text-xs text-muted">
+                  <span className="block text-xs leading-5 text-muted">
                     {d.facultyName ?? 'No faculty'} · {d.lecturerCount} lecturer{d.lecturerCount === 1 ? '' : 's'} · {d.unitCount} unit{d.unitCount === 1 ? '' : 's'}
                   </span>
                 </span>
@@ -98,17 +95,14 @@ function Spellings() {
     <section aria-labelledby="spellings" className="space-y-3">
       <div>
         <h2 id="spellings" className="font-semibold text-navy-900">Learned spellings</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          Other names SMARTTT uses for a department, learned when someone placed an unassigned lecturer or merged two departments.
-          Removing one doesn’t move anyone already placed. Future lecturers with that spelling will be left unassigned again.
-        </p>
+        <p className="mt-1 text-sm text-muted">Other names SMARTTT uses for a department.</p>
       </div>
       {error ? (
         <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(error, 'Could not load the learned spellings.')}</Card>
       ) : isPending || !aliases ? (
         <Skeleton className="h-24" />
       ) : aliases.length === 0 ? (
-        <Card className="p-5 text-sm text-muted">None yet. They appear as unassigned lecturers are placed.</Card>
+        <Card className="p-5 text-sm text-muted">None yet.</Card>
       ) : (
         <Card className="divide-y divide-line">
           {aliases.map((a) => (

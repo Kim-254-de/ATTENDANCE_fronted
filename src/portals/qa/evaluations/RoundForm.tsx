@@ -65,11 +65,17 @@ export function RoundForm({ initial, questionsLocked, submitLabel, pending, onSu
             <li key={i} className="rounded-xl border border-line p-3">
               <div className="flex flex-wrap items-start gap-2">
                 <span className="mt-3 w-5 text-sm font-semibold text-muted">{i + 1}.</span>
-                <label className="min-w-[200px] flex-1">
+                <label className="min-w-0 flex-1 basis-[calc(100%-2rem)] sm:basis-0">
                   <span className="sr-only">Question {i + 1}</span>
-                  <input value={q.prompt} onChange={(e) => setQuestion(i, { prompt: e.target.value })} disabled={questionsLocked} className="input" />
+                  <textarea
+                    value={q.prompt}
+                    onChange={(e) => setQuestion(i, { prompt: e.target.value })}
+                    disabled={questionsLocked}
+                    maxLength={300}
+                    className="input h-auto min-h-11 resize-none py-2 field-sizing-content"
+                  />
                 </label>
-                <label>
+                <label className="pl-7 sm:pl-0">
                   <span className="sr-only">Question {i + 1} type</span>
                   <select value={q.kind} onChange={(e) => setQuestion(i, { kind: e.target.value as EvaluationQuestionInput['kind'] })} disabled={questionsLocked} className="input w-auto">
                     <option value="RATING">Rating 1–5</option>

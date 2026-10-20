@@ -65,9 +65,9 @@ export function EvaluationResultsView({ results, showDepartment }: { results: Ev
                   <p className="mt-2 font-semibold text-navy-900">{u.unitName ?? u.unitCode}</p>
                   <p className="text-sm text-muted">{u.lecturerName ?? 'Former lecturer'}{showDepartment && u.departmentName ? ` · ${u.departmentName}` : ''}</p>
                 </div>
-                <p className="text-right text-sm text-muted">
-                  <span className="block text-xl font-bold text-navy-900">{u.responses}</span>
-                  of {u.enrolled} student{u.enrolled === 1 ? '' : 's'}{u.responseRate !== null ? ` (${u.responseRate}%)` : ''}
+                <p className="w-full text-sm text-muted sm:w-auto sm:text-right">
+                  <span className="text-navy-900 sm:block sm:text-xl sm:font-bold">{u.responses}<span className="sm:hidden"> response{u.responses === 1 ? '' : 's'}</span></span>
+                  {' '}of {u.enrolled} student{u.enrolled === 1 ? '' : 's'}{u.responseRate !== null ? ` (${u.responseRate}%)` : ''}
                 </p>
               </div>
               {u.reportable ? (

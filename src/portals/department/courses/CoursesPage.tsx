@@ -21,7 +21,7 @@ export function CoursesPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <p className="max-w-2xl text-sm text-muted">Courses your faculty has provided. Decide how many sections each needs, then assign a lecturer to each. You can assign a lecturer from another department; the unit stays yours.</p>
+      <p className="max-w-2xl text-sm text-muted">Set the sections each course needs, then assign a lecturer to each, from any department.</p>
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">

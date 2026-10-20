@@ -6,7 +6,7 @@ export function EvaluationsPage() {
   const { data, isPending, error, refetch } = useFacultyEvaluations()
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <p className="max-w-2xl text-sm text-muted">What students said about the units your faculty’s departments own. Responses are anonymous.</p>
+      <p className="max-w-2xl text-sm text-muted">What students said about your faculty’s units.</p>
       <EvaluationRoundList rounds={data} isPending={isPending} error={error} refetch={refetch} linkTo={(id) => `/faculty-evaluations/${id}`} />
     </div>
   )

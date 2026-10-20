@@ -61,10 +61,8 @@ export function EligibilityReport({ data, isPending, error, refetch, showAll, on
 
   return (
     <div className="space-y-6">
-      <p className="max-w-3xl text-sm text-muted">
-        {policy
-          ? <>Students must attend at least <strong className="text-navy-900">{policy.minAttendancePercent}%</strong> of a unit’s classes to sit its exam. Within {policy.atRiskMarginPercent} points above that counts as at risk. Standing is based on the classes held so far.</>
-          : 'Students must attend a minimum share of each unit’s classes to sit its exam.'}
+      <p className="text-sm text-muted">
+        Minimum to sit an exam: <strong className="text-navy-900">{policy ? `${policy.minAttendancePercent}%` : '…'}</strong> of a unit’s classes so far.
       </p>
 
       {filters && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{filters}</div>}
@@ -98,39 +96,67 @@ export function EligibilityReport({ data, isPending, error, refetch, showAll, on
       ) : rows.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted">No students match your search.</Card>
       ) : (
-        <Card className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-line text-xs font-semibold uppercase tracking-wider text-muted">
-                <th scope="col" className="px-5 py-3 font-semibold">Student</th>
-                <th scope="col" className="px-5 py-3 font-semibold">Unit</th>
-                {showDepartment && <th scope="col" className="px-5 py-3 font-semibold">Department</th>}
-                <th scope="col" className="px-5 py-3 font-semibold">Attended</th>
-                <th scope="col" className="px-5 py-3 font-semibold">Standing</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((r) => (
-                <tr key={r.allocationId}>
-                  <td className="px-5 py-3">
-                    <span className="block font-medium text-navy-900">{r.fullName ?? 'Not signed up yet'}</span>
-                    <span className="font-mono text-xs text-muted">{r.registrationNumber ?? '—'}</span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className="block font-semibold text-navy-900">{r.unitCode}</span>
-                    <span className="text-xs text-muted">{r.lecturerName}</span>
-                  </td>
-                  {showDepartment && <td className="px-5 py-3 text-navy-900">{r.departmentName ?? '—'}</td>}
-                  <td className="px-5 py-3 text-navy-900">
-                    <span className="font-semibold">{r.attendanceRate === null ? '—' : `${r.attendanceRate}%`}</span>
-                    <span className="block text-xs text-muted">{r.sessionsAttended} of {r.sessionsHeld} classes</span>
-                  </td>
-                  <td className="px-5 py-3"><EligibilityStatusBadge status={r.status} /></td>
+        <>
+          {/* Phones: one card per student, so the standing is never scrolled out of view. */}
+          <ul className="space-y-3 sm:hidden">
+            {rows.map((r) => (
+              <li key={r.allocationId}>
+                <Card className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium text-navy-900">{r.fullName ?? 'Not signed up yet'}</p>
+                      <p className="font-mono text-xs text-muted">{r.registrationNumber ?? '—'}</p>
+                    </div>
+                    <EligibilityStatusBadge status={r.status} />
+                  </div>
+                  <div className="mt-3 flex items-end justify-between gap-3 border-t border-line pt-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-navy-900">{r.unitCode}</p>
+                      <p className="truncate text-xs text-muted">{r.lecturerName}{showDepartment && r.departmentName ? ` · ${r.departmentName}` : ''}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-semibold text-navy-900">{r.attendanceRate === null ? '—' : `${r.attendanceRate}%`}</p>
+                      <p className="text-xs text-muted">{r.sessionsAttended} of {r.sessionsHeld} classes</p>
+                    </div>
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+          <Card className="hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-line text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th scope="col" className="px-5 py-3 font-semibold">Student</th>
+                  <th scope="col" className="px-5 py-3 font-semibold">Unit</th>
+                  {showDepartment && <th scope="col" className="px-5 py-3 font-semibold">Department</th>}
+                  <th scope="col" className="px-5 py-3 font-semibold">Attended</th>
+                  <th scope="col" className="px-5 py-3 font-semibold">Standing</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((r) => (
+                  <tr key={r.allocationId}>
+                    <td className="px-5 py-3">
+                      <span className="block font-medium text-navy-900">{r.fullName ?? 'Not signed up yet'}</span>
+                      <span className="font-mono text-xs text-muted">{r.registrationNumber ?? '—'}</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="block font-semibold text-navy-900">{r.unitCode}</span>
+                      <span className="text-xs text-muted">{r.lecturerName}</span>
+                    </td>
+                    {showDepartment && <td className="px-5 py-3 text-navy-900">{r.departmentName ?? '—'}</td>}
+                    <td className="px-5 py-3 text-navy-900">
+                      <span className="font-semibold">{r.attendanceRate === null ? '—' : `${r.attendanceRate}%`}</span>
+                      <span className="block text-xs text-muted">{r.sessionsAttended} of {r.sessionsHeld} classes</span>
+                    </td>
+                    <td className="px-5 py-3"><EligibilityStatusBadge status={r.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
       )}
     </div>
   )

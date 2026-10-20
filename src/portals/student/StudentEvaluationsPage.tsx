@@ -21,7 +21,7 @@ export function StudentEvaluationsPage() {
     <div className="space-y-5">
       <Card className="flex items-start gap-3 p-4">
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><ShieldCheck className="size-5" aria-hidden /></span>
-        <p className="text-sm text-muted">Your answers are anonymous. Nothing you submit is stored with your name, and lecturers only see results once several students have answered.</p>
+        <p className="text-sm text-muted">Anonymous. Your name is never stored with your answers.</p>
       </Card>
 
       {error ? (

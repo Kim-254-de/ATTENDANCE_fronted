@@ -59,7 +59,7 @@ function PolicyFields({ policy }: { policy: AttendancePolicy }) {
   return (
     <Card className="p-5">
       <h2 className="font-semibold text-navy-900">Attendance rule</h2>
-      <p className="mt-1 max-w-2xl text-sm text-muted">The minimum share of a unit’s classes a student must attend to sit its exam, as set by the Senate. Changes apply to every portal at once and are recorded in the audit log.</p>
+      <p className="mt-1 text-sm text-muted">Set by the Senate. Applies to every portal; changes are logged.</p>
       <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-3">
         <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
           Minimum attendance (%)

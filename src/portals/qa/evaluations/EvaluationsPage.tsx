@@ -33,10 +33,7 @@ export function EvaluationsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted">
-          While a round is open, every student can rate each unit they are on, once. Nothing they submit is linked to their name, and a
-          unit’s results stay hidden until enough students have answered.
-        </p>
+        <p className="text-sm text-muted">Students rate each of their units once, anonymously.</p>
         {!creating && <Button type="button" onClick={() => setCreating(true)}><Plus className="size-4" aria-hidden /> New round</Button>}
       </div>
 

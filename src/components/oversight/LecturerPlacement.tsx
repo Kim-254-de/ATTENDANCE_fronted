@@ -38,12 +38,7 @@ export function LecturerPlacement(props: Props) {
 
   return (
     <div className="space-y-6">
-      <p className="max-w-3xl text-sm text-muted">
-        Lecturers are placed in a department automatically when SMARTTT’s department name matches one here, however it is spelled or
-        abbreviated. Anyone it could not place is listed as unassigned and counts toward no department until you choose one. When you
-        place them, their spelling is remembered, so the next lecturer spelled the same way is placed automatically. Moving a lecturer changes only which department’s
-        staff they are. Their units stay with the departments that own them.
-      </p>
+      <p className="text-sm text-muted">Lecturers SMARTTT couldn’t match to a department come first. Place them once; their spelling is remembered.</p>
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="relative min-w-[220px] flex-1">
@@ -118,9 +113,9 @@ function PlacementRow({ lecturer, departments, onMove }: { lecturer: PlacementLe
                 : <span className="text-navy-900">{lecturer.departmentName}{lecturer.facultyName ? <span className="text-muted"> · {lecturer.facultyName}</span> : null}</span>}
             </p>
           </div>
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <label className="sr-only" htmlFor={`place-${lecturer.userId}`}>{unassigned ? 'Place' : 'Move'} {lecturer.fullName}</label>
-            <select id={`place-${lecturer.userId}`} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input w-full sm:w-56">
+            <select id={`place-${lecturer.userId}`} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input min-w-0 flex-1 sm:w-56 sm:flex-none">
               <option value="">{unassigned ? 'Choose a department…' : 'Move to…'}</option>
               {groups.map((g) => g
                 ? <optgroup key={g} label={g}>{choices.filter((d) => d.group === g).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
@@ -131,8 +126,8 @@ function PlacementRow({ lecturer, departments, onMove }: { lecturer: PlacementLe
         </div>
         {learned && (
           <p role="status" className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-success">
-            From now on, SMARTTT’s “{learned.learnedSpelling}” means {learned.departmentName}: lecturers with that spelling are placed here automatically.
-            {learned.alsoPlaced > 0 && ` ${learned.alsoPlaced} other unassigned lecturer${learned.alsoPlaced === 1 ? ' was' : 's were'} placed too.`}
+            SMARTTT’s “{learned.learnedSpelling}” now means {learned.departmentName}.
+            {learned.alsoPlaced > 0 && ` ${learned.alsoPlaced} more lecturer${learned.alsoPlaced === 1 ? '' : 's'} placed.`}
           </p>
         )}
         {moveError != null && <p role="alert" className="mt-2 text-sm text-red-600">{errorMessage(moveError)}</p>}
