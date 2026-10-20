@@ -59,6 +59,17 @@ describe('student home', () => {
 })
 
 describe('student units and history pages', () => {
+  it('reaches every page from the bottom bar, with evaluations offered on Units while a round is open', async () => {
+    const user = await signInAsStudent()
+    const bar = await screen.findByRole('navigation', { name: 'Primary' })
+    expect(within(bar).getAllByRole('link').map((l) => l.textContent)).toEqual(['Home', 'Units', 'History', 'Progress', 'Profile'])
+
+    await user.click(within(bar).getByRole('link', { name: 'Units' }))
+    expect(await screen.findByRole('heading', { name: 'My units' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /course evaluation open/i })).toBeInTheDocument()
+    expect((await screen.findAllByRole('link', { name: /rate this unit/i })).length).toBeGreaterThan(0)
+  })
+
   it("shows each unit's cumulative attendance rate, and picks up a fresh count after a scan", async () => {
     const { payload } = openMockSessionForScan('u1')
     const user = await signInAsStudent('/student-units')

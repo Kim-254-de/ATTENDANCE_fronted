@@ -13,6 +13,12 @@ import { QaLayout } from '@/portals/qa/layout/QaLayout'
 import { StudentLayout } from '@/portals/student/layout/StudentLayout'
 import { LandingPage } from '@/pages/LandingPage'
 
+/** Every officer role shares one profile page; the route says whose. */
+const officerProfile = (role: 'admin' | 'department' | 'faculty' | 'qa') => async () => {
+  const { OfficerProfilePage } = await import('@/components/officers/OfficerProfilePage')
+  return { Component: () => <OfficerProfilePage role={role} /> }
+}
+
 /** Sends an old sign-up link to the matching sign-in page, saying why. */
 function SignupRedirect() {
   const [searchParams] = useSearchParams()
@@ -153,6 +159,11 @@ export const routes = [
         handle: { role: 'department' },
         children: [
           {
+            path: 'department-profile',
+            lazy: officerProfile('department'),
+            handle: { title: 'My Profile' },
+          },
+          {
             path: 'department-dashboard',
             lazy: async () => ({ Component: (await import('@/portals/department/dashboard/OverviewPage')).OverviewPage }),
             handle: { title: 'Performance Dashboard' },
@@ -210,6 +221,11 @@ export const routes = [
         errorElement: <RouteError />,
         handle: { role: 'faculty' },
         children: [
+          {
+            path: 'faculty-profile',
+            lazy: officerProfile('faculty'),
+            handle: { title: 'My Profile' },
+          },
           {
             path: 'faculty-dashboard',
             lazy: async () => ({ Component: (await import('@/portals/faculty/dashboard/OverviewPage')).OverviewPage }),
@@ -284,7 +300,7 @@ export const routes = [
         children: [
           {
             path: 'admin-profile',
-            lazy: async () => ({ Component: (await import('@/portals/admin/AdminProfilePage')).AdminProfilePage }),
+            lazy: officerProfile('admin'),
             handle: { title: 'My Profile' },
           },
           {
@@ -314,6 +330,11 @@ export const routes = [
         errorElement: <RouteError />,
         handle: { role: 'qa' },
         children: [
+          {
+            path: 'qa-profile',
+            lazy: officerProfile('qa'),
+            handle: { title: 'My Profile' },
+          },
           {
             path: 'qa-dashboard',
             lazy: async () => ({ Component: (await import('@/portals/qa/dashboard/OverviewPage')).OverviewPage }),

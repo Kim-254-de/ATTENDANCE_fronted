@@ -29,7 +29,7 @@ export const useCreateFaculty = () => {
 }
 
 export type AdminInvitation =
-  | { role: 'admin'; fullName: string; email: string }
+  | { role: 'admin' | 'qa'; fullName: string; email: string }
   | { role: 'faculty'; fullName: string; email: string; facultyId: string }
 
 /** Invites an administrator, or a faculty officer for one faculty. */

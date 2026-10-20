@@ -1,14 +1,16 @@
 import { Outlet, useMatches } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
-import { formatLongDate, getGreeting, firstName, initials } from '@/lib/format'
+import { AccountMenu } from '@/components/layout/AccountMenu'
+import { officerSubtitle } from '@/components/officers/OfficerProfilePage'
+import { formatLongDate, getGreeting, firstName } from '@/lib/format'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
 
 /**
  * Shell for the faculty portal. Desktop-first like the department portal — an
- * officer reads these tables on a laptop — but with no profile page behind
- * the avatar: a provisioned account has nothing here to edit.
+ * officer reads these tables on a laptop. The avatar's menu holds the
+ * profile and sign-out, since phones have no sidebar.
  */
 export function FacultyLayout() {
   const title = [...useMatches()].reverse().map((m) => (m.handle as { title?: string } | undefined)?.title).find(Boolean)
@@ -29,15 +31,7 @@ export function FacultyLayout() {
               {user ? `${user.facultyName} · ${formatLongDate()}` : formatLongDate()}
             </p>
           </div>
-          {user && (
-            <span className="border-l border-line pl-4">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="size-10 rounded-full object-cover" />
-              ) : (
-                <span className="grid size-10 place-items-center rounded-full bg-brand text-sm font-bold text-white" title={user.fullName}>{initials(user.fullName)}</span>
-              )}
-            </span>
-          )}
+          {user && <AccountMenu user={user} subtitle={officerSubtitle(user)} profileTo="/faculty-profile" signOutTo="/oversight" />}
         </header>
         <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8 lg:px-10 lg:py-9">
           <Outlet />

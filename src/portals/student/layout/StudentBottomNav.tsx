@@ -1,13 +1,15 @@
 import clsx from 'clsx'
-import { History, Home, LineChart, MessageSquareQuote } from 'lucide-react'
+import { BookOpen, History, Home, LineChart, UserRound } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
-// Units are one tap away from Home ("My units →"), and Profile lives behind the avatar.
+// Five tabs, every one always useful. Course evaluations are seasonal, so they surface on Home and
+// Units only while a round is open (EvaluationPrompt) instead of holding a tab that is empty most of the term.
 const nav = [
   { to: '/student-dashboard', label: 'Home', icon: Home },
+  { to: '/student-units', label: 'Units', icon: BookOpen },
   { to: '/student-attendance', label: 'History', icon: History },
   { to: '/student-progress', label: 'Progress', icon: LineChart },
-  { to: '/student-evaluations', label: 'Evaluate', icon: MessageSquareQuote },
+  { to: '/student-profile', label: 'Profile', icon: UserRound },
 ]
 
 /**

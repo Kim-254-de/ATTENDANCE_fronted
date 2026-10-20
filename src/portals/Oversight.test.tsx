@@ -205,3 +205,23 @@ describe('course evaluations', () => {
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument()
   })
 })
+
+describe('the account menu', () => {
+  it.each([
+    ['department', DEPARTMENT, 'Department officer · Computer Science'],
+    ['faculty', FACULTY, /^Faculty officer · /],
+    ['QA', QA, /^Quality assurance/],
+  ])('lets a %s officer reach their profile and sign out without the desktop sidebar', async (_, email, subtitle) => {
+    const user = await signInAtOversight(email)
+    const header = await screen.findByRole('banner')
+    await user.click(await within(header).findByRole('button', { name: /account menu/i }))
+    expect(within(header).getByText(subtitle)).toBeInTheDocument()
+
+    await user.click(within(header).getByRole('link', { name: /my profile/i }))
+    expect(await screen.findByRole('heading', { name: 'Change password' })).toBeInTheDocument()
+
+    await user.click(within(screen.getByRole('banner')).getByRole('button', { name: /account menu/i }))
+    await user.click(within(screen.getByRole('banner')).getByRole('button', { name: /sign out/i }))
+    expect(await screen.findByRole('heading', { name: /staff sign-in/i })).toBeInTheDocument()
+  })
+})

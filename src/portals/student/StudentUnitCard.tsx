@@ -10,7 +10,7 @@ export const rateTone = (rate: number | null) =>
   rate === null ? 'text-muted' : rate >= 75 ? 'text-success' : rate >= 50 ? 'text-accent-ink' : 'text-danger'
 
 /** Shared between the dashboard's preview grid and the full My Units page. */
-export function UnitCard({ unit }: { unit: StudentUnit }) {
+export function UnitCard({ unit, evaluationPending = false }: { unit: StudentUnit; evaluationPending?: boolean }) {
   return (
     <li>
       <Card className="space-y-3 p-5">
@@ -32,6 +32,9 @@ export function UnitCard({ unit }: { unit: StudentUnit }) {
           <p className="text-sm text-brand-ink">Pick your group for this unit on the timetable app to be added to a class list.</p>
         ) : (
           <p className="text-sm text-muted">Attendance starts once your lecturer sets this unit up here.</p>
+        )}
+        {evaluationPending && (
+          <Link to="/student-evaluations" className="block text-sm font-semibold text-warning hover:underline">Rate this unit →</Link>
         )}
       </Card>
     </li>

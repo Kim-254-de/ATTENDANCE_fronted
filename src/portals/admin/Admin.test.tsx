@@ -55,19 +55,36 @@ describe('admin console', () => {
     expect(within(table).queryByRole('button', { name: /remove ms\. aisha njeri's access/i })).not.toBeInTheDocument()
   })
 
-  it('opens the administrator profile from the header badge without a header sign-out button', async () => {
+  it('opens the account menu from the header avatar, with the profile and sign-out', async () => {
     const user = userEvent.setup()
     await signInAtOversight(user, 'admin@university.edu')
     await screen.findByRole('table')
 
     const header = screen.getByRole('banner')
-    expect(within(header).queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument()
-    await user.click(within(header).getByRole('link', { name: /view profile/i }))
+    await user.click(within(header).getByRole('button', { name: /account menu/i }))
+    expect(within(header).getByRole('button', { name: /sign out/i })).toBeInTheDocument()
+    await user.click(within(header).getByRole('link', { name: /my profile/i }))
 
     expect(await screen.findByRole('heading', { name: 'My Profile' })).toBeInTheDocument()
-    expect(screen.getByText('Ms. Aisha Njeri')).toBeInTheDocument()
-    expect(screen.getByText('admin@university.edu')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /sign out/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Ms. Aisha Njeri').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('admin@university.edu').length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', { name: 'Change password' })).toBeInTheDocument()
+  })
+
+  it('invites a QA officer, who needs no faculty', async () => {
+    const user = userEvent.setup()
+    await signInAtOversight(user, 'admin@university.edu')
+    await screen.findByRole('table')
+
+    await user.type(screen.getByLabelText('Full name'), 'Mr. Otieno QA')
+    await user.type(screen.getByLabelText('Work email'), 'otieno.qa@university.edu')
+    await user.selectOptions(screen.getByLabelText('Role'), 'qa')
+    expect(screen.queryByLabelText('Faculty')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /send invitation/i }))
+
+    expect(await screen.findByText(/invitation sent to otieno.qa@university.edu/i)).toBeInTheDocument()
+    const row = (await screen.findByText('Mr. Otieno QA')).closest('tr')!
+    expect(within(row).getByText('QA officer')).toBeInTheDocument()
   })
 
   it('invites a faculty officer, who sets their own password and signs into the faculty portal', async () => {

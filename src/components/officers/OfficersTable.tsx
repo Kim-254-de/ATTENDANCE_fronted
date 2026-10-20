@@ -5,7 +5,7 @@ import { formatDateTime, initials } from '@/lib/format'
 import type { Officer } from '@/types'
 import { useOfficerActions } from './useOfficerActions'
 
-const ROLE_LABEL: Record<Officer['role'], string> = { admin: 'Administrator', faculty: 'Faculty officer', department: 'Department officer' }
+const ROLE_LABEL: Record<Officer['role'], string> = { admin: 'Administrator', faculty: 'Faculty officer', department: 'Department officer', qa: 'QA officer' }
 
 function StatusBadge({ officer }: { officer: Officer }) {
   if (officer.status === 'ACTIVE') return <span className="rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success">Active</span>

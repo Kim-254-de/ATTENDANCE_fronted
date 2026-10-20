@@ -1,14 +1,16 @@
 import { Outlet, useMatches } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
-import { formatLongDate, initials } from '@/lib/format'
+import { AccountMenu } from '@/components/layout/AccountMenu'
+import { officerSubtitle } from '@/components/officers/OfficerProfilePage'
+import { formatLongDate } from '@/lib/format'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
 
 /**
  * Shell for the QA portal. Desktop-first, like department/faculty — an
- * officer reads these tables and fills checklists on a laptop. No profile
- * page behind the avatar: a provisioned account has nothing here to edit.
+ * officer reads these tables and fills checklists on a laptop. The avatar's menu holds
+ * the profile and sign-out, since phones have no sidebar.
  */
 export function QaLayout() {
   const title = [...useMatches()].reverse().map((m) => (m.handle as { title?: string } | undefined)?.title).find(Boolean)
@@ -25,15 +27,7 @@ export function QaLayout() {
             <h1 className="text-xl font-bold tracking-tight text-ink">{title ?? 'Quality Assurance'}</h1>
             <p className="mt-0.5 text-sm text-muted">{formatLongDate()}</p>
           </div>
-          {user && (
-            <span className="border-l border-line pl-4">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="size-10 rounded-full object-cover" />
-              ) : (
-                <span className="grid size-10 place-items-center rounded-full bg-brand-strong text-sm font-bold text-white" title={user.fullName}>{initials(user.fullName)}</span>
-              )}
-            </span>
-          )}
+          {user && <AccountMenu user={user} subtitle={officerSubtitle(user)} profileTo="/qa-profile" signOutTo="/oversight" />}
         </header>
         <main className="flex-1 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-8 lg:px-10 lg:py-9">
           <Outlet />

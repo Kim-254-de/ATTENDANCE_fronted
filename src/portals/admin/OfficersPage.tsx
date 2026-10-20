@@ -9,7 +9,7 @@ import { ADMIN_OFFICERS_KEY, useAdminFaculties, useAdminInvite, useAdminOfficers
 
 /**
  * Who has access to the oversight portals. Administrators invite faculty
- * officers and other administrators here; department officers are invited by
+ * officers, QA officers and other administrators here; department officers are invited by
  * their own faculty officer, but appear here too so access can be removed.
  */
 export function OfficersPage() {
@@ -17,7 +17,7 @@ export function OfficersPage() {
   const officers = useAdminOfficers()
   const faculties = useAdminFaculties()
   const invite = useAdminInvite()
-  const [role, setRole] = useState<'faculty' | 'admin'>('faculty')
+  const [role, setRole] = useState<'faculty' | 'qa' | 'admin'>('faculty')
   const [facultyId, setFacultyId] = useState('')
   const [notice, setNotice] = useState<{ text: string; warn: boolean } | null>(null)
 
@@ -28,9 +28,9 @@ export function OfficersPage() {
         description="They get an email with a link to choose their own password, valid for 72 hours. Use their own work email, not a shared mailbox."
         pending={invite.isPending}
         error={invite.error}
-        canSubmit={role === 'admin' || !!facultyId}
+        canSubmit={role !== 'faculty' || !!facultyId}
         onInvite={(invitee, done) =>
-          invite.mutate(role === 'admin' ? { role, ...invitee } : { role, facultyId, ...invitee }, {
+          invite.mutate(role === 'faculty' ? { role, facultyId, ...invitee } : { role, ...invitee }, {
             onSuccess: (result) => {
               done()
               setNotice(result.emailSent
@@ -41,8 +41,9 @@ export function OfficersPage() {
       >
         <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Role
-          <select value={role} onChange={(e) => setRole(e.target.value as 'faculty' | 'admin')} className="input">
+          <select value={role} onChange={(e) => setRole(e.target.value as 'faculty' | 'qa' | 'admin')} className="input">
             <option value="faculty">Faculty officer</option>
+            <option value="qa">QA officer</option>
             <option value="admin">Administrator</option>
           </select>
         </label>

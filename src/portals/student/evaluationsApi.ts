@@ -18,6 +18,12 @@ export const usePendingEvaluationCount = () => {
   return data?.reduce((n, r) => n + r.units.filter((u) => !u.submitted).length, 0) ?? 0
 }
 
+/** Units (by id) this student can still rate in an open round. */
+export const usePendingEvaluationUnitIds = () => {
+  const { data } = useMyEvaluations()
+  return new Set(data?.flatMap((r) => r.units.filter((u) => !u.submitted).map((u) => u.unitId)) ?? [])
+}
+
 /** Submits one unit's evaluation. Anonymous: the server keeps only that it was done, apart from what was said. */
 export const useSubmitEvaluation = () => {
   const qc = useQueryClient()
