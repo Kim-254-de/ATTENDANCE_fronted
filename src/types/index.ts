@@ -132,6 +132,169 @@ export interface AdminFaculty {
   name: string
   departmentCount: number
   officerCount: number
+  /** Linked to SMARTTT's faculty (SMARTTT owns faculties and departments); false for one only here. */
+  inSmarttt: boolean
+}
+
+/** GET /admin/directory — faculties and departments not yet in SMARTTT. */
+export interface DirectoryStatus {
+  smartttConnected: boolean
+  onlyHere: { faculties: number; departments: number }
+}
+
+/** POST /admin/directory/sync */
+export interface DirectorySyncResult {
+  fromSmarttt: { faculties: { linked: number; created: number }; departments: { linked: number; created: number }; skipped: string[] } | null
+  toSmarttt: { faculties: number; departments: number; skipped: string[] }
+}
+
+/*
+ * SMARTTT's admin functions in the admin console (GET/POST /admin/smarttt/...).
+ * The backend passes SMARTTT's own answers through, so these keep SMARTTT's
+ * snake_case field names.
+ */
+
+/** A page of a SMARTTT list. */
+export interface SmartttPage<T> {
+  count?: number
+  next?: string | null
+  results: T[]
+}
+
+export interface SmartttTerm {
+  id: string
+  academic_year: string
+  semester: number
+  start_date: string | null
+  end_date: string | null
+  is_current: boolean
+}
+
+/** A master timetable upload (history). */
+export interface SmartttTimetableUpload {
+  id: string
+  source_file?: string | null
+  term?: string | null
+  status: string
+  rows_received?: number
+  rows_saved?: number
+  rows_failed?: number
+  created_at?: string
+  uploaded_by_name?: string | null
+}
+
+/** POST /admin/smarttt/timetable/uploads: started in the background (batch id), or done at once. */
+export interface SmartttUploadStarted {
+  batch_id?: string
+  upload_batch_id?: string
+  rows_received?: number
+  rows_saved?: number
+  total_rows?: number
+}
+
+export interface SmartttUploadStatus {
+  upload_batch_id: string
+  status: 'received' | 'processing' | 'processed' | 'partial' | 'failed' | string
+  rows_received: number
+  rows_saved: number
+  rows_failed: number
+}
+
+/** A row of a department's allocation document, as SMARTTT summarises it. */
+export interface SmartttAllocationRow {
+  unit_code: string | null
+  lecturer: string | null
+  programme?: string | null
+  year_semester?: string | null
+  group?: string | null
+  department?: string | null
+}
+
+/** POST /admin/smarttt/lecturer-allocation */
+export interface SmartttAllocationResult {
+  detail: string
+  source: string
+  academic_year: string
+  awaiting_timetable: boolean
+  matched: number
+  unmatched: number
+  slots_updated: number
+  conflict_slots: number
+  results: (SmartttAllocationRow & { slots_assigned: number; account_linked: boolean })[]
+  not_found: (SmartttAllocationRow & { reason: string })[]
+  conflicts: { slot_id: string; unit_code: string; program: string; candidates: SmartttAllocationRow[] }[]
+}
+
+/** GET /admin/smarttt/lecturer-allocation */
+export interface SmartttAllocationDocuments {
+  academic_year: string | null
+  documents: { source: string; file_name: string; rows: number; slots_assigned: number; uploaded_by: string | null; uploaded_at: string }[]
+}
+
+export type SmartttNotificationType = 'general' | 'timetable_change' | 'sync_reminder' | 'registration_reminder'
+export type SmartttNotificationTarget = 'all' | 'program' | 'year'
+
+export interface SmartttNotification {
+  id: string
+  title: string
+  notification_type: SmartttNotificationType | string
+  target: SmartttNotificationTarget | string
+  recipients_count: number
+  sent_at: string
+}
+
+export interface SmartttNotificationSent {
+  recipients: number
+  push_sent: number
+  push_attempted: number
+}
+
+export interface SmartttProgram {
+  id: string | number
+  name: string
+  code?: string
+}
+
+export interface SmartttStaffId {
+  id: string
+  staff_id: string
+  name_hint: string | null
+  is_claimed: boolean
+  uploaded_at: string
+  file_name: string | null
+}
+
+export interface SmartttStaffIdUploads {
+  uploads: {
+    id: string
+    file_name: string
+    ids_created: number
+    ids_skipped: number
+    ids_remaining: number
+    ids_claimed: number
+    uploaded_by: string | null
+    uploaded_at: string
+  }[]
+  /** IDs loaded before uploads were tracked. */
+  untracked_ids: number
+}
+
+export interface SmartttVenueSummary {
+  total: number
+  confirmed: number
+  unconfirmed: number
+  unconfirmed_codes: string[]
+}
+
+export interface SmartttVenueUpload {
+  detail?: string
+  errors?: { row: number; code?: string; error: string }[]
+  summary?: SmartttVenueSummary
+}
+
+/** What SMARTTT says after a removal ("Removed 12 staff ID(s) ..."). */
+export interface SmartttDetail {
+  detail?: string
 }
 
 /** A unit the timetable does not list its lecturer for, waiting for an administrator (GET /admin/units/pending). */

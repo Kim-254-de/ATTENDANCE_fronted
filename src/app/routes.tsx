@@ -327,6 +327,45 @@ export const routes = [
             lazy: async () => ({ Component: (await import('@/portals/admin/PendingUnitsPage')).PendingUnitsPage }),
             handle: { title: 'Units to Verify' },
           },
+          {
+            // SMARTTT's admin functions (its old separate admin page), reached through the attendance API.
+            path: 'admin-smarttt',
+            lazy: async () => ({ Component: (await import('@/portals/admin/smarttt/SmartttLayout')).SmartttLayout }),
+            handle: { title: 'SMARTTT' },
+            children: [
+              { index: true, element: <Navigate to="terms" replace /> },
+              {
+                path: 'terms',
+                lazy: async () => ({ Component: (await import('@/portals/admin/smarttt/TermsPage')).TermsPage }),
+                handle: { title: 'SMARTTT · Terms' },
+              },
+              {
+                path: 'timetable',
+                lazy: async () => ({ Component: (await import('@/portals/admin/smarttt/TimetablePage')).TimetablePage }),
+                handle: { title: 'SMARTTT · Master Timetable' },
+              },
+              {
+                path: 'allocation',
+                lazy: async () => ({ Component: (await import('@/portals/admin/smarttt/AllocationPage')).AllocationPage }),
+                handle: { title: 'SMARTTT · Lecturer Allocation' },
+              },
+              {
+                path: 'notifications',
+                lazy: async () => ({ Component: (await import('@/portals/admin/smarttt/NotificationsPage')).NotificationsPage }),
+                handle: { title: 'SMARTTT · Notifications' },
+              },
+              {
+                path: 'staff-ids',
+                lazy: async () => ({ Component: (await import('@/portals/admin/smarttt/StaffIdsPage')).StaffIdsPage }),
+                handle: { title: 'SMARTTT · Staff IDs' },
+              },
+              {
+                path: 'venues',
+                lazy: async () => ({ Component: (await import('@/portals/admin/smarttt/VenuesPage')).VenuesPage }),
+                handle: { title: 'SMARTTT · Venues' },
+              },
+            ],
+          },
         ],
       },
       {

@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
-import { useAdminFaculties, useCreateFaculty } from './adminApi'
+import { useAdminFaculties, useCreateFaculty, useDirectoryStatus, useSyncDirectory } from './adminApi'
 
-/** Faculties: created here, then each gets a faculty officer (Officers), who creates its departments. */
+/**
+ * Faculties: added here (created in SMARTTT, which owns faculties and
+ * departments), then each gets a faculty officer (Officers), who adds its departments.
+ */
 export function FacultiesPage() {
   const faculties = useAdminFaculties()
   const create = useCreateFaculty()
@@ -31,6 +34,8 @@ export function FacultiesPage() {
         {create.isError && <p role="alert" className="mt-2 text-sm text-red-600">{errorMessage(create.error)}</p>}
       </Card>
 
+      <DirectoryCard />
+
       {faculties.error ? (
         <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(faculties.error, 'Could not load faculties.')}</Card>
       ) : faculties.isPending ? (
@@ -45,6 +50,7 @@ export function FacultiesPage() {
                 <th scope="col" className="px-5 py-3">Faculty</th>
                 <th scope="col" className="px-5 py-3">Departments</th>
                 <th scope="col" className="px-5 py-3">Officers</th>
+                <th scope="col" className="px-5 py-3">SMARTTT</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -53,6 +59,7 @@ export function FacultiesPage() {
                   <td className="px-5 py-3 font-medium text-navy-900">{f.name}</td>
                   <td className="px-5 py-3">{f.departmentCount}</td>
                   <td className="px-5 py-3">{f.officerCount === 0 ? <span className="text-orange-700">None yet</span> : f.officerCount}</td>
+                  <td className="px-5 py-3">{f.inSmarttt ? <span className="text-success">Linked</span> : <span className="text-orange-700">Only here</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -60,5 +67,44 @@ export function FacultiesPage() {
         </Card>
       )}
     </div>
+  )
+}
+
+/**
+ * Faculties and departments made here before SMARTTT owned them exist only
+ * here; sending them creates them in SMARTTT (or links to SMARTTT's own by name).
+ */
+function DirectoryCard() {
+  const status = useDirectoryStatus()
+  const sync = useSyncDirectory()
+  if (!status.data?.smartttConnected) return null
+  const { faculties, departments } = status.data.onlyHere
+  const report = sync.data?.toSmarttt
+
+  return (
+    <Card className="space-y-3 p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-navy-900">SMARTTT</h2>
+          <p className="mt-1 text-sm text-muted">
+            {faculties + departments === 0
+              ? 'Every faculty and department is in SMARTTT.'
+              : `${faculties} faculty(ies) and ${departments} department(s) exist only here. Send them to SMARTTT so both systems share one list.`}
+          </p>
+        </div>
+        <Button variant="secondary" onClick={() => sync.mutate()} loading={sync.isPending}>
+          <RefreshCw className="size-4" aria-hidden /> {faculties + departments === 0 ? 'Check SMARTTT' : 'Send to SMARTTT'}
+        </Button>
+      </div>
+      {sync.isError && <p role="alert" className="text-sm text-red-600">{errorMessage(sync.error)}</p>}
+      {report && (
+        <div role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-success">
+          Sent {report.faculties} faculty(ies) and {report.departments} department(s) to SMARTTT.
+          {report.skipped.length > 0 && (
+            <ul className="mt-1 list-disc pl-5 text-orange-700">{report.skipped.map((s) => <li key={s}>{s}</li>)}</ul>
+          )}
+        </div>
+      )}
+    </Card>
   )
 }

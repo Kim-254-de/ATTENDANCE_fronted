@@ -1501,8 +1501,9 @@ const OFFICERS_SEED = (): Officer[] => [
   { userId: departmentOfficer.id, role: 'department', fullName: departmentOfficer.fullName, email: departmentOfficer.email, status: 'ACTIVE', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: 'dept-cs', departmentName: 'Computer Science', invitedAt: '2026-09-03T08:00:00Z', invitationExpiresAt: null, lastLoginAt: null },
 ]
 const FACULTIES_SEED = (): AdminFaculty[] => [
-  { facultyId: 'fac-pet', name: 'Physical Engineering and Technologies', departmentCount: FACULTY_DEPARTMENTS_SEED.length, officerCount: 1 },
-  { facultyId: 'fac-bus', name: 'Business and Economics', departmentCount: 0, officerCount: 0 },
+  { facultyId: 'fac-pet', name: 'Physical Engineering and Technologies', departmentCount: FACULTY_DEPARTMENTS_SEED.length, officerCount: 1, inSmarttt: true },
+  // Created here before SMARTTT owned faculties: the console offers to send it there.
+  { facultyId: 'fac-bus', name: 'Business and Economics', departmentCount: 0, officerCount: 0, inSmarttt: false },
 ]
 const PENDING_UNITS_SEED = (): PendingUnit[] => [
   {
@@ -1515,6 +1516,33 @@ const PENDING_UNITS_SEED = (): PendingUnit[] => [
     departmentName: null, createdAt: '2026-10-16T13:40:00Z', slots: [],
   },
 ]
+/** SMARTTT's admin functions (/admin/smarttt/...), which the real backend passes on to SMARTTT. */
+const SMARTTT_ADMIN_SEED = () => ({
+  terms: [
+    { id: 'term-2026-1', academic_year: '2026/2027', semester: 1, start_date: '2026-09-07', end_date: '2026-12-18', is_current: true },
+    { id: 'term-2025-3', academic_year: '2025/2026', semester: 3, start_date: '2026-05-04', end_date: '2026-08-21', is_current: false },
+  ],
+  uploads: [
+    { id: 'upload-1', source_file: 'timetable_uploads/2026/09/TUN_SEP_DEC_2026_TT_V2.pdf', status: 'processed', rows_received: 1663, rows_saved: 1663, rows_failed: 0, created_at: '2026-09-19T10:00:00Z', uploaded_by_name: 'Ms. Aisha Njeri' },
+  ],
+  allocations: [
+    { source: 'Computer Science and ICT', file_name: 'VETTED_SEP-DEC ALLOCATION 2026.docx', rows: 240, slots_assigned: 212, uploaded_by: 'Ms. Aisha Njeri', uploaded_at: '2026-09-21T08:30:00Z' },
+  ],
+  notifications: [
+    { id: 'notif-1', title: 'Timetable V2 is out', notification_type: 'timetable_change', target: 'all', recipients_count: 5120, sent_at: '2026-09-19T11:00:00Z' },
+  ],
+  programs: [{ id: 1, name: 'BSc Computer Science' }, { id: 2, name: 'Bachelor of Education (Arts)' }],
+  staffIds: [
+    { id: 'staff-1', staff_id: 'STF/0001', name_hint: 'Peter Kamami', is_claimed: true, uploaded_at: '2026-08-01T08:00:00Z', file_name: 'staff_ids.csv' },
+    { id: 'staff-2', staff_id: 'STF/0002', name_hint: null, is_claimed: false, uploaded_at: '2026-08-01T08:00:00Z', file_name: 'staff_ids.csv' },
+  ],
+  staffIdUploads: [
+    { id: 'staff-upload-1', file_name: 'staff_ids.csv', ids_created: 2, ids_skipped: 0, ids_remaining: 2, ids_claimed: 1, uploaded_by: 'Ms. Aisha Njeri', uploaded_at: '2026-08-01T08:00:00Z' },
+  ],
+  venues: { total: 102, confirmed: 99, unconfirmed: 3, unconfirmed_codes: ['G 12', 'UTC-AA 3', 'STB 4'] },
+})
+let smartttAdmin = SMARTTT_ADMIN_SEED()
+
 let officers = OFFICERS_SEED()
 let adminFaculties = FACULTIES_SEED()
 let pendingUnits = PENDING_UNITS_SEED()
@@ -1526,6 +1554,7 @@ function resetOfficerMocks() {
   officers = OFFICERS_SEED()
   adminFaculties = FACULTIES_SEED()
   pendingUnits = PENDING_UNITS_SEED()
+  smartttAdmin = SMARTTT_ADMIN_SEED()
   invitations.clear()
 }
 
@@ -2002,6 +2031,93 @@ const qaHandlers = [
   }),
 ]
 
+const smartttAdminHandlers = [
+  http.get(`${API}/admin/directory`, () => requireAdmin() ?? ok({
+    smartttConnected: true,
+    onlyHere: { faculties: adminFaculties.filter((f) => !f.inSmarttt).length, departments: 0 },
+  })),
+  http.post(`${API}/admin/directory/sync`, () => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const sent = adminFaculties.filter((f) => !f.inSmarttt)
+    sent.forEach((f) => { f.inSmarttt = true })
+    return ok({ fromSmarttt: { faculties: { linked: 0, created: 0 }, departments: { linked: 0, created: 0 }, skipped: [] }, toSmarttt: { faculties: sent.length, departments: 0, skipped: [] } })
+  }),
+  http.get(`${API}/admin/smarttt/terms`, () => requireAdmin() ?? ok({ count: smartttAdmin.terms.length, next: null, results: smartttAdmin.terms })),
+  http.post(`${API}/admin/smarttt/terms/:termId/set-current`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.terms.forEach((t) => { t.is_current = t.id === params.termId })
+    return ok({ detail: 'Current term updated.' })
+  }),
+  http.delete(`${API}/admin/smarttt/terms/:termId/slots`, () => requireAdmin() ?? ok({ detail: 'Deleted 1663 slot(s) for this term.' })),
+  http.get(`${API}/admin/smarttt/timetable/uploads`, () => requireAdmin() ?? ok({ count: smartttAdmin.uploads.length, next: null, results: smartttAdmin.uploads })),
+  http.post(`${API}/admin/smarttt/timetable/uploads`, () => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.uploads.unshift({ id: `upload-${smartttAdmin.uploads.length + 1}`, source_file: 'timetable_uploads/new.pdf', status: 'processed', rows_received: 902, rows_saved: 900, rows_failed: 2, created_at: new Date().toISOString(), uploaded_by_name: adminUser.fullName })
+    return ok({ batch_id: smartttAdmin.uploads[0]!.id, status: 'processing' })
+  }),
+  http.get(`${API}/admin/smarttt/timetable/uploads/:id/status`, ({ params }) =>
+    requireAdmin() ?? ok({ upload_batch_id: params.id, status: 'processed', rows_received: 902, rows_saved: 900, rows_failed: 2 })),
+  http.delete(`${API}/admin/smarttt/timetable/uploads/:id`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.uploads = smartttAdmin.uploads.filter((u) => u.id !== params.id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get(`${API}/admin/smarttt/lecturer-allocation`, () => requireAdmin() ?? ok({ academic_year: '2026/2027', documents: smartttAdmin.allocations })),
+  http.post(`${API}/admin/smarttt/lecturer-allocation`, () => requireAdmin() ?? ok({
+    detail: 'Saved 3 allocation row(s) from Mathematics.', source: 'Mathematics', academic_year: '2026/2027', awaiting_timetable: false,
+    matched: 2, unmatched: 1, slots_updated: 4, conflict_slots: 0,
+    results: [
+      { unit_code: 'MATH 110', lecturer: 'Dr. Jane Otieno', group: null, programme: 'BSc Mathematics', year_semester: 'Y1S1', slots_assigned: 2, account_linked: true },
+      { unit_code: 'MATH 210', lecturer: 'Mr. Collins Mwangi', group: 'GR A', programme: 'BSc Mathematics', year_semester: 'Y2S1', slots_assigned: 2, account_linked: false },
+    ],
+    not_found: [{ unit_code: 'MATH 999', lecturer: 'Dr. Unknown', reason: 'no such unit in the timetable' }],
+    conflicts: [],
+  })),
+  http.delete(`${API}/admin/smarttt/lecturer-allocation`, ({ request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const source = new URL(request.url).searchParams.get('source')
+    smartttAdmin.allocations = smartttAdmin.allocations.filter((d) => d.source !== source)
+    return ok({ detail: `Removed the allocation from ${source}.`, slots_updated: 212 })
+  }),
+  http.get(`${API}/admin/smarttt/notifications`, () => requireAdmin() ?? ok({ count: smartttAdmin.notifications.length, next: null, results: smartttAdmin.notifications })),
+  http.post(`${API}/admin/smarttt/notifications`, async ({ request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const input = (await request.json()) as { title: string; notification_type: string; target: string }
+    smartttAdmin.notifications.unshift({ id: `notif-${smartttAdmin.notifications.length + 1}`, title: input.title, notification_type: input.notification_type, target: input.target, recipients_count: 340, sent_at: new Date().toISOString() })
+    return ok({ recipients: 340, push_sent: 290, push_attempted: 300 })
+  }),
+  http.get(`${API}/admin/smarttt/programs`, () => requireAdmin() ?? ok({ count: smartttAdmin.programs.length, next: null, results: smartttAdmin.programs })),
+  http.get(`${API}/admin/smarttt/staff-ids`, () => requireAdmin() ?? ok(smartttAdmin.staffIds)),
+  http.post(`${API}/admin/smarttt/staff-ids`, () => requireAdmin() ?? ok({ detail: 'Added 5 staff ID(s); 1 already listed.' })),
+  http.delete(`${API}/admin/smarttt/staff-ids/:id`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.staffIds = smartttAdmin.staffIds.filter((x) => x.id !== params.id)
+    return ok({ detail: 'Staff ID removed.', accounts_disabled: 0 })
+  }),
+  http.get(`${API}/admin/smarttt/staff-id-uploads`, () => requireAdmin() ?? ok({ uploads: smartttAdmin.staffIdUploads, untracked_ids: 0 })),
+  http.delete(`${API}/admin/smarttt/staff-id-uploads/:id`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.staffIdUploads = smartttAdmin.staffIdUploads.filter((u) => u.id !== params.id)
+    smartttAdmin.staffIds = []
+    return ok({ detail: 'Removed 2 staff ID(s) from staff_ids.csv.', removed: 2, accounts_disabled: 1 })
+  }),
+  http.get(`${API}/admin/smarttt/rooms/capacities`, () => requireAdmin() ?? ok(smartttAdmin.venues)),
+  http.post(`${API}/admin/smarttt/rooms/capacities`, () => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.venues = { total: 102, confirmed: 101, unconfirmed: 1, unconfirmed_codes: ['STB 4'] }
+    return ok({ detail: 'Updated 2 venue(s).', errors: [{ row: 4, code: 'XX 1', error: 'capacity must be a whole number' }], summary: smartttAdmin.venues })
+  }),
+]
+
 const invitationHandlers = [
   http.get(`${API}/admin/faculties`, () => requireAdmin() ?? ok(adminFaculties)),
   http.post(`${API}/admin/faculties`, async ({ request }) => {
@@ -2009,7 +2125,7 @@ const invitationHandlers = [
     if (blocked) return blocked
     const { name } = (await request.json()) as { name: string }
     if (adminFaculties.some((f) => f.name.toLowerCase() === name.trim().toLowerCase())) return fail(409, 'CONFLICT', `A faculty named "${name}" already exists.`)
-    const faculty = { facultyId: `fac-${adminFaculties.length + 1}`, name: name.trim(), departmentCount: 0, officerCount: 0 }
+    const faculty = { facultyId: `fac-${adminFaculties.length + 1}`, name: name.trim(), departmentCount: 0, officerCount: 0, inSmarttt: true }
     adminFaculties.push(faculty)
     return ok({ facultyId: faculty.facultyId, name: faculty.name }, 201)
   }),
@@ -2631,4 +2747,4 @@ const oversightHandlers = [
   }),
 ]
 
-export const handlers = [...terminalHandlers, ...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+export const handlers = [...terminalHandlers, ...authHandlers, ...smartttAdminHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

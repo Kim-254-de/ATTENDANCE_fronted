@@ -120,7 +120,10 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
       subtitle={viaSmarttt
         ? 'Sign in with your SMARTTT account: the same login and password you use for SMARTTT.'
         : isStudent ? 'Sign in to access your attendance dashboard.'
-        : isOfficer ? 'For administrators and faculty and department officers. Sign in with the email your invitation was sent to.'
+        : isOfficer
+          ? smartttAccounts()
+            ? 'Administrators: your SMARTTT login and password. Faculty and department officers: the email your invitation was sent to.'
+            : 'For administrators and faculty and department officers. Sign in with the email your invitation was sent to.'
         : 'Sign in to manage attendance'}
     >
       <form

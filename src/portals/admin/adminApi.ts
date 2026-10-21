@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { AdminDepartment, AdminFaculty, DepartmentAlias, DuplicateDepartment, InvitationResult, Officer, PlacementLecturer, PlacementResult, PendingUnit } from '@/types'
+import type { AdminDepartment, AdminFaculty, DepartmentAlias, DirectoryStatus, DirectorySyncResult, DuplicateDepartment, InvitationResult, Officer, PlacementLecturer, PlacementResult, PendingUnit } from '@/types'
 
 export const ADMIN_OFFICERS_KEY = ['admin', 'officers'] as const
 const FACULTIES_KEY = ['admin', 'faculties'] as const
@@ -26,6 +26,24 @@ export const useCreateFaculty = () => {
   return useMutation({
     mutationFn: async (name: string) => (await api.post<{ facultyId: string; name: string }>('/admin/faculties', { name })).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: FACULTIES_KEY }),
+  })
+}
+
+const DIRECTORY_KEY = ['admin', 'directory'] as const
+
+/** Faculties and departments belong to SMARTTT: whether it is connected, and what only exists here. */
+export const useDirectoryStatus = () =>
+  useQuery({ queryKey: DIRECTORY_KEY, queryFn: async () => (await api.get<DirectoryStatus>('/admin/directory')).data })
+
+/** Reads SMARTTT's faculties and departments now and sends the ones only here to SMARTTT. */
+export const useSyncDirectory = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => (await api.post<DirectorySyncResult>('/admin/directory/sync', undefined, { timeout: 60_000 })).data,
+    onSettled: async () => {
+      await qc.invalidateQueries({ queryKey: DIRECTORY_KEY })
+      await qc.invalidateQueries({ queryKey: FACULTIES_KEY })
+    },
   })
 }
 

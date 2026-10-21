@@ -5,12 +5,14 @@ import { OfficersTable } from '@/components/officers/OfficersTable'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
+import { smartttAccounts } from '@/lib/env'
 import { ADMIN_OFFICERS_KEY, useAdminFaculties, useAdminInvite, useAdminOfficers } from './adminApi'
 
 /**
  * Who has access to the oversight portals. Administrators invite faculty
- * officers and other administrators here; department officers are invited by
- * their own faculty officer, but appear here too so access can be removed.
+ * officers here; department officers are invited by their own faculty officer,
+ * but appear here too so access can be removed. With SMARTTT accounts on,
+ * administrators are SMARTTT administrators and are not invited here.
  */
 export function OfficersPage() {
   const { data: me } = useMe()
@@ -20,6 +22,7 @@ export function OfficersPage() {
   const [role, setRole] = useState<'faculty' | 'admin'>('faculty')
   const [facultyId, setFacultyId] = useState('')
   const [notice, setNotice] = useState<{ text: string; warn: boolean } | null>(null)
+  const adminsInSmarttt = smartttAccounts()
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -43,7 +46,7 @@ export function OfficersPage() {
           Role
           <select value={role} onChange={(e) => setRole(e.target.value as 'faculty' | 'admin')} className="input">
             <option value="faculty">Faculty officer</option>
-            <option value="admin">Administrator</option>
+            {!adminsInSmarttt && <option value="admin">Administrator</option>}
           </select>
         </label>
         {role === 'faculty' && (
@@ -56,6 +59,12 @@ export function OfficersPage() {
           </label>
         )}
       </InviteForm>
+      {adminsInSmarttt && (
+        <p className="rounded-lg bg-white px-4 py-3 text-sm text-muted shadow-[0_1px_3px_rgba(18,48,95,0.08)]">
+          <strong className="text-navy-900">Administrators</strong> are SMARTTT administrators: give the person staff status in SMARTTT
+          (a non-teaching account) and they sign in here with their SMARTTT login. There is no separate invitation.
+        </p>
+      )}
       {notice && <p role="status" className={`rounded-lg px-3 py-2 text-sm ${notice.warn ? 'bg-orange-50 text-orange-700' : 'bg-emerald-50 text-success'}`}>{notice.text}</p>}
 
       {officers.error ? (
