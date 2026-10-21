@@ -313,7 +313,6 @@ export const routes = [
             handle: { title: 'Faculties' },
           },
           {
-<<<<<<< Updated upstream
             path: 'admin-departments',
             lazy: async () => ({ Component: (await import('@/portals/admin/DepartmentsPage')).DepartmentsPage }),
             handle: { title: 'Departments' },
@@ -322,11 +321,11 @@ export const routes = [
             path: 'admin-lecturers',
             lazy: async () => ({ Component: (await import('@/portals/admin/LecturersPage')).LecturersPage }),
             handle: { title: 'Lecturers' },
-=======
+          },
+          {
             path: 'admin-units',
             lazy: async () => ({ Component: (await import('@/portals/admin/PendingUnitsPage')).PendingUnitsPage }),
             handle: { title: 'Units to Verify' },
->>>>>>> Stashed changes
           },
         ],
       },

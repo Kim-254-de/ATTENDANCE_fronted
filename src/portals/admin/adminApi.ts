@@ -1,10 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-<<<<<<< Updated upstream
-import type { AdminDepartment, AdminFaculty, DepartmentAlias, DuplicateDepartment, InvitationResult, Officer, PlacementLecturer, PlacementResult } from '@/types'
-=======
-import type { AdminFaculty, InvitationResult, Officer, PendingUnit } from '@/types'
->>>>>>> Stashed changes
+import type { AdminDepartment, AdminFaculty, DepartmentAlias, DuplicateDepartment, InvitationResult, Officer, PlacementLecturer, PlacementResult, PendingUnit } from '@/types'
 
 export const ADMIN_OFFICERS_KEY = ['admin', 'officers'] as const
 const FACULTIES_KEY = ['admin', 'faculties'] as const
@@ -49,7 +45,6 @@ export const useAdminInvite = () => {
   })
 }
 
-<<<<<<< Updated upstream
 /** Every department with its faculty, for placing a lecturer. */
 export const useAdminDepartments = () =>
   useQuery({
@@ -115,7 +110,9 @@ export const useRemoveDepartmentAlias = () => {
   return useMutation({
     mutationFn: async (aliasId: string) => { await api.delete(`/admin/department-aliases/${aliasId}`) },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'department-aliases'] }),
-=======
+  })
+}
+
 /** Units waiting for an administrator to confirm their lecturer, oldest first. */
 export const usePendingUnits = () =>
   useQuery({
@@ -130,6 +127,5 @@ export const useVerifyUnit = () => {
   return useMutation({
     mutationFn: async (unitId: string) => (await api.post<{ unitId: string; code: string; status: 'VERIFIED' }>(`/admin/units/${unitId}/verify`)).data,
     onSettled: () => qc.invalidateQueries({ queryKey: PENDING_UNITS_KEY }),
->>>>>>> Stashed changes
   })
 }

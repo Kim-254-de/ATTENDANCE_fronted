@@ -87,7 +87,7 @@ describe('lecturer portal', () => {
 
     await user.click(await screen.findByRole('button', { name: /delete account/i }))
     await user.type(screen.getByLabelText(/your password/i), 'password')
-    await user.click(screen.getByRole('button', { name: /delete my account/i }))
+    await user.click(screen.getByRole('button', { name: /delete account/i }))
 
     expect(await screen.findByText('Your account has been deleted.')).toBeInTheDocument()
     expect(screen.getByLabelText(/staff number or email/i)).toBeInTheDocument()
