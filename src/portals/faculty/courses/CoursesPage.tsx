@@ -48,15 +48,15 @@ export function CoursesPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the faculty’s courses.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the faculty’s courses.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !courses ? (
         <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-14" />)}</div>
       ) : courses.length === 0 ? (
         <Card className="p-10 text-center">
           <Library className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No courses yet</p>
+          <p className="mt-3 font-semibold text-ink">No courses yet</p>
           <p className="mt-1 text-sm text-muted">Courses appear here once you provide one to a department.</p>
         </Card>
       ) : rows.length === 0 ? (
@@ -82,16 +82,16 @@ export function CoursesPage() {
 function CourseRow({ course }: { course: FacultyCourse }) {
   const full = course.segmentsFilled >= course.segmentsPlanned
   return (
-    <tr className="transition-colors hover:bg-teal-50/60">
+    <tr className="transition-colors hover:bg-brand-soft/60">
       <td className="px-5 py-3">
-        <span className="rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{course.code}</span>
+        <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{course.code}</span>
       </td>
-      <td className="px-5 py-3 text-navy-900">{course.name ?? '—'}</td>
+      <td className="px-5 py-3 text-ink">{course.name ?? '—'}</td>
       <td className="px-5 py-3">
-        <Link to={`/faculty-departments/${course.departmentId}`} className="text-navy-900 hover:underline">{course.departmentName}</Link>
+        <Link to={`/faculty-departments/${course.departmentId}`} className="text-ink hover:underline">{course.departmentName}</Link>
       </td>
       <td className="px-5 py-3">
-        <span className={`text-sm font-semibold ${full ? 'text-success' : 'text-orange-600'}`}>
+        <span className={`text-sm font-semibold ${full ? 'text-success' : 'text-warning'}`}>
           {course.segmentsFilled} / {course.segmentsPlanned}
         </span>
       </td>

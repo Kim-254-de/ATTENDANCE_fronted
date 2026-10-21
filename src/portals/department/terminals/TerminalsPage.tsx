@@ -23,7 +23,7 @@ import {
 /** Devices and Fingerprint enrolment are one area of the portal, with one nav entry. */
 export function TerminalTabs() {
   const tab = ({ isActive }: { isActive: boolean }) =>
-    clsx('rounded-lg px-4 py-2 text-sm font-semibold transition', isActive ? 'bg-indigo-50 text-indigo-800' : 'text-muted hover:bg-surface')
+    clsx('rounded-lg px-4 py-2 text-sm font-semibold transition', isActive ? 'bg-brand-soft text-brand-ink' : 'text-muted hover:bg-surface')
   return (
     <nav aria-label="Terminals" className="flex gap-2">
       <NavLink to="/department-terminals" end className={tab}>Devices</NavLink>
@@ -57,15 +57,15 @@ export function TerminalsPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load your terminals.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load your terminals.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !terminals ? (
         <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : terminals.length === 0 ? (
         <Card className="p-10 text-center">
           <TabletSmartphone className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No terminals yet</p>
+          <p className="mt-3 font-semibold text-ink">No terminals yet</p>
           <p className="mt-1 text-sm text-muted">Add one, then scan its pairing code with the device.</p>
         </Card>
       ) : (
@@ -81,10 +81,10 @@ export function TerminalsPage() {
 }
 
 const STATUS: Record<TerminalStatus, { label: string; className: string }> = {
-  PENDING: { label: 'Waiting to pair', className: 'bg-amber-50 text-amber-800 ring-amber-100' },
-  ACTIVE: { label: 'Paired', className: 'bg-emerald-50 text-emerald-800 ring-emerald-100' },
-  LOST: { label: 'Lost', className: 'bg-red-50 text-red-700 ring-red-100' },
-  RETIRED: { label: 'Retired', className: 'bg-slate-100 text-slate-600 ring-slate-200' },
+  PENDING: { label: 'Waiting to pair', className: 'bg-warning-soft text-warning ring-warning/30' },
+  ACTIVE: { label: 'Paired', className: 'bg-success-soft text-success ring-success/30' },
+  LOST: { label: 'Lost', className: 'bg-danger-soft text-danger ring-danger/30' },
+  RETIRED: { label: 'Retired', className: 'bg-line text-ink ring-line' },
 }
 
 function TerminalCard({ terminal: t, onPairing }: { terminal: Terminal; onPairing: (p: Pairing) => void }) {
@@ -109,7 +109,7 @@ function TerminalCard({ terminal: t, onPairing }: { terminal: Terminal; onPairin
     <Card className="space-y-4 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-semibold text-navy-900">{t.code}</p>
+          <p className="font-semibold text-ink">{t.code}</p>
           {t.label && <p className="truncate text-sm text-muted">{t.label}</p>}
         </div>
         <span className={clsx('shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ring-inset', status.className)}>{status.label}</span>
@@ -117,26 +117,26 @@ function TerminalCard({ terminal: t, onPairing }: { terminal: Terminal; onPairin
 
       <div className="flex flex-wrap gap-1.5">
         {t.capabilities.map((c) => (
-          <span key={c} className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-navy-900">{CAPABILITY_LABEL[c]}</span>
+          <span key={c} className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-ink">{CAPABILITY_LABEL[c]}</span>
         ))}
       </div>
 
       {t.status === 'ACTIVE' && (
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <dt className="text-muted">Last seen</dt>
-          <dd className="text-navy-900">{t.lastSeenAt ? formatDateTime(t.lastSeenAt) : 'Never'}</dd>
+          <dd className="text-ink">{t.lastSeenAt ? formatDateTime(t.lastSeenAt) : 'Never'}</dd>
           <dt className="text-muted">Battery</dt>
-          <dd className="flex items-center gap-1.5 text-navy-900">
+          <dd className="flex items-center gap-1.5 text-ink">
             <BatteryMedium className="size-4 text-muted" aria-hidden />
             {t.batteryPercent !== null ? `${t.batteryPercent}%` : 'Unknown'}
           </dd>
           <dt className="text-muted">Network</dt>
-          <dd className="flex items-center gap-1.5 text-navy-900">
+          <dd className="flex items-center gap-1.5 text-ink">
             {t.network === 'WIFI' ? <Wifi className="size-4 text-muted" aria-hidden /> : t.network === 'CELLULAR' ? <Signal className="size-4 text-muted" aria-hidden /> : null}
             {t.network === 'WIFI' ? 'Wi-Fi' : t.network === 'CELLULAR' ? 'Mobile data' : 'Unknown'}
           </dd>
           <dt className="text-muted">In class</dt>
-          <dd className="text-navy-900">{t.linkedSession ? t.linkedSession.unitCode ?? 'Yes' : 'No'}</dd>
+          <dd className="text-ink">{t.linkedSession ? t.linkedSession.unitCode ?? 'Yes' : 'No'}</dd>
         </dl>
       )}
       {t.status === 'PENDING' && t.pairingExpiresAt && (
@@ -151,13 +151,13 @@ function TerminalCard({ terminal: t, onPairing }: { terminal: Terminal; onPairin
             {t.status === 'ACTIVE' ? 'Pair again' : 'New pairing code'}
           </Button>
           {t.status !== 'LOST' && (
-            <Button variant="ghost" onClick={markLost} disabled={decommission.isPending} className="text-red-600 hover:bg-red-50">Mark lost</Button>
+            <Button variant="ghost" onClick={markLost} disabled={decommission.isPending} className="text-danger hover:bg-danger-soft">Mark lost</Button>
           )}
           <Button variant="ghost" onClick={retire} disabled={decommission.isPending}>Retire</Button>
         </div>
       )}
       {(reissue.error || decommission.error) && (
-        <p role="alert" className="text-sm text-red-600">{errorMessage(reissue.error ?? decommission.error)}</p>
+        <p role="alert" className="text-sm text-danger">{errorMessage(reissue.error ?? decommission.error)}</p>
       )}
     </Card>
   )
@@ -165,10 +165,10 @@ function TerminalCard({ terminal: t, onPairing }: { terminal: Terminal; onPairin
 
 function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
-    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-40 grid place-items-center bg-navy-950/50 p-4">
+    <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-40 grid place-items-center bg-brand-950/50 p-4">
       <Card className="w-full max-w-md space-y-4 p-6">
         <div className="flex items-start justify-between gap-3">
-          <h2 className="text-lg font-semibold text-navy-900">{title}</h2>
+          <h2 className="text-lg font-semibold text-ink">{title}</h2>
           <button onClick={onClose} className="rounded-lg p-1.5 text-muted hover:bg-surface" aria-label="Close">
             <X className="size-5" aria-hidden />
           </button>
@@ -197,24 +197,24 @@ function AddTerminalDialog({ onClose, onCreated }: { onClose: () => void; onCrea
     <Dialog title="Add a terminal" onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         <label className="block space-y-1">
-          <span className="text-sm font-medium text-navy-900">Name</span>
+          <span className="text-sm font-medium text-ink">Name</span>
           <input value={code} onChange={(e) => setCode(e.target.value)} required maxLength={64} placeholder="e.g. TERM-01" className="input" />
           <span className="text-xs text-muted">Write it on the device. It can't be changed later.</span>
         </label>
         <label className="block space-y-1">
-          <span className="text-sm font-medium text-navy-900">Description <span className="font-normal text-muted">(optional)</span></span>
+          <span className="text-sm font-medium text-ink">Description <span className="font-normal text-muted">(optional)</span></span>
           <input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={120} placeholder="e.g. Kept in the department office" className="input" />
         </label>
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-navy-900">What it reads</legend>
+          <legend className="text-sm font-medium text-ink">What it reads</legend>
           {(Object.keys(CAPABILITY_LABEL) as TerminalCapability[]).map((c) => (
-            <label key={c} className="flex items-center gap-2 text-sm text-navy-900">
+            <label key={c} className="flex items-center gap-2 text-sm text-ink">
               <input type="checkbox" checked={capabilities.includes(c)} onChange={() => toggle(c)} className="size-4" />
               {CAPABILITY_LABEL[c]}
             </label>
           ))}
         </fieldset>
-        {create.error && <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>}
+        {create.error && <p role="alert" className="text-sm text-danger">{errorMessage(create.error)}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
           <Button type="submit" loading={create.isPending} disabled={!code.trim() || capabilities.length === 0}>Add and get pairing code</Button>
@@ -229,10 +229,10 @@ function PairingDialog({ pairing, onClose }: { pairing: Pairing; onClose: () => 
   return (
     <Dialog title={`Pair ${pairing.terminal.code}`} onClose={onClose}>
       <p className="text-sm text-muted">Scan this with the terminal's app, or type the code into it. It works once, until {formatDateTime(pairing.expiresAt)}.</p>
-      <div className="mx-auto w-fit rounded-2xl bg-white p-3 ring-1 ring-line">
+      <div className="mx-auto w-fit rounded-2xl bg-card p-3 ring-1 ring-line">
         <QRCodeCanvas value={pairing.pairingCode} size={200} level="M" marginSize={2} />
       </div>
-      <p className="text-center font-mono text-2xl font-semibold tracking-widest text-navy-900">{pairing.pairingCode}</p>
+      <p className="text-center font-mono text-2xl font-semibold tracking-widest text-ink">{pairing.pairingCode}</p>
       <Button onClick={onClose} className="w-full">Done</Button>
     </Dialog>
   )

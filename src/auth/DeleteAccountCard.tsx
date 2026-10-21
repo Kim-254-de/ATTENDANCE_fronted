@@ -41,17 +41,17 @@ export function DeleteAccountCard() {
   }
 
   return (
-    <Card className="border-red-200 p-6 sm:p-8">
+    <Card className="border-danger/30 p-6 sm:p-8">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-50 text-red-600"><AlertTriangle className="size-5" aria-hidden /></span>
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-danger-soft text-danger"><AlertTriangle className="size-5" aria-hidden /></span>
         <div>
-          <h3 className="font-bold text-navy-900">Delete account</h3>
+          <h3 className="font-bold text-ink">Delete account</h3>
         </div>
       </div>
       {open ? (
         <form className="mt-5 space-y-3" onSubmit={onSubmit}>
           <div>
-            <label htmlFor={passwordId} className="block text-sm font-semibold text-navy-900">
+            <label htmlFor={passwordId} className="block text-sm font-semibold text-ink">
               {smartttAccounts() ? 'Your SMARTTT password' : 'Your password'}
             </label>
             <input
@@ -65,7 +65,7 @@ export function DeleteAccountCard() {
               autoFocus
             />
           </div>
-          {deleteAccount.isError && <p role="alert" className="text-sm text-red-600">{errorMessage(deleteAccount.error)}</p>}
+          {deleteAccount.isError && <p role="alert" className="text-sm text-danger">{errorMessage(deleteAccount.error)}</p>}
           <div className="flex flex-wrap gap-2">
             <Button
               type="submit"

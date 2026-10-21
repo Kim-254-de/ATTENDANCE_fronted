@@ -36,11 +36,12 @@ describe('faculty portal', () => {
     // The dashboard now opens directly on the statistics without an intro sentence.
     expect(screen.queryByText(/attendance across every department in physical engineering and technologies/i)).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('link', { name: /view profile/i }))
+    await user.click(screen.getByRole('button', { name: /account menu/i }))
+    await user.click(screen.getByRole('link', { name: /my profile/i }))
     expect(await screen.findByRole('heading', { name: 'My Profile' })).toBeInTheDocument()
     expect(screen.getByText('Prof. Daniel K. Rotich')).toBeInTheDocument()
     expect(screen.getByText('d.rotich@university.edu')).toBeInTheDocument()
-    expect(screen.getByText('Physical Engineering and Technologies')).toBeInTheDocument()
+    expect(screen.getByText('Faculty officer · Physical Engineering and Technologies')).toBeInTheDocument()
   })
 
   it('does not offer self-registration on the staff sign-in form', async () => {

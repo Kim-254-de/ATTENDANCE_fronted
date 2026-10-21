@@ -22,23 +22,23 @@ export function DepartmentDetailPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <Link to="/faculty-departments" className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-700 hover:underline">
+      <Link to="/faculty-departments" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline">
         <ArrowLeft className="size-4" aria-hidden /> All departments
       </Link>
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load this department.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load this department.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !data ? (
         <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-48" /><Skeleton className="h-48" /></div>
       ) : (
         <>
           <Card className="flex items-center gap-4 p-5">
-            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-teal-700 text-white"><Building2 className="size-5" aria-hidden /></span>
+            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-white"><Building2 className="size-5" aria-hidden /></span>
             <div className="min-w-0">
-              <h2 className="truncate text-lg font-bold text-navy-900">{data.departmentName}</h2>
+              <h2 className="truncate text-lg font-bold text-ink">{data.departmentName}</h2>
               <p className="text-xs text-muted">{data.lecturers.length} lecturer{data.lecturers.length === 1 ? '' : 's'} · {data.units.length} unit{data.units.length === 1 ? '' : 's'}</p>
             </div>
           </Card>
@@ -46,7 +46,7 @@ export function DepartmentDetailPage() {
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between gap-4 p-5">
               <div>
-                <h2 className="font-semibold text-navy-900">Courses offered</h2>
+                <h2 className="font-semibold text-ink">Courses offered</h2>
                 <p className="mt-1 text-sm text-muted">What this department can hand to lecturers. The department decides how many sections each needs.</p>
               </div>
               {!adding && (
@@ -74,10 +74,10 @@ export function DepartmentDetailPage() {
                     {data.courses.map((c) => (
                       <tr key={c.id}>
                         <td className="px-5 py-3">
-                          <span className="rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{c.code}</span>
+                          <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{c.code}</span>
                         </td>
-                        <td className="px-5 py-3 text-navy-900">{c.name ?? '—'}</td>
-                        <td className="px-5 py-3 text-navy-900">{c.segmentsFilled} / {c.segmentsPlanned} assigned</td>
+                        <td className="px-5 py-3 text-ink">{c.name ?? '—'}</td>
+                        <td className="px-5 py-3 text-ink">{c.segmentsFilled} / {c.segmentsPlanned} assigned</td>
                       </tr>
                     ))}
                   </tbody>
@@ -87,7 +87,7 @@ export function DepartmentDetailPage() {
           </Card>
 
           <Card className="overflow-hidden">
-            <h2 className="p-5 font-semibold text-navy-900">Lecturers</h2>
+            <h2 className="p-5 font-semibold text-ink">Lecturers</h2>
             {data.lecturers.length === 0 ? (
               <p className="border-t border-line p-8 text-center text-sm text-muted">No lecturers assigned to this department yet.</p>
             ) : (
@@ -103,12 +103,12 @@ export function DepartmentDetailPage() {
                       <tr key={l.userId}>
                         <td className="px-5 py-3">
                           <Link to={`/faculty-lecturers/${l.userId}`} className="flex items-center gap-2.5 hover:underline">
-                            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-teal-700 text-xs font-bold text-white">{initials(l.fullName)}</span>
-                            <span className="font-medium text-navy-900">{l.fullName}</span>
+                            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-white">{initials(l.fullName)}</span>
+                            <span className="font-medium text-ink">{l.fullName}</span>
                           </Link>
                         </td>
-                        <td className="px-5 py-3 text-navy-900">{l.unitsTaught}</td>
-                        <td className="px-5 py-3 text-navy-900">{l.studentsTaught}</td>
+                        <td className="px-5 py-3 text-ink">{l.unitsTaught}</td>
+                        <td className="px-5 py-3 text-ink">{l.studentsTaught}</td>
                         <td className="px-5 py-3"><RateBar rate={l.avgAttendanceRate} label={`${l.fullName} average attendance`} /></td>
                         <td className="px-5 py-3">
                           <RateBar rate={l.onTimeRate} label={`${l.fullName} on-time rate`} />
@@ -123,7 +123,7 @@ export function DepartmentDetailPage() {
           </Card>
 
           <Card className="overflow-hidden">
-            <h2 className="p-5 font-semibold text-navy-900">Units</h2>
+            <h2 className="p-5 font-semibold text-ink">Units</h2>
             {data.units.length === 0 ? (
               <p className="border-t border-line p-8 text-center text-sm text-muted">No units taught in this department yet.</p>
             ) : (
@@ -138,11 +138,11 @@ export function DepartmentDetailPage() {
                     {data.units.map((u) => (
                       <tr key={u.unitId}>
                         <td className="px-5 py-3">
-                          <span className="rounded-md bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{u.unitCode}</span>
+                          <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{u.unitCode}</span>
                         </td>
-                        <td className="px-5 py-3 text-navy-900">{u.unitName ?? '—'}</td>
-                        <td className="px-5 py-3 text-navy-900">{u.lecturerName}</td>
-                        <td className="px-5 py-3 text-navy-900">{u.activeStudents}</td>
+                        <td className="px-5 py-3 text-ink">{u.unitName ?? '—'}</td>
+                        <td className="px-5 py-3 text-ink">{u.lecturerName}</td>
+                        <td className="px-5 py-3 text-ink">{u.activeStudents}</td>
                         <td className="px-5 py-3"><RateBar rate={u.avgAttendanceRate} label={`${u.unitCode} average attendance`} /></td>
                       </tr>
                     ))}
@@ -174,7 +174,7 @@ function ProvideCourseForm({ departmentId, onDone }: { departmentId: string; onD
       <p className="text-sm text-muted">Entered directly — this isn't checked against the issued timetable. The department assigns a lecturer to it next.</p>
       <div className="flex flex-wrap gap-4">
         <div className="max-w-[200px] flex-1 space-y-1.5">
-          <label htmlFor={`${id}-code`} className="text-sm font-medium text-navy-900">Course code</label>
+          <label htmlFor={`${id}-code`} className="text-sm font-medium text-ink">Course code</label>
           <input
             id={`${id}-code`}
             className="input uppercase"
@@ -186,10 +186,10 @@ function ProvideCourseForm({ departmentId, onDone }: { departmentId: string; onD
             autoFocus
             aria-invalid={!!fields.code || undefined}
           />
-          {fields.code && <p className="text-xs text-red-600">{fields.code}</p>}
+          {fields.code && <p className="text-xs text-danger">{fields.code}</p>}
         </div>
         <div className="max-w-xs flex-1 space-y-1.5">
-          <label htmlFor={`${id}-name`} className="text-sm font-medium text-navy-900">Name (optional)</label>
+          <label htmlFor={`${id}-name`} className="text-sm font-medium text-ink">Name (optional)</label>
           <input
             id={`${id}-name`}
             className="input"
@@ -199,11 +199,11 @@ function ProvideCourseForm({ departmentId, onDone }: { departmentId: string; onD
             maxLength={200}
             aria-invalid={!!fields.name || undefined}
           />
-          {fields.name && <p className="text-xs text-red-600">{fields.name}</p>}
+          {fields.name && <p className="text-xs text-danger">{fields.name}</p>}
         </div>
       </div>
       {provide.error && !fields.code && !fields.name && (
-        <p role="alert" className="text-sm text-red-600">{errorMessage(provide.error)}</p>
+        <p role="alert" className="text-sm text-danger">{errorMessage(provide.error)}</p>
       )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>

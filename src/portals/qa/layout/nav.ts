@@ -1,4 +1,4 @@
-import { ClipboardCheck, LayoutGrid, ListChecks, ShieldCheck, Wrench } from 'lucide-react'
+import { ClipboardCheck, LayoutGrid, ListChecks, MessageSquareQuote, ShieldAlert, ShieldCheck, Wrench } from 'lucide-react'
 
 /**
  * The portal's primary navigation, shared by Sidebar (lg+) and BottomNav
@@ -12,4 +12,6 @@ export const nav = [
   { to: '/qa-checklists', label: 'Checklists', icon: ListChecks },
   { to: '/qa-audits', label: 'Audits', icon: ClipboardCheck },
   { to: '/qa-corrective-actions', label: 'Corrective Actions', icon: Wrench },
+  { to: '/qa-evaluations', label: 'Course Evaluations', icon: MessageSquareQuote },
+  { to: '/qa-eligibility', label: 'Exam Eligibility', icon: ShieldAlert },
 ]

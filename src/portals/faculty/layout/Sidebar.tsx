@@ -4,7 +4,10 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useLogout } from '@/auth/authApi'
 import { nav } from './nav'
 
-/** Desktop-only (lg+) — small screens use BottomNav instead. */
+/**
+ * Desktop-only (lg+) — small screens use BottomNav instead, so this never
+ * needs a mobile open/close state or a hamburger trigger.
+ */
 export function Sidebar() {
   const logout = useLogout()
   const navigate = useNavigate()
@@ -12,17 +15,17 @@ export function Sidebar() {
   return (
     <aside
       aria-label="Primary"
-      className="sticky top-0 hidden h-dvh w-64 flex-col overflow-hidden bg-blue-700 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-white lg:flex"
+      className="sticky top-0 hidden h-dvh w-64 flex-col overflow-hidden bg-sidebar p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-white lg:flex"
     >
       <div className="pointer-events-none absolute -right-28 -top-24 size-72 rounded-full border-28 border-white/5" aria-hidden />
-      <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-blue-800/70" aria-hidden />
+      <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-white/5" aria-hidden />
       <div className="flex items-center gap-3 px-1 py-2">
         <div className="flex-1 leading-tight">
-          <p className="text-sm font-semibold text-white">Faculty Portal</p>
+          <p className="text-sm font-semibold text-brand-100">Faculty Portal</p>
         </div>
       </div>
 
-      <p className="mt-6 px-2 text-xs font-semibold tracking-widest text-white/80">NAVIGATION</p>
+      <p className="mt-6 px-2 text-xs font-semibold tracking-widest text-gold-500">NAVIGATION</p>
       <nav className="mt-2 space-y-1">
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink
@@ -30,14 +33,14 @@ export function Sidebar() {
             to={to}
             end={end}
             className={({ isActive }) =>
-              clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-blue-600 text-white' : 'text-white hover:bg-white/10')
+              clsx('flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition', isActive ? 'bg-sidebar-active text-white' : 'text-brand-100 hover:bg-white/5')
             }
           >
             {({ isActive }) => (
               <>
                 <Icon className="size-4.5" aria-hidden />
                 <span className="flex-1">{label}</span>
-                {isActive && <span className="h-5 w-1 rounded-full bg-blue-300" aria-hidden />}
+                {isActive && <span className="h-5 w-1 rounded-full bg-gold-500" aria-hidden />}
               </>
             )}
           </NavLink>

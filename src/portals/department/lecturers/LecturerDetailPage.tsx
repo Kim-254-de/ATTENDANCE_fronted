@@ -21,23 +21,23 @@ export function LecturerDetailPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <Link to="/department-lecturers" className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-700 hover:underline">
+      <Link to="/department-lecturers" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline">
         <ArrowLeft className="size-4" aria-hidden /> All lecturers
       </Link>
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load this lecturer.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load this lecturer.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !data ? (
         <div className="space-y-4"><Skeleton className="h-24" /><Skeleton className="h-48" /><Skeleton className="h-48" /></div>
       ) : (
         <>
           <Card className="flex items-center gap-4 p-5">
-            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-indigo-700 text-sm font-bold text-white">{initials(data.fullName)}</span>
+            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-sm font-bold text-white">{initials(data.fullName)}</span>
             <div className="min-w-0">
-              <h2 className="truncate text-lg font-bold text-navy-900">{data.fullName}</h2>
+              <h2 className="truncate text-lg font-bold text-ink">{data.fullName}</h2>
               <p className="font-mono text-xs text-muted">{data.staffNumber}</p>
             </div>
             {lecturerUserId && (
@@ -48,7 +48,7 @@ export function LecturerDetailPage() {
           </Card>
 
           <Card className="overflow-hidden">
-            <h2 className="p-5 font-semibold text-navy-900">Units taught</h2>
+            <h2 className="p-5 font-semibold text-ink">Units taught</h2>
             {data.units.length === 0 ? (
               <p className="border-t border-line p-8 text-center text-sm text-muted">No units assigned to this lecturer.</p>
             ) : (
@@ -63,9 +63,9 @@ export function LecturerDetailPage() {
                     {data.units.map((unit) => (
                       <tr key={unit.unitId}>
                         <td className="px-5 py-3">
-                          <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-800 ring-1 ring-inset ring-indigo-100">{unit.code}</span>
+                          <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{unit.code}</span>
                         </td>
-                        <td className="px-5 py-3 text-navy-900">{unit.name ?? '—'}</td>
+                        <td className="px-5 py-3 text-ink">{unit.name ?? '—'}</td>
                         <td className="px-5 py-3"><RateBar rate={unit.attendanceRate} label={`${unit.code} average attendance`} /></td>
                       </tr>
                     ))}
@@ -77,7 +77,7 @@ export function LecturerDetailPage() {
 
           <Card className="overflow-hidden">
             <div className="p-5">
-              <h2 className="font-semibold text-navy-900">Timekeeping</h2>
+              <h2 className="font-semibold text-ink">Timekeeping</h2>
               <p className="mt-1 text-sm text-muted">Recent classes, newest first: when each was timetabled to start against when it was actually opened.</p>
             </div>
             {data.recentSessions.length === 0 ? (
@@ -107,10 +107,10 @@ function TimekeepingRow({ session }: { session: LecturerTimekeepingEntry }) {
   return (
     <tr>
       <td className="px-5 py-3">
-        <span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{session.unitCode}</span>
+        <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">{session.unitCode}</span>
       </td>
       <td className="whitespace-nowrap px-5 py-3 text-muted">{session.scheduledStartAt ? formatDateTime(session.scheduledStartAt) : '—'}</td>
-      <td className="whitespace-nowrap px-5 py-3 text-navy-900">{formatDateTime(session.opensAt)}</td>
+      <td className="whitespace-nowrap px-5 py-3 text-ink">{formatDateTime(session.opensAt)}</td>
       <td className="px-5 py-3"><LateMinutes minutes={session.lateMinutes} /></td>
     </tr>
   )

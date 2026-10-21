@@ -35,8 +35,8 @@ export function AttendanceReportsPage() {
     <div className="mx-auto max-w-[1440px] space-y-6">
       {unitsError ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(unitsError, 'Could not load your units.')}</p>
-          <button onClick={() => refetchUnits()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(unitsError, 'Could not load your units.')}</p>
+          <button onClick={() => refetchUnits()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : unitsPending || !units ? (
         <div className="flex gap-4 overflow-x-auto pb-1">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[150px] w-64 shrink-0" />)}</div>
@@ -58,11 +58,11 @@ export function AttendanceReportsPage() {
       )}
 
       <Card className="overflow-hidden">
-        <div className="p-5"><h3 className="font-semibold text-navy-900">Session Log</h3></div>
+        <div className="p-5"><h3 className="font-semibold text-ink">Session Log</h3></div>
         {sessionsError ? (
           <div role="alert" className="flex items-center justify-between border-t border-line p-5 text-sm">
-            <span className="text-red-700">{errorMessage(sessionsError, 'Could not load the session log.')}</span>
-            <button onClick={() => refetchSessions()} className="font-semibold text-navy-900 underline">Retry</button>
+            <span className="text-danger">{errorMessage(sessionsError, 'Could not load the session log.')}</span>
+            <button onClick={() => refetchSessions()} className="font-semibold text-ink underline">Retry</button>
           </div>
         ) : sessionsPending || !filteredSessions ? (
           <div className="space-y-2 border-t border-line p-5">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-9" />)}</div>
@@ -93,10 +93,10 @@ function UnitReportCard({ unit, rate, animate }: { unit: TaughtUnit; rate: numbe
   return (
     <Card className="w-64 shrink-0 space-y-3 p-5 transition-shadow hover:shadow-md">
       <div className="flex items-center justify-between gap-3">
-        <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{unit.code}</span>
+        <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{unit.code}</span>
         <span className={`text-lg font-bold ${text}`}>{rate.toFixed(0)}%</span>
       </div>
-      <h3 className="truncate font-semibold text-navy-900">{unit.name ?? unit.code}</h3>
+      <h3 className="truncate font-semibold text-ink">{unit.name ?? unit.code}</h3>
       <div className="h-1.5 w-full rounded-full bg-line" role="img" aria-label={`${rate.toFixed(0)}% average attendance`}>
         <div
           className={`h-full rounded-full transition-[width] duration-1000 ease-out motion-reduce:transition-none ${bar}`}
@@ -114,7 +114,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${active ? 'bg-blue-700 text-white' : 'bg-white text-navy-900 hover:bg-navy-900/5'}`}
+      className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${active ? 'bg-brand text-white' : 'bg-card text-ink hover:bg-brand-soft'}`}
     >
       {children}
     </button>
@@ -126,9 +126,9 @@ function SessionRow({ session }: { session: RecentSession }) {
   return (
     <tr>
       <td className="whitespace-nowrap px-5 py-4 text-muted">{formatShortDate(session.date)}</td>
-      <td className="px-5 py-4"><span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{session.unitCode}</span></td>
-      <td className="px-5 py-4 font-semibold text-navy-900">{session.present}</td>
-      <td className="px-5 py-4 text-red-600">{session.absent}</td>
+      <td className="px-5 py-4"><span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{session.unitCode}</span></td>
+      <td className="px-5 py-4 font-semibold text-ink">{session.present}</td>
+      <td className="px-5 py-4 text-danger">{session.absent}</td>
       <td className="px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="h-1.5 w-12 rounded-full bg-line" role="img" aria-label={`${session.rate}% attendance`}>
@@ -141,7 +141,7 @@ function SessionRow({ session }: { session: RecentSession }) {
       <td className="px-5 py-4">
         <a
           href={sessionExportUrl(session.id)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline"
         >
           <Download className="size-3.5" aria-hidden /> Download
         </a>

@@ -21,16 +21,16 @@ export function ShareLocationPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <Link to="/lecturer-dashboard" className="text-sm font-semibold text-navy-900 underline">‹ Dashboard</Link>
+      <Link to="/lecturer-dashboard" className="text-sm font-semibold text-ink underline">‹ Dashboard</Link>
       {live.isPending ? (
         <p className="text-sm text-muted" role="status">Finding your class…</p>
       ) : live.error ? (
         <Card className="p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(live.error, 'Could not load your classes.')}</p>
+          <p className="text-sm text-danger">{errorMessage(live.error, 'Could not load your classes.')}</p>
         </Card>
       ) : !session ? (
         <Card className="space-y-2 p-5">
-          <p className="font-semibold text-navy-900">This class isn't running</p>
+          <p className="font-semibold text-ink">This class isn't running</p>
           <p className="text-sm text-muted">It has ended, or it was activated from another lecturer's account.</p>
         </Card>
       ) : (
@@ -73,10 +73,10 @@ export function ShareLocationCard({ session }: { session: SessionSummary }) {
   return (
     <Card className="space-y-4 p-5">
       <div className="flex items-center gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gold-100 text-gold-600"><MapPin className="size-5" aria-hidden /></span>
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-ink"><MapPin className="size-5" aria-hidden /></span>
         <div className="min-w-0 leading-tight">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">{session.unitCode}</p>
-          <p className="truncate font-semibold text-navy-900">{session.unitName ?? session.title ?? 'Class session'}</p>
+          <p className="truncate font-semibold text-ink">{session.unitName ?? session.title ?? 'Class session'}</p>
         </div>
       </div>
 
@@ -89,7 +89,7 @@ export function ShareLocationCard({ session }: { session: SessionSummary }) {
           Location shared (accurate to about {Math.round(anchorAccuracyMetres ?? 0)} m). The QR code is now showing on your other screen.
         </Status>
       ) : mode === 'AWAITING_LOCATION' ? (
-        <p className="text-sm text-navy-900">
+        <p className="text-sm text-ink">
           Your class is waiting for its location. Stand inside{room ? ` room${room}` : ' the room'}, near the middle, and share this phone's location.
           Students' check-ins will be measured from here.
         </p>
@@ -98,7 +98,7 @@ export function ShareLocationCard({ session }: { session: SessionSummary }) {
           Location set (accurate to about {Math.round(anchorAccuracyMetres ?? 0)} m). Share again if it was taken somewhere else.
         </Status>
       ) : (
-        <p className="text-sm text-navy-900">The location check is off for this class. Share this phone's location to switch it on.</p>
+        <p className="text-sm text-ink">The location check is off for this class. Share this phone's location to switch it on.</p>
       )}
 
       {locating && (
@@ -107,7 +107,7 @@ export function ShareLocationCard({ session }: { session: SessionSummary }) {
         </p>
       )}
       {(locateError || setGeofence.error) && (
-        <p role="alert" className="flex gap-2 text-sm text-red-600">
+        <p role="alert" className="flex gap-2 text-sm text-danger">
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           {locateError ?? errorMessage(setGeofence.error, 'Could not share your location.')}
         </p>
@@ -132,7 +132,7 @@ export function ShareLocationCard({ session }: { session: SessionSummary }) {
 
 function Status({ children }: { children: ReactNode }) {
   return (
-    <p className="flex gap-2 text-sm text-navy-900">
+    <p className="flex gap-2 text-sm text-ink">
       <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
       <span>{children}</span>
     </p>

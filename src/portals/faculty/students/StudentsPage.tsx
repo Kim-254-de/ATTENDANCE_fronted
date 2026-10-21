@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { RateBar } from '@/components/attendance/RateBar'
 import { errorMessage } from '@/lib/api'
-import { MIN_REQUIRED_ATTENDANCE } from '@/lib/attendancePolicy'
+import { useMinAttendance } from '@/lib/attendancePolicy'
 import { initials } from '@/lib/format'
 import type { FacultyStudent } from '@/types'
 import { useFacultyStudents } from './studentsApi'
@@ -14,7 +14,7 @@ type SortKey = 'name' | 'department' | 'unit' | 'attendance'
 type SortDir = 'asc' | 'desc'
 
 /** Below the minimum required to sit the exam counts as At Risk; no sessions yet is given the benefit of the doubt. */
-const isAtRisk = (rate: number | null) => rate !== null && rate < MIN_REQUIRED_ATTENDANCE
+const isAtRisk = (rate: number | null, minimum: number) => rate !== null && rate < minimum
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'name', label: 'Full Name' },
@@ -92,15 +92,15 @@ export function StudentsPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the faculty’s students.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the faculty’s students.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !students ? (
         <div className="space-y-3">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-14" />)}</div>
       ) : students.length === 0 ? (
         <Card className="p-10 text-center">
           <Users className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No students yet</p>
+          <p className="mt-3 font-semibold text-ink">No students yet</p>
           <p className="mt-1 text-sm text-muted">Students appear here once they are registered on a unit in this faculty.</p>
         </Card>
       ) : rows.length === 0 ? (
@@ -113,7 +113,7 @@ export function StudentsPage() {
                 <th scope="col" className="px-5 py-3 font-semibold">Student ID</th>
                 {COLUMNS.map((c) => (
                   <th key={c.key} scope="col" className="px-5 py-3 font-semibold">
-                    <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex cursor-pointer items-center gap-1 hover:text-navy-900">
+                    <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex cursor-pointer items-center gap-1 hover:text-ink">
                       {c.label}
                       {sortKey !== c.key ? <ArrowUpDown className="size-3.5" aria-hidden />
                         : sortDir === 'asc' ? <ArrowUp className="size-3.5" aria-hidden /> : <ArrowDown className="size-3.5" aria-hidden />}
@@ -136,26 +136,26 @@ export function StudentsPage() {
 }
 
 function StudentRow({ student }: { student: FacultyStudent }) {
-  const atRisk = isAtRisk(student.attendanceRate)
+  const atRisk = isAtRisk(student.attendanceRate, useMinAttendance())
   return (
-    <tr className="transition-colors hover:bg-teal-50/60">
+    <tr className="transition-colors hover:bg-brand-soft/60">
       <td className="px-5 py-3 font-mono text-xs text-muted">{student.registrationNumber ?? '—'}</td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-teal-700 text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
-          <span className="font-medium text-navy-900">{student.fullName ?? 'Unnamed student'}</span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
+          <span className="font-medium text-ink">{student.fullName ?? 'Unnamed student'}</span>
         </div>
       </td>
       <td className="px-5 py-3">
-        <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-100">{student.departmentName}</span>
+        <span className="rounded-md bg-brand-soft px-2 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{student.departmentName}</span>
       </td>
       <td className="px-5 py-3">
-        <span className="rounded-md bg-navy-900/5 px-2 py-1 text-xs font-semibold text-navy-900" title={student.unitName ?? undefined}>{student.unitCode}</span>
+        <span className="rounded-md bg-brand-soft px-2 py-1 text-xs font-semibold text-ink" title={student.unitName ?? undefined}>{student.unitCode}</span>
       </td>
       <td className="px-5 py-3"><RateBar rate={student.attendanceRate} label={`${student.fullName ?? 'Student'} attendance in ${student.unitCode}`} /></td>
-      <td className="px-5 py-3"><b className="text-navy-900">{student.sessionsAttended}</b><span className="text-muted">/{student.sessionsHeld}</span></td>
+      <td className="px-5 py-3"><b className="text-ink">{student.sessionsAttended}</b><span className="text-muted">/{student.sessionsHeld}</span></td>
       <td className="px-5 py-3">
-        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${atRisk ? 'bg-orange-100 text-orange-600' : 'bg-emerald-50 text-success'}`}>
+        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${atRisk ? 'bg-warning-soft text-warning' : 'bg-success-soft text-success'}`}>
           {atRisk ? 'At Risk' : 'Active'}
         </span>
       </td>

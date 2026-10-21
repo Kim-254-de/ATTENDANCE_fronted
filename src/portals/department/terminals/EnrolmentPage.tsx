@@ -48,22 +48,22 @@ export function EnrolmentPage() {
       </label>
 
       {terminals && readers.length === 0 && (
-        <Card className="p-4 text-sm text-navy-900" role="status">
+        <Card className="p-4 text-sm text-ink" role="status">
           You have no paired terminal with a fingerprint reader yet. Add one under Devices first.
         </Card>
       )}
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load your students.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load your students.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !students ? (
         <div className="space-y-3">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
       ) : students.length === 0 ? (
         <Card className="p-10 text-center">
           <Fingerprint className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">{deferred ? 'No student matches that search' : 'No students yet'}</p>
+          <p className="mt-3 font-semibold text-ink">{deferred ? 'No student matches that search' : 'No students yet'}</p>
           <p className="mt-1 text-sm text-muted">Students appear once they are on a unit taught by one of your lecturers.</p>
         </Card>
       ) : (
@@ -95,23 +95,23 @@ function StudentRow({ student: s, readers }: { student: EnrolmentStudent; reader
     <li>
       <Card className="flex flex-wrap items-center justify-between gap-4 p-4">
         <div className="min-w-0">
-          <p className="font-semibold text-navy-900">{s.fullName ?? 'Name not known yet'}</p>
+          <p className="font-semibold text-ink">{s.fullName ?? 'Name not known yet'}</p>
           <p className="text-sm text-muted">{s.registrationNumber} · {s.unitCodes.join(', ')}</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {s.fingerprints.map((f) => (
-              <span key={f.id} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 py-0.5 pl-2.5 pr-1 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-100">
+              <span key={f.id} className="inline-flex items-center gap-1 rounded-full bg-success-soft py-0.5 pl-2.5 pr-1 text-xs font-medium text-success ring-1 ring-inset ring-success/30">
                 <Fingerprint className="size-3" aria-hidden /> {f.terminalCode}{f.label ? ` · ${f.label}` : ''}
-                <button onClick={() => remove(f.id, f.terminalCode)} className="rounded-full p-0.5 hover:bg-emerald-100" aria-label={`Remove fingerprint on ${f.terminalCode}`}>
+                <button onClick={() => remove(f.id, f.terminalCode)} className="rounded-full p-0.5 hover:bg-success-soft" aria-label={`Remove fingerprint on ${f.terminalCode}`}>
                   <X className="size-3" aria-hidden />
                 </button>
               </span>
             ))}
             {s.pending.map((p) => (
-              <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-amber-50 py-0.5 pl-2.5 pr-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-100">
+              <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-warning-soft py-0.5 pl-2.5 pr-1 text-xs font-medium text-warning ring-1 ring-inset ring-warning/30">
                 <Clock className="size-3" aria-hidden />
                 {p.kind === 'ENROL_FINGERPRINT' ? `Waiting on ${p.terminalCode}` : `Removing from ${p.terminalCode}`}
                 {p.kind === 'ENROL_FINGERPRINT' && (
-                  <button onClick={() => cancel.mutate(p.id)} className="rounded-full p-0.5 hover:bg-amber-100" aria-label={`Cancel enrolment on ${p.terminalCode}`}>
+                  <button onClick={() => cancel.mutate(p.id)} className="rounded-full p-0.5 hover:bg-warning-soft" aria-label={`Cancel enrolment on ${p.terminalCode}`}>
                     <X className="size-3" aria-hidden />
                   </button>
                 )}
@@ -136,7 +136,7 @@ function StudentRow({ student: s, readers }: { student: EnrolmentStudent; reader
             </Button>
           </div>
         )}
-        {failure && <p role="alert" className="w-full text-sm text-red-600">{errorMessage(failure)}</p>}
+        {failure && <p role="alert" className="w-full text-sm text-danger">{errorMessage(failure)}</p>}
       </Card>
     </li>
   )

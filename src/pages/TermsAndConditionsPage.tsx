@@ -83,14 +83,14 @@ export function TermsAndConditionsPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <header className="border-b border-line bg-white">
+      <header className="border-b border-line bg-card">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-navy-900 hover:text-navy-700">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-ink hover:text-brand-ink">
             <ArrowLeft className="size-4" aria-hidden="true" />
             Back to home
           </Link>
-          <div className="inline-flex items-center gap-2 text-sm font-bold text-navy-900">
-            <GraduationCap className="size-5 text-gold-600" aria-hidden="true" />
+          <div className="inline-flex items-center gap-2 text-sm font-bold text-ink">
+            <GraduationCap className="size-5 text-accent-ink" aria-hidden="true" />
             Smart Attendance
           </div>
         </div>
@@ -98,11 +98,11 @@ export function TermsAndConditionsPage() {
 
       <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
         <div className="mb-8 border-b border-line pb-7 sm:mb-10 sm:pb-9">
-          <p className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-navy-700">
+          <p className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-brand-ink">
             <ShieldCheck className="size-4 text-success" aria-hidden="true" />
             Student information
           </p>
-          <h1 className="text-3xl font-bold text-navy-950 sm:text-4xl">Terms and Conditions</h1>
+          <h1 className="text-3xl font-bold text-ink sm:text-4xl">Terms and Conditions</h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-muted">
             These terms explain how to use the university attendance system and what to expect when recording attendance.
           </p>
@@ -111,18 +111,18 @@ export function TermsAndConditionsPage() {
         <ol className="grid list-none gap-x-12 gap-y-7 p-0 md:grid-cols-2">
           {sections.map((section, index) => (
             <li key={section.title} className="flex gap-4 border-b border-line pb-6">
-              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-gold-100 text-sm font-bold text-navy-900" aria-hidden="true">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-accent-soft text-sm font-bold text-ink" aria-hidden="true">
                 {String(index + 1).padStart(2, '0')}
               </span>
               <section aria-labelledby={`terms-section-${index + 1}`}>
-                <h2 id={`terms-section-${index + 1}`} className="text-base font-bold text-navy-900">{section.title}</h2>
+                <h2 id={`terms-section-${index + 1}`} className="text-base font-bold text-ink">{section.title}</h2>
                 <p className="mt-2 text-sm leading-6 text-ink">{section.body}</p>
               </section>
             </li>
           ))}
         </ol>
 
-        <section aria-label="Your agreement" className="mt-10 border-t-2 border-navy-900 bg-white p-5 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-7">
+        <section aria-label="Your agreement" className="mt-10 border-t-2 border-brand-ink bg-card p-5 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-7">
           <label className="flex cursor-pointer items-start gap-3 text-sm font-medium leading-6 text-ink">
             <input
               type="checkbox"
@@ -131,7 +131,7 @@ export function TermsAndConditionsPage() {
                 setAgreed(event.target.checked)
                 setResponse(null)
               }}
-              className="mt-1 size-4 shrink-0 accent-navy-900"
+              className="mt-1 size-4 shrink-0 accent-brand"
             />
             <span>I have read, understood, and agree to the Terms and Conditions of the System.</span>
           </label>
@@ -139,7 +139,7 @@ export function TermsAndConditionsPage() {
             <button
               type="button"
               onClick={() => setResponse('declined')}
-              className="min-h-11 rounded-md border border-line px-5 text-sm font-semibold text-navy-900 transition-colors hover:bg-surface"
+              className="min-h-11 rounded-md border border-line px-5 text-sm font-semibold text-ink transition-colors hover:bg-surface"
             >
               Decline
             </button>
@@ -147,7 +147,7 @@ export function TermsAndConditionsPage() {
               type="button"
               disabled={!agreed}
               onClick={() => setResponse('accepted')}
-              className="min-h-11 rounded-md bg-navy-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-navy-800 disabled:cursor-not-allowed disabled:bg-navy-900/40"
+              className="min-h-11 rounded-md bg-brand px-5 text-sm font-semibold text-white transition-colors hover:bg-brand-strong disabled:cursor-not-allowed disabled:bg-brand/40"
             >
               Accept
             </button>

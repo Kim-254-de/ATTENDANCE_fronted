@@ -59,8 +59,8 @@ export function DeleteAccountButton({
       aria-label={`Delete ${who}'s account`}
       title={compact ? 'Delete account' : undefined}
       className={clsx(
-        'inline-flex cursor-pointer items-center gap-1.5 rounded-lg text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60',
-        compact ? 'p-2' : 'border border-red-200 px-3 py-2',
+        'inline-flex cursor-pointer items-center gap-1.5 rounded-lg text-sm font-semibold text-danger transition hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-60',
+        compact ? 'p-2' : 'border border-danger/30 px-3 py-2',
       )}
     >
       <Trash2 className="size-4" aria-hidden />

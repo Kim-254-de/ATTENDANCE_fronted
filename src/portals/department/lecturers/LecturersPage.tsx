@@ -7,6 +7,7 @@ import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
 import type { DepartmentLecturer } from '@/types'
 import { AvgLateMinutes, RateBar } from '@/components/attendance/RateBar'
+import { BorrowedBadge } from '@/components/attendance/BorrowedBadge'
 import { useDepartmentLecturers } from './lecturersApi'
 
 const HEADERS = ['LECTURER', 'STAFF NO.', 'UNITS', 'STUDENTS', 'AVG. ATTENDANCE', 'SESSIONS', 'ON TIME']
@@ -46,15 +47,15 @@ export function LecturersPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the department’s lecturers.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the department’s lecturers.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !lecturers ? (
         <div className="space-y-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-14" />)}</div>
       ) : lecturers.length === 0 ? (
         <Card className="p-10 text-center">
           <GraduationCap className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No lecturers yet</p>
+          <p className="mt-3 font-semibold text-ink">No lecturers yet</p>
           <p className="mt-1 text-sm text-muted">Lecturers appear here once they are assigned a unit in this department.</p>
         </Card>
       ) : rows.length === 0 ? (
@@ -79,18 +80,22 @@ export function LecturersPage() {
 
 function LecturerRow({ lecturer }: { lecturer: DepartmentLecturer }) {
   return (
-    <tr className="transition-colors hover:bg-indigo-50/60">
+    <tr className="transition-colors hover:bg-brand-soft/60">
       <td className="px-5 py-3">
         <Link to={`/department-lecturers/${lecturer.userId}`} className="flex items-center gap-2.5 hover:underline">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-indigo-700 text-xs font-bold text-white">{initials(lecturer.fullName)}</span>
-          <span className="font-medium text-navy-900">{lecturer.fullName}</span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-white">{initials(lecturer.fullName)}</span>
+          <span className="font-medium text-ink">{lecturer.fullName}</span>
+          {!lecturer.isOwnStaff && <BorrowedBadge homeDepartmentName={lecturer.homeDepartmentName} />}
         </Link>
       </td>
       <td className="px-5 py-3 font-mono text-xs text-muted">{lecturer.staffNumber}</td>
-      <td className="px-5 py-3 text-navy-900">{lecturer.unitsTaught}</td>
-      <td className="px-5 py-3 text-navy-900">{lecturer.studentsTaught}</td>
+      <td className="px-5 py-3 text-ink">
+        {lecturer.unitsTaught}
+        {lecturer.unitsElsewhere > 0 && <span className="block text-xs text-muted">+{lecturer.unitsElsewhere} elsewhere</span>}
+      </td>
+      <td className="px-5 py-3 text-ink">{lecturer.studentsTaught}</td>
       <td className="px-5 py-3"><RateBar rate={lecturer.avgAttendanceRate} label={`${lecturer.fullName} average attendance`} /></td>
-      <td className="px-5 py-3 text-navy-900">{lecturer.sessionsHeld}</td>
+      <td className="px-5 py-3 text-ink">{lecturer.sessionsHeld}</td>
       <td className="px-5 py-3">
         <RateBar rate={lecturer.onTimeRate} label={`${lecturer.fullName} on-time rate`} />
         <AvgLateMinutes minutes={lecturer.avgLateMinutes} />

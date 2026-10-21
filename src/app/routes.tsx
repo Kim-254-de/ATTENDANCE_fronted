@@ -13,6 +13,12 @@ import { QaLayout } from '@/portals/qa/layout/QaLayout'
 import { StudentLayout } from '@/portals/student/layout/StudentLayout'
 import { LandingPage } from '@/pages/LandingPage'
 
+/** Every officer role shares one profile page; the route says whose. */
+const officerProfile = (role: 'admin' | 'department' | 'faculty' | 'qa') => async () => {
+  const { OfficerProfilePage } = await import('@/components/officers/OfficerProfilePage')
+  return { Component: () => <OfficerProfilePage role={role} /> }
+}
+
 /** Sends an old sign-up link to the matching sign-in page, saying why. */
 function SignupRedirect() {
   const [searchParams] = useSearchParams()
@@ -83,6 +89,11 @@ export const routes = [
             handle: { title: 'Progress' },
           },
           {
+            path: 'student-evaluations',
+            lazy: async () => ({ Component: (await import('@/portals/student/StudentEvaluationsPage')).StudentEvaluationsPage }),
+            handle: { title: 'Course Evaluations' },
+          },
+          {
             path: 'student-profile',
             lazy: async () => ({ Component: (await import('@/portals/student/StudentProfilePage')).StudentProfilePage }),
             handle: { title: 'Student Profile' },
@@ -148,6 +159,11 @@ export const routes = [
         handle: { role: 'department' },
         children: [
           {
+            path: 'department-profile',
+            lazy: officerProfile('department'),
+            handle: { title: 'My Profile' },
+          },
+          {
             path: 'department-dashboard',
             lazy: async () => ({ Component: (await import('@/portals/department/dashboard/OverviewPage')).OverviewPage }),
             handle: { title: 'Performance Dashboard' },
@@ -178,6 +194,21 @@ export const routes = [
             handle: { title: 'Units' },
           },
           {
+            path: 'department-eligibility',
+            lazy: async () => ({ Component: (await import('@/portals/department/eligibility/EligibilityPage')).EligibilityPage }),
+            handle: { title: 'Exam Eligibility' },
+          },
+          {
+            path: 'department-evaluations',
+            lazy: async () => ({ Component: (await import('@/portals/department/evaluations/EvaluationsPage')).EvaluationsPage }),
+            handle: { title: 'Course Evaluations' },
+          },
+          {
+            path: 'department-evaluations/:roundId',
+            lazy: async () => ({ Component: (await import('@/portals/department/evaluations/EvaluationResultsPage')).EvaluationResultsPage }),
+            handle: { title: 'Evaluation Results' },
+          },
+          {
             path: 'department-terminals',
             lazy: async () => ({ Component: (await import('@/portals/department/terminals/TerminalsPage')).TerminalsPage }),
             handle: { title: 'Terminals' },
@@ -201,14 +232,14 @@ export const routes = [
         handle: { role: 'faculty' },
         children: [
           {
+            path: 'faculty-profile',
+            lazy: officerProfile('faculty'),
+            handle: { title: 'My Profile' },
+          },
+          {
             path: 'faculty-dashboard',
             lazy: async () => ({ Component: (await import('@/portals/faculty/dashboard/OverviewPage')).OverviewPage }),
             handle: { title: 'Performance Dashboard' },
-          },
-          {
-            path: 'faculty-profile',
-            lazy: async () => ({ Component: (await import('@/portals/faculty/FacultyProfilePage')).FacultyProfilePage }),
-            handle: { title: 'My Profile' },
           },
           {
             path: 'faculty-departments',
@@ -250,6 +281,26 @@ export const routes = [
             lazy: async () => ({ Component: (await import('@/portals/faculty/officers/OfficersPage')).OfficersPage }),
             handle: { title: 'Department Officers' },
           },
+          {
+            path: 'faculty-placement',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/placement/PlacementPage')).PlacementPage }),
+            handle: { title: 'Lecturer Placement' },
+          },
+          {
+            path: 'faculty-eligibility',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/eligibility/EligibilityPage')).EligibilityPage }),
+            handle: { title: 'Exam Eligibility' },
+          },
+          {
+            path: 'faculty-evaluations',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/evaluations/EvaluationsPage')).EvaluationsPage }),
+            handle: { title: 'Course Evaluations' },
+          },
+          {
+            path: 'faculty-evaluations/:roundId',
+            lazy: async () => ({ Component: (await import('@/portals/faculty/evaluations/EvaluationResultsPage')).EvaluationResultsPage }),
+            handle: { title: 'Evaluation Results' },
+          },
         ],
       },
       {
@@ -259,7 +310,7 @@ export const routes = [
         children: [
           {
             path: 'admin-profile',
-            lazy: async () => ({ Component: (await import('@/portals/admin/AdminProfilePage')).AdminProfilePage }),
+            lazy: officerProfile('admin'),
             handle: { title: 'My Profile' },
           },
           {
@@ -272,6 +323,16 @@ export const routes = [
             lazy: async () => ({ Component: (await import('@/portals/admin/FacultiesPage')).FacultiesPage }),
             handle: { title: 'Faculties' },
           },
+          {
+            path: 'admin-departments',
+            lazy: async () => ({ Component: (await import('@/portals/admin/DepartmentsPage')).DepartmentsPage }),
+            handle: { title: 'Departments' },
+          },
+          {
+            path: 'admin-lecturers',
+            lazy: async () => ({ Component: (await import('@/portals/admin/LecturersPage')).LecturersPage }),
+            handle: { title: 'Lecturers' },
+          },
         ],
       },
       {
@@ -279,6 +340,11 @@ export const routes = [
         errorElement: <RouteError />,
         handle: { role: 'qa' },
         children: [
+          {
+            path: 'qa-profile',
+            lazy: officerProfile('qa'),
+            handle: { title: 'My Profile' },
+          },
           {
             path: 'qa-dashboard',
             lazy: async () => ({ Component: (await import('@/portals/qa/dashboard/OverviewPage')).OverviewPage }),
@@ -313,6 +379,21 @@ export const routes = [
             path: 'qa-corrective-actions',
             lazy: async () => ({ Component: (await import('@/portals/qa/capa/CapaPage')).CapaPage }),
             handle: { title: 'Corrective Actions' },
+          },
+          {
+            path: 'qa-eligibility',
+            lazy: async () => ({ Component: (await import('@/portals/qa/eligibility/EligibilityPage')).EligibilityPage }),
+            handle: { title: 'Exam Eligibility' },
+          },
+          {
+            path: 'qa-evaluations',
+            lazy: async () => ({ Component: (await import('@/portals/qa/evaluations/EvaluationsPage')).EvaluationsPage }),
+            handle: { title: 'Course Evaluations' },
+          },
+          {
+            path: 'qa-evaluations/:roundId',
+            lazy: async () => ({ Component: (await import('@/portals/qa/evaluations/EvaluationDetailPage')).EvaluationDetailPage }),
+            handle: { title: 'Course Evaluation' },
           },
         ],
       },

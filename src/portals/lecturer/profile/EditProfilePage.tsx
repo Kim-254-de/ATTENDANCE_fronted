@@ -34,13 +34,13 @@ function EditProfileForm({ user }: { user: Lecturer }) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Link to="/profile" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline">
+      <Link to="/profile" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-ink hover:underline">
         <ArrowLeft className="size-4" aria-hidden /> Back to profile
       </Link>
       <Card className="p-6 sm:p-8">
         <div className="flex items-start gap-3 border-b border-line pb-5">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><UserRound className="size-5" aria-hidden /></span>
-          <div><h2 className="font-bold text-navy-900">Edit profile</h2><p className="mt-1 text-sm text-muted">Update your professional title and department.</p></div>
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-ink"><UserRound className="size-5" aria-hidden /></span>
+          <div><h2 className="font-bold text-ink">Edit profile</h2><p className="mt-1 text-sm text-muted">Update your professional title and department.</p></div>
         </div>
         <form className="mt-6 space-y-5" onSubmit={submit}>
           <div className="grid gap-5 sm:grid-cols-2">
@@ -52,9 +52,9 @@ function EditProfileForm({ user }: { user: Lecturer }) {
           <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
             <div aria-live="polite" className="text-sm">
               {saved && <span className="inline-flex items-center gap-2 font-medium text-success"><Check className="size-4" aria-hidden />Profile updated</span>}
-              {updateProfile.isError && <span className="text-red-600">{errorMessage(updateProfile.error)}</span>}
+              {updateProfile.isError && <span className="text-danger">{errorMessage(updateProfile.error)}</span>}
             </div>
-            <Button type="submit" variant="lecturer" loading={updateProfile.isPending}>Save changes</Button>
+            <Button type="submit" loading={updateProfile.isPending}>Save changes</Button>
           </div>
         </form>
       </Card>

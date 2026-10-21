@@ -55,26 +55,26 @@ export function FaceEnrollDialog({ unitId, student, onClose, onDone }: {
   const done = photos.length >= PHOTOS
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-navy-950/80 p-4">
-      <div role="dialog" aria-modal="true" aria-labelledby="enroll-title" className="mx-auto max-w-md space-y-4 rounded-2xl bg-navy-950 p-4 text-white shadow-2xl">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-brand-950/80 p-4">
+      <div role="dialog" aria-modal="true" aria-labelledby="enroll-title" className="mx-auto max-w-md space-y-4 rounded-2xl bg-brand-950 p-4 text-white shadow-2xl">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <h2 id="enroll-title" className="text-lg font-bold">Register face: {name}</h2>
-            {student.registrationNumber && <p className="font-mono text-xs text-sky-300">{student.registrationNumber}</p>}
+            {student.registrationNumber && <p className="font-mono text-xs text-brand-300">{student.registrationNumber}</p>}
           </div>
           <button ref={closeRef} onClick={onClose} className="rounded-lg p-2 hover:bg-white/10" aria-label="Close">
             <X className="size-5" aria-hidden />
           </button>
         </div>
 
-        <p className="flex items-start gap-2 rounded-xl bg-white/5 p-3 text-sm text-sky-100">
+        <p className="flex items-start gap-2 rounded-xl bg-white/5 p-3 text-sm text-brand-100">
           <IdCard className="mt-0.5 size-4 shrink-0" aria-hidden />
           Check their student ID card first. This face will check them in to all their classes.
         </p>
 
         <ol className="grid grid-cols-3 gap-2" aria-label="Photos">
           {Array.from({ length: PHOTOS }, (_, i) => (
-            <li key={i} className="space-y-1 text-center text-[11px] text-sky-300">
+            <li key={i} className="space-y-1 text-center text-[11px] text-brand-300">
               {photos[i] ? (
                 <button
                   onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))}
@@ -85,7 +85,7 @@ export function FaceEnrollDialog({ unitId, student, onClose, onDone }: {
                   <img src={photos[i]} alt="" className="size-full object-cover" />
                 </button>
               ) : (
-                <span className={`block aspect-[3/4] w-full rounded-lg border-2 border-dashed ${i === photos.length ? 'border-sky-300' : 'border-white/20'}`} />
+                <span className={`block aspect-[3/4] w-full rounded-lg border-2 border-dashed ${i === photos.length ? 'border-brand-300' : 'border-white/20'}`} />
               )}
               <span className="block leading-tight">{PROMPTS[i]}</span>
             </li>
@@ -96,8 +96,8 @@ export function FaceEnrollDialog({ unitId, student, onClose, onDone }: {
 
         {done ? (
           <div className="space-y-2">
-            <p className="text-center text-xs text-sky-300">Tap a photo to retake it.</p>
-            <Button variant="lecturer" className="w-full" onClick={save} loading={enroll.isPending}>
+            <p className="text-center text-xs text-brand-300">Tap a photo to retake it.</p>
+            <Button className="w-full" onClick={save} loading={enroll.isPending}>
               Save face
             </Button>
           </div>

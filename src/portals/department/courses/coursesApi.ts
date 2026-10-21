@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { AllocatedUnit, CourseOffering } from '@/types'
+import type { AllocatedUnit, CourseOffering, LecturerDirectoryEntry } from '@/types'
 
 const COURSES_KEY = ['department', 'courses'] as const
 
@@ -22,7 +22,20 @@ export const useSetSegmentCount = () => {
   })
 }
 
-/** Allocates one of the department's own lecturers to the next open segment — immediate, creates a real unit. */
+/**
+ * Lecturers who can be allocated to a section: anyone in the institution, own staff first. A
+ * department may borrow another department's lecturer; the unit stays this department's.
+ */
+export const useLecturerDirectory = (search: string) =>
+  useQuery({
+    queryKey: ['department', 'lecturer-directory', search],
+    queryFn: async () =>
+      (await api.get<LecturerDirectoryEntry[]>('/departments/lecturer-directory', { params: search ? { q: search } : {} })).data,
+    staleTime: 60_000,
+    placeholderData: (previous) => previous,
+  })
+
+/** Allocates a lecturer, own staff or borrowed, to the next open segment — immediate, creates a real unit owned by this department. */
 export const useAllocateLecturer = () => {
   const qc = useQueryClient()
   return useMutation({

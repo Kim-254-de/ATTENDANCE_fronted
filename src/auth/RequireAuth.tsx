@@ -26,7 +26,7 @@ export function RequireAuth() {
     return (
       <div className="grid min-h-dvh place-items-center p-6 text-center">
         <div className="space-y-4">
-          <p className="font-semibold text-navy-900">We couldn’t load your session.</p>
+          <p className="font-semibold text-ink">We couldn’t load your session.</p>
           <Button onClick={() => refetch()}>Try again</Button>
         </div>
       </div>

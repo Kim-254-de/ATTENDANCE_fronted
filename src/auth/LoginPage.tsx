@@ -77,7 +77,7 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
       type="button"
       aria-label={showPassword ? 'Hide password' : 'Show password'}
       onClick={() => setShowPassword((value) => !value)}
-      className="absolute inset-y-0 right-3 flex cursor-pointer items-center text-muted transition hover:text-navy-900"
+      className="absolute inset-y-0 right-3 flex cursor-pointer items-center text-muted transition hover:text-ink"
     >
       {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
     </button>
@@ -94,7 +94,7 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
       trailing={toggleButton}
     />
   ) : (
-    <div className="space-y-1.5 text-sm font-medium text-navy-900">
+    <div className="space-y-1.5 text-sm font-medium text-ink">
       <label htmlFor="login-password" className="block">Password</label>
       <div className="relative">
         <input
@@ -108,13 +108,12 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
         />
         {toggleButton}
       </div>
-      {errors.password && <span id="login-password-error" role="alert" className="block text-xs font-normal text-red-600">{errors.password.message}</span>}
+      {errors.password && <span id="login-password-error" role="alert" className="block text-xs font-normal text-danger">{errors.password.message}</span>}
     </div>
   )
 
   return (
     <AuthShell
-      student={isStudent}
       title={isStudent ? 'STUDENT PORTAL' : isOfficer ? 'Staff Sign-in' : 'Lecturer Portal'}
       subtitle={viaSmarttt
         ? 'Sign in with your SMARTTT account: the same login and password you use for SMARTTT.'
@@ -124,13 +123,13 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
     >
       <form
         onSubmit={handleSubmit((v) => login.mutate(v, { onSuccess: (user) => navigate(landing(user.role), { replace: true }) }))}
-        className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8"
+        className="space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8"
         noValidate
       >
         {login.isError && (
-          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorMessage(login.error, 'Sign-in failed.')}</p>
+          <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{errorMessage(login.error, 'Sign-in failed.')}</p>
         )}
-        {message && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-success">{message}</p>}
+        {message && <p role="status" className="rounded-lg bg-success-soft px-3 py-2 text-sm text-success">{message}</p>}
 
         {isStudent ? (
           <IconField
@@ -148,9 +147,9 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
         )}
         {passwordField}
 
-        <div className="flex justify-end"><Link to={`/forgot-password?role=${role}`} className="text-sm font-semibold text-navy-800 hover:underline">Forgot password?</Link></div>
+        <div className="flex justify-end"><Link to={`/forgot-password?role=${role}`} className="text-sm font-semibold text-brand-ink hover:underline">Forgot password?</Link></div>
 
-        <Button type="submit" variant={isOfficer ? 'primary' : 'accent'} loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
+        <Button type="submit" loading={login.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">{isStudent ? 'Sign In' : 'Sign in'}</Button>
         {isStudent && <SocialSignIn />}
       </form>
       {/* Nobody signs up here: students and lecturers use their SMARTTT account, officers are provisioned. */}

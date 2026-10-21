@@ -1,6 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { EnrolmentStudent, Terminal, TerminalCapability } from '@/portals/department/terminals/terminalsApi'
-import type { Account, Admin, AdminFaculty, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, InvitationDetails, Officer, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import type { Account, Admin, AdminDepartment, AdminFaculty, Allocation, AttendanceMark, AttendancePolicy, CheckInResult, CourseOffering, CreateSessionInput, CreateUnitInput, CurrentQr, DepartmentAlias, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, DuplicateDepartment, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, GeofenceStatus, InvitationDetails, Lecturer, LecturerDirectoryEntry, LecturerStudent, Officer, Overview, PlacementLecturer, PlacementResult, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaCapaStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentEvaluationRound, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -181,6 +181,7 @@ export const resetMocks = () => {
   resetFaceMocks()
   resetOfficerMocks()
   resetQaMocks()
+  resetOversightMocks()
   resetTerminalMocks()
 }
 
@@ -926,9 +927,9 @@ export const faceHandlers = [
 
 /** The seeded lecturer is one of the three, so the lecturer and department portals never disagree about them. */
 const DEPARTMENT_LECTURERS: DepartmentLecturer[] = [
-  { userId: lecturer.id, fullName: lecturer.fullName, staffNumber: lecturer.staffNumber, unitsTaught: 2, studentsTaught: 151, avgAttendanceRate: 92.5, sessionsHeld: 38, avgLateMinutes: 1.2, onTimeRate: 94.7 },
-  { userId: 'lec-2', fullName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', unitsTaught: 2, studentsTaught: 93, avgAttendanceRate: 76, sessionsHeld: 22, avgLateMinutes: 8.4, onTimeRate: 63.6 },
-  { userId: 'lec-3', fullName: 'Mr. Peter Njuguna', staffNumber: 'STF/03480', unitsTaught: 1, studentsTaught: 110, avgAttendanceRate: 68, sessionsHeld: 14, avgLateMinutes: 17.9, onTimeRate: 42.9 },
+  { userId: lecturer.id, fullName: lecturer.fullName, staffNumber: lecturer.staffNumber, isOwnStaff: true, homeDepartmentName: 'Computer Science', unitsTaught: 2, unitsElsewhere: 0, studentsTaught: 151, avgAttendanceRate: 92.5, sessionsHeld: 38, avgLateMinutes: 1.2, onTimeRate: 94.7 },
+  { userId: 'lec-2', fullName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', isOwnStaff: true, homeDepartmentName: 'Computer Science', unitsTaught: 2, unitsElsewhere: 1, studentsTaught: 93, avgAttendanceRate: 76, sessionsHeld: 22, avgLateMinutes: 8.4, onTimeRate: 63.6 },
+  { userId: 'lec-3', fullName: 'Mr. Peter Njuguna', staffNumber: 'STF/03480', isOwnStaff: true, homeDepartmentName: 'Computer Science', unitsTaught: 1, unitsElsewhere: 0, studentsTaught: 110, avgAttendanceRate: 68, sessionsHeld: 14, avgLateMinutes: 17.9, onTimeRate: 42.9 },
 ]
 
 /** Every unit in the department — a superset of `units` (the seeded lecturer's own), plus two colleagues'. */
@@ -1166,7 +1167,7 @@ const departmentHandlers = [
     return ok({ offeringId: offering.id, segmentsPlanned })
   }),
 
-  /** Allocates one of the department's own lecturers to the next open segment — mirrors department.repository.ts allocateLecturerToSegment. */
+  /** Allocates a lecturer (own or borrowed) to the next open segment — mirrors department.repository.ts allocateLecturerToSegment. */
   http.post(`${API}/departments/courses/:offeringId/segments`, async ({ params, request }) => {
     const blocked = requireDepartment()
     if (blocked) return blocked
@@ -1177,8 +1178,7 @@ const departmentHandlers = [
       return fail(404, 'NOT_FOUND', 'No such course in your department.')
     }
     const { lecturerUserId } = (await request.json()) as { lecturerUserId?: string }
-    const lecturer = DEPARTMENT_LECTURERS.find((l) => l.userId === lecturerUserId)
-    if (!lecturer) return fail(400, 'VALIDATION_FAILED', 'That lecturer is not in your department.')
+    if (!LECTURER_DIRECTORY.some((l) => l.userId === lecturerUserId)) return fail(400, 'VALIDATION_FAILED', 'No such lecturer.')
     if (offering.segmentsFilled >= offering.segmentsPlanned) {
       return fail(409, 'CONFLICT', 'This course already has a lecturer assigned to every planned section.')
     }
@@ -1210,9 +1210,9 @@ const FACULTY_DEPARTMENTS_SEED = [
 ]
 
 const FACULTY_LECTURERS: FacultyLecturer[] = [
-  { userId: lecturer.id, fullName: lecturer.fullName, staffNumber: lecturer.staffNumber, departmentId: 'dept-cs', departmentName: 'Computer Science', unitsTaught: 2, studentsTaught: 151, avgAttendanceRate: 92.5, sessionsHeld: 38, avgLateMinutes: 1.2, onTimeRate: 94.7 },
-  { userId: 'lec-2', fullName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', departmentId: 'dept-cs', departmentName: 'Computer Science', unitsTaught: 2, studentsTaught: 93, avgAttendanceRate: 76, sessionsHeld: 22, avgLateMinutes: 8.4, onTimeRate: 63.6 },
-  { userId: 'lec-3', fullName: 'Mr. Peter Njuguna', staffNumber: 'STF/03480', departmentId: 'dept-se', departmentName: 'Software Engineering', unitsTaught: 1, studentsTaught: 110, avgAttendanceRate: 68, sessionsHeld: 14, avgLateMinutes: 17.9, onTimeRate: 42.9 },
+  { userId: lecturer.id, fullName: lecturer.fullName, staffNumber: lecturer.staffNumber, departmentId: 'dept-cs', departmentName: 'Computer Science', isOwnStaff: true, unitsTaught: 2, unitsElsewhere: 0, studentsTaught: 151, avgAttendanceRate: 92.5, sessionsHeld: 38, avgLateMinutes: 1.2, onTimeRate: 94.7 },
+  { userId: 'lec-2', fullName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', departmentId: 'dept-cs', departmentName: 'Computer Science', isOwnStaff: true, unitsTaught: 2, unitsElsewhere: 1, studentsTaught: 93, avgAttendanceRate: 76, sessionsHeld: 22, avgLateMinutes: 8.4, onTimeRate: 63.6 },
+  { userId: 'lec-3', fullName: 'Mr. Peter Njuguna', staffNumber: 'STF/03480', departmentId: 'dept-se', departmentName: 'Software Engineering', isOwnStaff: true, unitsTaught: 1, unitsElsewhere: 0, studentsTaught: 110, avgAttendanceRate: 68, sessionsHeld: 14, avgLateMinutes: 17.9, onTimeRate: 42.9 },
 ]
 
 const FACULTY_UNITS: FacultyUnit[] = [
@@ -1271,9 +1271,9 @@ const facultyHandlers = [
     const { name } = (await request.json()) as { name?: string }
     const trimmed = name?.trim()
     if (!trimmed) return fail(400, 'VALIDATION_FAILED', 'Enter the department name.')
-    if (FACULTY_DEPARTMENTS_SEED.some((d) => d.name.toLowerCase() === trimmed.toLowerCase())) {
-      return fail(409, 'CONFLICT', `A department named "${trimmed}" already exists.`)
-    }
+    // Mirrors faculty.service.ts createDepartment: another spelling of an existing department is a duplicate.
+    const existing = FACULTY_DEPARTMENTS_SEED.find((d) => departmentKey(d.name) === departmentKey(trimmed))
+    if (existing) return fail(409, 'CONFLICT', `"${trimmed}" is the same department as "${existing.name}", which already exists.`)
     const id = `dept-${++courseOfferingSeq}`
     FACULTY_DEPARTMENTS_SEED.push({ id, name: trimmed })
     return ok({ departmentId: id, departmentName: trimmed }, 201)
@@ -2005,8 +2005,8 @@ const invitationHandlers = [
   http.post(`${API}/admin/invitations`, async ({ request }) => {
     const blocked = requireAdmin()
     if (blocked) return blocked
-    const input = (await request.json()) as { role: 'admin' | 'faculty'; fullName: string; email: string; facultyId?: string }
-    if (input.role === 'admin') return inviteOfficer(input, { role: 'admin', facultyId: null, facultyName: null, departmentId: null, departmentName: null })
+    const input = (await request.json()) as { role: 'admin' | 'qa' | 'faculty'; fullName: string; email: string; facultyId?: string }
+    if (input.role !== 'faculty') return inviteOfficer(input, { role: input.role, facultyId: null, facultyName: null, departmentId: null, departmentName: null })
     const faculty = adminFaculties.find((f) => f.facultyId === input.facultyId)
     if (!faculty) return fail(400, 'BAD_REQUEST', 'That faculty does not exist.')
     const res = inviteOfficer(input, { role: 'faculty', facultyId: faculty.facultyId, facultyName: faculty.name, departmentId: null, departmentName: null })
@@ -2059,6 +2059,440 @@ const invitationHandlers = [
     const { token } = (await request.json()) as { token: string }
     if (token !== 'valid-reset-token') return fail(400, 'BAD_REQUEST', 'This password reset link is invalid or has expired. Please request a new one.')
     return ok({ message: 'Your password has been changed. You have been signed out everywhere. Please sign in with your new password.' })
+  }),
+]
+
+
+/* ------------------------------------------------------------------ *
+ * Oversight backlog: the attendance policy and exam eligibility,
+ * placing lecturers in departments, cross-department allocation, and
+ * student course evaluations. Shapes mirror the backend field for field.
+ * ------------------------------------------------------------------ */
+
+const POLICY_SEED = (): AttendancePolicy => ({ minAttendancePercent: 75, atRiskMarginPercent: 10, updatedAt: new Date('2026-09-01T08:00:00Z').toISOString(), updatedByName: null })
+let attendancePolicy = POLICY_SEED()
+
+/** Every active (student, unit) pair the eligibility reports judge, with classes held and attended. */
+const STANDING_SEED: Omit<EligibilityRow, 'attendanceRate' | 'status'>[] = [
+  { allocationId: 'al-1', studentUserId: 'stu-1', registrationNumber: 'STU00042', fullName: 'Ama Mensah', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 20, sessionsAttended: 19 },
+  { allocationId: 'al-2', studentUserId: 'stu-2', registrationNumber: 'SC211/0002/2022', fullName: 'Brian Otieno', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 20, sessionsAttended: 14 },
+  { allocationId: 'al-3', studentUserId: 'stu-7', registrationNumber: 'SC211/0007/2022', fullName: 'Grace Nyambura Maina', unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 14, sessionsAttended: 11 },
+  { allocationId: 'al-4', studentUserId: 'stu-8', registrationNumber: 'SC211/0008/2022', fullName: 'Hassan Ali Noor', unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 14, sessionsAttended: 8 },
+  { allocationId: 'al-5', studentUserId: 'stu-9', registrationNumber: 'SC211/0009/2023', fullName: 'Irene Chepkoech Lagat', unitId: 'u4', unitCode: 'CS210', unitName: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', sessionsHeld: 14, sessionsAttended: 12 },
+  { allocationId: 'al-6', studentUserId: 'stu-10', registrationNumber: 'SC211/0010/2023', fullName: 'John Mutua Kilonzo', unitId: 'u4', unitCode: 'CS210', unitName: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', sessionsHeld: 14, sessionsAttended: 10 },
+  { allocationId: 'al-7', studentUserId: 'stu-11', registrationNumber: 'SC211/0011/2023', fullName: 'Faith Atieno', unitId: 'u5', unitCode: 'CS410', unitName: 'Distributed Systems', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 0, sessionsAttended: 0 },
+]
+
+const SEVERITY: Record<EligibilityStatus, number> = { NOT_ELIGIBLE: 0, AT_RISK: 1, NOT_YET_MEASURED: 2, ELIGIBLE: 3 }
+
+/** Mirrors eligibility.service.ts buildReport. */
+function eligibilityReport(filter: (r: (typeof STANDING_SEED)[number]) => boolean, all: boolean): EligibilityReport {
+  const summary = { total: 0, eligible: 0, atRisk: 0, notEligible: 0, notYetMeasured: 0 }
+  const rows: EligibilityRow[] = []
+  for (const r of STANDING_SEED.filter(filter)) {
+    const percent = r.sessionsHeld > 0 ? (r.sessionsAttended / r.sessionsHeld) * 100 : null
+    const status: EligibilityStatus = percent === null ? 'NOT_YET_MEASURED'
+      : percent < attendancePolicy.minAttendancePercent ? 'NOT_ELIGIBLE'
+        : percent < attendancePolicy.minAttendancePercent + attendancePolicy.atRiskMarginPercent ? 'AT_RISK' : 'ELIGIBLE'
+    summary.total += 1
+    if (status === 'ELIGIBLE') summary.eligible += 1
+    else if (status === 'AT_RISK') summary.atRisk += 1
+    else if (status === 'NOT_ELIGIBLE') summary.notEligible += 1
+    else summary.notYetMeasured += 1
+    if (!all && status !== 'AT_RISK' && status !== 'NOT_ELIGIBLE') continue
+    rows.push({ ...r, attendanceRate: percent === null ? null : Math.round(percent * 10) / 10, status })
+  }
+  rows.sort((a, b) => SEVERITY[a.status] - SEVERITY[b.status] || (a.attendanceRate ?? 101) - (b.attendanceRate ?? 101))
+  return { policy: attendancePolicy, summary, rows }
+}
+
+const FACULTY_DEPARTMENT_IDS = new Set(FACULTY_DEPARTMENTS_SEED.map((d) => d.id))
+
+/** Lecturers anywhere in the institution, for the allocation picker: the department's own, plus one from another department. */
+const LECTURER_DIRECTORY: LecturerDirectoryEntry[] = [
+  ...DEPARTMENT_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, departmentId: 'dept-cs', departmentName: 'Computer Science' })),
+  { userId: 'lec-4', fullName: 'Dr. Ruth Kamau', staffNumber: 'STF/04112', title: 'Dr.', departmentId: 'dept-math', departmentName: 'Mathematics' },
+]
+
+const ADMIN_DEPARTMENTS_SEED = (): AdminDepartment[] => [
+  ...FACULTY_DEPARTMENTS_SEED.map((d) => ({ departmentId: d.id, name: d.name, facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', lecturerCount: FACULTY_LECTURERS.filter((l) => l.departmentId === d.id).length })),
+  { departmentId: 'dept-math', name: 'Mathematics', facultyId: 'fac-sci', facultyName: 'Science', lecturerCount: 1 },
+  { departmentId: 'dept-acc', name: 'Accounting', facultyId: 'fac-bus', facultyName: 'Business and Economics', lecturerCount: 0 },
+  // Created under a second spelling before names were unified — the duplicate the admin Departments page merges.
+  { departmentId: 'dept-cs-dup', name: 'Department of Computer Science', facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', lecturerCount: 1 },
+]
+let ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS_SEED()
+
+const ABBREVIATIONS: Record<string, string> = {
+  comp: 'computer', cs: 'computer science', sci: 'science', it: 'information technology', info: 'information', tech: 'technology',
+  eng: 'engineering', mgt: 'management', mgmt: 'management', admin: 'administration', bus: 'business', econ: 'economics',
+  math: 'mathematics', maths: 'mathematics', stats: 'statistics', phys: 'physics', chem: 'chemistry', bio: 'biology', educ: 'education',
+}
+
+/** Mirrors department_key() in db/migrations/036_department_spelling.sql. */
+const departmentKey = (name: string | null) => {
+  const words = (name ?? '').toLowerCase().replace(/&/g, ' and ').replace(/\b([a-z])\.(?=[a-z](\.|\b))/g, '$1')
+    .replace(/[^a-z0-9 ]+/g, ' ').replace(/^\s*(the\s+)?(department|dept|dpt)\s+(of\s+)?/, '')
+    .split(/\s+/).filter(Boolean).map((w) => ABBREVIATIONS[w] ?? w)
+  return words.length ? words.join(' ') : null
+}
+
+const ALIASES_SEED = (): DepartmentAlias[] => []
+let departmentAliases = ALIASES_SEED()
+
+/** Mirrors department_for_name(): canonical name first, then a learned alias. */
+const departmentForName = (name: string | null) => {
+  const key = departmentKey(name)
+  if (!key) return null
+  return ADMIN_DEPARTMENTS.find((d) => departmentKey(d.name) === key)
+    ?? ADMIN_DEPARTMENTS.find((d) => departmentAliases.some((a) => a.departmentId === d.departmentId && departmentKey(a.alias) === key))
+    ?? null
+}
+
+const PLACEMENT_SEED = (): PlacementLecturer[] => [
+  { userId: 'lec-9', fullName: 'Dr. Samuel Kiprono', staffNumber: 'STF/09001', title: 'Dr.', email: 's.kiprono@university.edu', departmentId: null, departmentName: null, facultyId: null, facultyName: null, reportedDepartment: 'Comp. Sci & IT', reportedFaculty: 'FPET', unitCount: 1 },
+  { userId: 'lec-10', fullName: 'Ms. Lucy Wanjiku', staffNumber: 'STF/09002', title: 'Ms.', email: 'l.wanjiku@university.edu', departmentId: null, departmentName: null, facultyId: null, facultyName: null, reportedDepartment: 'Maths', reportedFaculty: null, unitCount: 0 },
+  ...FACULTY_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, email: `${l.userId}@university.edu`, departmentId: l.departmentId, departmentName: l.departmentName, facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', reportedDepartment: l.departmentName, reportedFaculty: null, unitCount: l.unitsTaught })),
+  { userId: 'lec-4', fullName: 'Dr. Ruth Kamau', staffNumber: 'STF/04112', title: 'Dr.', email: 'r.kamau@university.edu', departmentId: 'dept-math', departmentName: 'Mathematics', facultyId: 'fac-sci', facultyName: 'Science', reportedDepartment: 'Mathematics', reportedFaculty: 'Science', unitCount: 2 },
+]
+let placementLecturers = PLACEMENT_SEED()
+
+/** Mirrors lecturer.placement.ts listLecturers: unassigned first, then (optionally) one faculty's staff. */
+function listPlacement(request: Request, facultyId: string | null) {
+  const url = new URL(request.url)
+  const q = url.searchParams.get('q')?.trim().toLowerCase() ?? ''
+  const unassignedOnly = url.searchParams.get('unassigned') === 'true'
+  return placementLecturers
+    .filter((l) => l.departmentId === null || (!unassignedOnly && (facultyId === null || l.facultyId === facultyId)))
+    .filter((l) => !q || l.fullName.toLowerCase().includes(q) || l.staffNumber.toLowerCase().includes(q))
+    .sort((a, b) => Number(a.departmentId !== null) - Number(b.departmentId !== null) || a.fullName.localeCompare(b.fullName))
+}
+
+/** Mirrors lecturer.placement.ts moveLecturer, including learning SMARTTT's spelling from an unassigned lecturer. */
+function placeLecturer(lecturer: PlacementLecturer, department: AdminDepartment) {
+  const assign = (l: PlacementLecturer) => Object.assign(l, { departmentId: department.departmentId, departmentName: department.name, facultyId: department.facultyId, facultyName: department.facultyName })
+  let learnedSpelling: string | null = null
+  let alsoPlaced = 0
+  if (lecturer.departmentId === null && lecturer.reportedDepartment && departmentKey(lecturer.reportedDepartment) && !departmentForName(lecturer.reportedDepartment)) {
+    learnedSpelling = lecturer.reportedDepartment
+    departmentAliases.push({
+      aliasId: `alias-${departmentAliases.length + 1}`, alias: learnedSpelling, departmentId: department.departmentId, departmentName: department.name,
+      facultyName: department.facultyName, source: 'PLACEMENT', createdByName: currentAccount.fullName, createdAt: new Date().toISOString(),
+    })
+    for (const other of placementLecturers) {
+      if (other !== lecturer && other.departmentId === null && departmentForName(other.reportedDepartment)?.departmentId === department.departmentId) { assign(other); alsoPlaced += 1 }
+    }
+  }
+  assign(lecturer)
+  const result: PlacementResult = { ...lecturer, learnedSpelling, alsoPlaced }
+  return ok(result)
+}
+
+// --- Course evaluations ----------------------------------------------------
+
+interface MockRound { id: string; title: string; instructions: string | null; opensAt: string; closesAt: string; minResponses: number; createdAt: string; questions: EvaluationQuestion[] }
+interface MockResponse { roundId: string; unitId: string; lecturerName: string; departmentId: string; departmentName: string; answers: { questionId: string; rating?: number; text?: string }[] }
+
+const daysFromNow = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString()
+const questionsFor = (roundId: string): EvaluationQuestion[] => [
+  { id: `${roundId}-q1`, position: 1, prompt: 'The lecturer explained the material clearly.', kind: 'RATING', required: true },
+  { id: `${roundId}-q2`, position: 2, prompt: 'The unit was well organised and followed its outline.', kind: 'RATING', required: true },
+  { id: `${roundId}-q3`, position: 3, prompt: 'What should the lecturer keep doing, or change?', kind: 'TEXT', required: false },
+]
+const ROUNDS_SEED = (): MockRound[] => [
+  { id: 'round-open', title: 'Semester 1 2026/27 evaluation', instructions: 'Your answers are anonymous.', opensAt: daysFromNow(-3), closesAt: daysFromNow(11), minResponses: 3, createdAt: daysFromNow(-4), questions: questionsFor('round-open') },
+  { id: 'round-old', title: 'Semester 2 2025/26 evaluation', instructions: null, opensAt: daysFromNow(-200), closesAt: daysFromNow(-186), minResponses: 3, createdAt: daysFromNow(-201), questions: questionsFor('round-old') },
+]
+const cs301 = { unitId: 'u1', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science' }
+const RESPONSES_SEED = (): MockResponse[] => [
+  ...[[5, 4, 'Clear examples every week.'], [4, 4, undefined], [3, 2, 'Notes came out late.'], [5, 5, undefined]].map(([a, b, text]) => ({
+    roundId: 'round-open', ...cs301, answers: [{ questionId: 'round-open-q1', rating: a as number }, { questionId: 'round-open-q2', rating: b as number }, ...(text ? [{ questionId: 'round-open-q3', text: text as string }] : [])],
+  })),
+  // One response only: below the minimum, so its ratings are withheld.
+  { roundId: 'round-open', unitId: 'u3', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', answers: [{ questionId: 'round-open-q1', rating: 2 }, { questionId: 'round-open-q2', rating: 3 }] },
+  ...[4, 5, 4].map((a) => ({ roundId: 'round-old', unitId: 'u4', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', answers: [{ questionId: 'round-old-q1', rating: a }, { questionId: 'round-old-q2', rating: a }] })),
+]
+let evaluationRounds = ROUNDS_SEED()
+let evaluationResponses = RESPONSES_SEED()
+/** `${roundId}:${unitId}:${studentId}` — who has evaluated what, never joined to the responses. */
+const evaluationSubmissions = new Set<string>()
+let roundSeq = 0
+
+const roundStatus = (r: MockRound): EvaluationRoundStatus => (Date.now() < Date.parse(r.opensAt) ? 'UPCOMING' : Date.now() < Date.parse(r.closesAt) ? 'OPEN' : 'CLOSED')
+const toRound = (r: MockRound): EvaluationRound => ({
+  id: r.id, title: r.title, instructions: r.instructions, opensAt: r.opensAt, closesAt: r.closesAt, status: roundStatus(r),
+  minResponses: r.minResponses, questionCount: r.questions.length, responseCount: evaluationResponses.filter((x) => x.roundId === r.id).length, createdAt: r.createdAt,
+})
+const hasAnswers = (roundId: string) => evaluationResponses.some((x) => x.roundId === roundId)
+const toRoundDetail = (r: MockRound): EvaluationRoundDetail => ({ ...toRound(r), questions: r.questions, questionsEditable: !hasAnswers(r.id) })
+
+function aggregate(responses: MockResponse[], questions: EvaluationQuestion[]): EvaluationQuestionResult[] {
+  return questions.filter((q) => q.kind === 'RATING').flatMap((q) => {
+    const ratings = responses.flatMap((r) => r.answers.filter((a) => a.questionId === q.id && a.rating).map((a) => a.rating!))
+    if (ratings.length === 0) return []
+    const distribution = [1, 2, 3, 4, 5].map((n) => ratings.filter((x) => x === n).length) as [number, number, number, number, number]
+    return [{ questionId: q.id, answered: ratings.length, average: Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 100) / 100, distribution }]
+  })
+}
+
+/** Mirrors evaluation.service.ts getResults. */
+function evaluationResults(round: MockRound, inScope: (r: MockResponse) => boolean): EvaluationResults {
+  const responses = evaluationResponses.filter((r) => r.roundId === round.id && inScope(r))
+  const groups = new Map<string, MockResponse[]>()
+  for (const r of responses) groups.set(`${r.unitId}:${r.lecturerName}`, [...(groups.get(`${r.unitId}:${r.lecturerName}`) ?? []), r])
+  const unitResults: EvaluationUnitResult[] = [...groups.values()].map((list) => {
+    const first = list[0]!
+    const unit = DEPARTMENT_UNITS.find((u) => u.id === first.unitId)
+    const enrolled = unit?.studentCount ?? 0
+    const reportable = list.length >= round.minResponses
+    return {
+      unitId: first.unitId, unitCode: unit?.code ?? first.unitId, unitName: unit?.name ?? null, lecturerName: first.lecturerName,
+      departmentId: first.departmentId, departmentName: first.departmentName, responses: list.length, enrolled,
+      responseRate: enrolled ? Math.round((list.length / enrolled) * 1000) / 10 : null, reportable,
+      ratings: reportable ? aggregate(list, round.questions) : [],
+      comments: reportable ? list.flatMap((r) => r.answers.filter((a) => a.text).map((a) => ({ questionId: a.questionId, text: a.text! }))).sort((a, b) => a.text.localeCompare(b.text)) : [],
+    }
+  })
+  return { round: toRoundDetail(round), totalResponses: responses.length, overall: responses.length >= round.minResponses ? aggregate(responses, round.questions) : [], units: unitResults }
+}
+
+function resetOversightMocks() {
+  attendancePolicy = POLICY_SEED()
+  placementLecturers = PLACEMENT_SEED()
+  ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS_SEED()
+  departmentAliases = ALIASES_SEED()
+  evaluationRounds = ROUNDS_SEED()
+  evaluationResponses = RESPONSES_SEED()
+  evaluationSubmissions.clear()
+}
+
+const requireStudent = () => {
+  if (!store.get()) return unauthorized()
+  if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
+  return null
+}
+
+const findRound = (id: unknown) => evaluationRounds.find((r) => r.id === id)
+
+const oversightHandlers = [
+  http.get(`${API}/attendance-policy`, () => (store.get() ? ok(attendancePolicy) : unauthorized())),
+  http.get(`${API}/quality-assurance/attendance-policy`, () => requireQa() ?? ok(attendancePolicy)),
+  http.put(`${API}/quality-assurance/attendance-policy`, async ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const input = (await request.json()) as { minAttendancePercent?: number; atRiskMarginPercent?: number }
+    const min = input.minAttendancePercent ?? attendancePolicy.minAttendancePercent
+    const margin = input.atRiskMarginPercent ?? attendancePolicy.atRiskMarginPercent
+    if (min < 1 || min > 100 || margin < 0 || margin > 50) return fail(400, 'VALIDATION_FAILED', 'Out of range.')
+    attendancePolicy = { minAttendancePercent: min, atRiskMarginPercent: margin, updatedAt: new Date().toISOString(), updatedByName: currentAccount.fullName }
+    return ok(attendancePolicy)
+  }),
+
+  http.get(`${API}/departments/eligibility`, ({ request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const officer = currentAccount as DepartmentOfficer
+    return ok(eligibilityReport((r) => r.departmentId === officer.departmentId, new URL(request.url).searchParams.get('all') === 'true'))
+  }),
+  http.get(`${API}/faculties/eligibility`, ({ request }) => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    const url = new URL(request.url)
+    const departmentId = url.searchParams.get('departmentId')
+    if (departmentId && !FACULTY_DEPARTMENT_IDS.has(departmentId)) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
+    return ok(eligibilityReport((r) => (departmentId ? r.departmentId === departmentId : FACULTY_DEPARTMENT_IDS.has(r.departmentId ?? '')), url.searchParams.get('all') === 'true'))
+  }),
+  http.get(`${API}/quality-assurance/eligibility`, ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const url = new URL(request.url)
+    const departmentId = url.searchParams.get('departmentId')
+    const facultyId = url.searchParams.get('facultyId')
+    return ok(eligibilityReport((r) => (!departmentId || r.departmentId === departmentId) && (!facultyId || (facultyId === 'fac-pet' && FACULTY_DEPARTMENT_IDS.has(r.departmentId ?? ''))), url.searchParams.get('all') === 'true'))
+  }),
+
+  http.get(`${API}/departments/lecturer-directory`, ({ request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const q = new URL(request.url).searchParams.get('q')?.trim().toLowerCase() ?? ''
+    return ok(LECTURER_DIRECTORY.filter((l) => !q || l.fullName.toLowerCase().includes(q) || l.staffNumber.toLowerCase().includes(q)))
+  }),
+
+  http.get(`${API}/faculties/lecturer-placement`, ({ request }) => requireFaculty() ?? ok(listPlacement(request, 'fac-pet'))),
+  http.patch(`${API}/faculties/lecturers/:lecturerUserId/department`, async ({ params, request }) => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    const lecturer = placementLecturers.find((l) => l.userId === params.lecturerUserId)
+    if (!lecturer || (lecturer.departmentId !== null && lecturer.facultyId !== 'fac-pet')) return fail(404, 'NOT_FOUND', 'No such lecturer in your faculty.')
+    const { departmentId } = (await request.json()) as { departmentId: string }
+    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === departmentId && d.facultyId === 'fac-pet')
+    if (!department) return fail(400, 'BAD_REQUEST', 'Choose one of your faculty’s departments.')
+    return placeLecturer(lecturer, department)
+  }),
+  http.get(`${API}/admin/departments`, () => requireAdmin() ?? ok(ADMIN_DEPARTMENTS)),
+  http.get(`${API}/admin/department-aliases`, () => requireAdmin() ?? ok(departmentAliases)),
+  http.delete(`${API}/admin/department-aliases/:aliasId`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    if (!departmentAliases.some((a) => a.aliasId === params.aliasId)) return fail(404, 'NOT_FOUND', 'No such spelling.')
+    departmentAliases = departmentAliases.filter((a) => a.aliasId !== params.aliasId)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get(`${API}/admin/department-duplicates`, () => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const groups = new Map<string, DuplicateDepartment[]>()
+    for (const d of ADMIN_DEPARTMENTS) {
+      const key = departmentKey(d.name)!
+      groups.set(key, [...(groups.get(key) ?? []), { departmentId: d.departmentId, name: d.name, facultyId: d.facultyId, facultyName: d.facultyName, lecturerCount: d.lecturerCount, unitCount: 0 }])
+    }
+    return ok([...groups.values()].filter((g) => g.length > 1).map((g) => g.sort((a, b) => b.lecturerCount - a.lecturerCount)))
+  }),
+  http.post(`${API}/admin/departments/:departmentId/merge`, async ({ params, request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const { intoDepartmentId } = (await request.json()) as { intoDepartmentId: string }
+    const duplicate = ADMIN_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
+    const keep = ADMIN_DEPARTMENTS.find((d) => d.departmentId === intoDepartmentId)
+    if (!duplicate) return fail(404, 'NOT_FOUND', 'No such department.')
+    if (!keep || keep === duplicate) return fail(400, 'BAD_REQUEST', 'Choose a different department to keep.')
+    keep.lecturerCount += duplicate.lecturerCount
+    ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS.filter((d) => d !== duplicate)
+    if (departmentKey(duplicate.name) !== departmentKey(keep.name)) {
+      departmentAliases.push({ aliasId: `alias-${departmentAliases.length + 1}`, alias: duplicate.name, departmentId: keep.departmentId, departmentName: keep.name, facultyName: keep.facultyName, source: 'MERGE', createdByName: currentAccount.fullName, createdAt: new Date().toISOString() })
+    }
+    return ok({ departmentId: keep.departmentId, name: keep.name })
+  }),
+  http.get(`${API}/admin/lecturers`, ({ request }) => requireAdmin() ?? ok(listPlacement(request, null))),
+  http.patch(`${API}/admin/lecturers/:lecturerUserId/department`, async ({ params, request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const lecturer = placementLecturers.find((l) => l.userId === params.lecturerUserId)
+    if (!lecturer) return fail(404, 'NOT_FOUND', 'No such lecturer.')
+    const { departmentId } = (await request.json()) as { departmentId: string }
+    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === departmentId)
+    if (!department) return fail(400, 'BAD_REQUEST', 'That department does not exist.')
+    return placeLecturer(lecturer, department)
+  }),
+
+  // QA: evaluation rounds
+  http.get(`${API}/quality-assurance/evaluations`, () => requireQa() ?? ok([...evaluationRounds].sort((a, b) => b.opensAt.localeCompare(a.opensAt)).map(toRound))),
+  http.post(`${API}/quality-assurance/evaluations`, async ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const input = (await request.json()) as EvaluationRoundInput
+    if (Date.parse(input.closesAt) <= Date.parse(input.opensAt)) return fail(400, 'VALIDATION_FAILED', 'The round must close after it opens.')
+    const id = `round-${++roundSeq}`
+    const round: MockRound = {
+      id, title: input.title, instructions: input.instructions ?? null, opensAt: input.opensAt, closesAt: input.closesAt,
+      minResponses: input.minResponses ?? 3, createdAt: new Date().toISOString(),
+      questions: input.questions.map((q, i) => ({ ...q, id: `${id}-q${i + 1}`, position: i + 1 })),
+    }
+    evaluationRounds.push(round)
+    return ok(toRoundDetail(round), 201)
+  }),
+  http.get(`${API}/quality-assurance/evaluations/:id`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    return round ? ok(toRoundDetail(round)) : fail(404, 'NOT_FOUND', 'No such evaluation round.')
+  }),
+  http.patch(`${API}/quality-assurance/evaluations/:id`, async ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    const input = (await request.json()) as Partial<EvaluationRoundInput>
+    if (input.questions && hasAnswers(round.id)) return fail(409, 'CONFLICT', 'Students have already answered this round, so its questions can no longer change.')
+    if (input.title) round.title = input.title
+    if (input.instructions !== undefined) round.instructions = input.instructions || null
+    if (input.opensAt) round.opensAt = input.opensAt
+    if (input.closesAt) round.closesAt = input.closesAt
+    if (input.minResponses) round.minResponses = input.minResponses
+    if (input.questions) round.questions = input.questions.map((q, i) => ({ ...q, id: `${round.id}-e${roundSeq}-${i + 1}`, position: i + 1 }))
+    return ok(toRoundDetail(round))
+  }),
+  http.post(`${API}/quality-assurance/evaluations/:id/close`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    if (roundStatus(round) !== 'CLOSED') {
+      round.closesAt = new Date().toISOString()
+      if (Date.parse(round.opensAt) >= Date.now()) round.opensAt = new Date(Date.now() - 1000).toISOString()
+    }
+    return ok(toRoundDetail(round))
+  }),
+  http.delete(`${API}/quality-assurance/evaluations/:id`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    if (hasAnswers(round.id)) return fail(409, 'CONFLICT', 'Students have already answered this round. Close it instead of deleting it.')
+    evaluationRounds = evaluationRounds.filter((r) => r.id !== round.id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get(`${API}/quality-assurance/evaluations/:id/results`, ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    const url = new URL(request.url)
+    const departmentId = url.searchParams.get('departmentId')
+    const facultyId = url.searchParams.get('facultyId')
+    return ok(evaluationResults(round, (r) => (!departmentId || r.departmentId === departmentId) && (!facultyId || (facultyId === 'fac-pet' && FACULTY_DEPARTMENT_IDS.has(r.departmentId)))))
+  }),
+
+  // Department and faculty: started rounds and their own results
+  http.get(`${API}/departments/evaluations`, () => requireDepartment() ?? ok(evaluationRounds.filter((r) => roundStatus(r) !== 'UPCOMING').map(toRound))),
+  http.get(`${API}/departments/evaluations/:id`, ({ params }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round || roundStatus(round) === 'UPCOMING') return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    const officer = currentAccount as DepartmentOfficer
+    return ok(evaluationResults(round, (r) => r.departmentId === officer.departmentId))
+  }),
+  http.get(`${API}/faculties/evaluations`, () => requireFaculty() ?? ok(evaluationRounds.filter((r) => roundStatus(r) !== 'UPCOMING').map(toRound))),
+  http.get(`${API}/faculties/evaluations/:id`, ({ params, request }) => {
+    const blocked = requireFaculty()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round || roundStatus(round) === 'UPCOMING') return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    const departmentId = new URL(request.url).searchParams.get('departmentId')
+    if (departmentId && !FACULTY_DEPARTMENT_IDS.has(departmentId)) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
+    return ok(evaluationResults(round, (r) => (departmentId ? r.departmentId === departmentId : FACULTY_DEPARTMENT_IDS.has(r.departmentId))))
+  }),
+
+  // Students
+  http.get(`${API}/students/me/evaluations`, () => {
+    const blocked = requireStudent()
+    if (blocked) return blocked
+    const studentId = currentAccount.id
+    const rounds: StudentEvaluationRound[] = evaluationRounds.filter((r) => roundStatus(r) === 'OPEN').map((r) => ({
+      id: r.id, title: r.title, instructions: r.instructions, closesAt: r.closesAt, questions: r.questions,
+      units: STUDENT_UNIT_IDS.map((unitId) => {
+        const unit = units.find((u) => u.id === unitId)!
+        return { unitId, unitCode: unit.code, unitName: unit.name, lecturerName: lecturer.fullName, submitted: evaluationSubmissions.has(`${r.id}:${unitId}:${studentId}`) }
+      }),
+    }))
+    return ok(rounds)
+  }),
+  http.post(`${API}/students/me/evaluations/:roundId/units/:unitId`, async ({ params, request }) => {
+    const blocked = requireStudent()
+    if (blocked) return blocked
+    const round = findRound(params.roundId)
+    if (!round || roundStatus(round) !== 'OPEN') return fail(404, 'NOT_FOUND', 'This evaluation is not open.')
+    const unitId = String(params.unitId)
+    if (!STUDENT_UNIT_IDS.includes(unitId)) return fail(404, 'NOT_FOUND', 'You are not on that unit.')
+    const key = `${round.id}:${unitId}:${currentAccount.id}`
+    if (evaluationSubmissions.has(key)) return fail(409, 'CONFLICT', 'You have already evaluated this unit in this round.')
+    const { answers } = (await request.json()) as { answers: { questionId: string; rating?: number; text?: string }[] }
+    const missing = round.questions.find((q) => q.required && !answers.some((a) => a.questionId === q.id))
+    if (missing) return fail(400, 'BAD_REQUEST', `Please answer "${missing.prompt}".`)
+    evaluationSubmissions.add(key)
+    evaluationResponses.push({ roundId: round.id, unitId, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', answers })
+    return new HttpResponse(null, { status: 204 })
   }),
 ]
 
@@ -2177,4 +2611,4 @@ const terminalHandlers = [
   }),
 ]
 
-export const handlers = [...terminalHandlers, ...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+export const handlers = [...terminalHandlers, ...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

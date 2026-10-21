@@ -35,7 +35,7 @@ export function UnitsPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         {!adding && (
-          <Button variant="lecturer" onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden /> Add unit
           </Button>
         )}
@@ -45,8 +45,8 @@ export function UnitsPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load your units.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load your units.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !units ? (
         <div className="grid gap-4 sm:grid-cols-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[168px]" />)}</div>
@@ -54,7 +54,7 @@ export function UnitsPage() {
         !adding && (
           <Card className="p-10 text-center">
             <BookOpen className="mx-auto size-8 text-muted" aria-hidden />
-            <p className="mt-3 font-semibold text-navy-900">No units yet</p>
+            <p className="mt-3 font-semibold text-ink">No units yet</p>
             <p className="mt-1 text-sm text-muted">Add the first unit you teach to start taking attendance.</p>
           </Card>
         )
@@ -78,9 +78,9 @@ function UnitCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number | un
     <li>
       <Card className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{unit.code}</span>
+          <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{unit.code}</span>
           {pending ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-600">
+            <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning">
               <Clock className="size-3.5" aria-hidden /> Pending verification
             </span>
           ) : rate !== undefined ? (
@@ -91,14 +91,14 @@ function UnitCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number | un
         </div>
 
         <div>
-          <h3 className="truncate font-semibold text-navy-900">{unit.name ?? unit.code}</h3>
+          <h3 className="truncate font-semibold text-ink">{unit.name ?? unit.code}</h3>
           {unit.slots && unit.slots.length > 0 ? (
             <p className="text-xs text-muted">{unit.slots.map(formatSchedule).join(' · ')}</p>
           ) : (
             formatSchedule(unit.schedule) && <p className="text-xs text-muted">{formatSchedule(unit.schedule)}</p>
           )}
           {ungrouped && (
-            <p className="mt-2 text-xs font-medium text-orange-600" title="They are on no group's roster until they pick their group on the timetable">
+            <p className="mt-2 text-xs font-medium text-warning" title="They are on no group's roster until they pick their group on the timetable">
               {ungrouped}
             </p>
           )}
@@ -122,8 +122,8 @@ function UnitCard({ unit, rate, animate }: { unit: TaughtUnit; rate: number | un
         </div>
 
         <div className="flex items-center gap-4 border-t border-line pt-3 text-sm font-semibold">
-          <Link to={`/units/${unit.id}`} className="text-blue-700 hover:underline">Roster</Link>
-          <Link to={`/attendance?unit=${unit.id}`} className="text-blue-700 hover:underline">Attendance</Link>
+          <Link to={`/units/${unit.id}`} className="text-brand-ink hover:underline">Roster</Link>
+          <Link to={`/attendance?unit=${unit.id}`} className="text-brand-ink hover:underline">Attendance</Link>
         </div>
       </Card>
     </li>
@@ -142,17 +142,17 @@ function AddUnitForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <Card className="border border-orange-500/30 p-5">
+    <Card className="border border-warning/30 p-5">
       <form onSubmit={submit} className="space-y-4" noValidate>
         <div>
-          <h3 className="font-semibold text-navy-900">Add a unit</h3>
+          <h3 className="font-semibold text-ink">Add a unit</h3>
           <p className="mt-1 flex items-start gap-1.5 text-sm text-muted">
             <Clock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             Its name and schedule are looked up from the issued timetable. If the timetable doesn't already list you as its lecturer, an administrator confirms that before classes can be activated for it.
           </p>
         </div>
         <div className="max-w-xs space-y-1.5">
-          <label htmlFor={`${id}-code`} className="text-sm font-medium text-navy-900">Unit code</label>
+          <label htmlFor={`${id}-code`} className="text-sm font-medium text-ink">Unit code</label>
           <input
             id={`${id}-code`}
             className="input uppercase"
@@ -164,14 +164,14 @@ function AddUnitForm({ onDone }: { onDone: () => void }) {
             autoFocus
             aria-invalid={!!fields.code || undefined}
           />
-          {fields.code && <p className="text-xs text-red-600">{fields.code}</p>}
+          {fields.code && <p className="text-xs text-danger">{fields.code}</p>}
         </div>
         {create.error && !fields.code && (
-          <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>
+          <p role="alert" className="text-sm text-danger">{errorMessage(create.error)}</p>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
-          <Button type="submit" variant="lecturer" loading={create.isPending} disabled={!code.trim()}>
+          <Button type="submit" loading={create.isPending} disabled={!code.trim()}>
             Add unit
           </Button>
         </div>

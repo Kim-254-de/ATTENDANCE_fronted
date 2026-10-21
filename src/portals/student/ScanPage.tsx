@@ -90,15 +90,15 @@ export function ScanPage() {
   const cameraOn = state.step === 'scanning' || state.step === 'checking'
 
   return (
-    <main className="student-portal min-h-dvh bg-blue-50 p-4 sm:p-8">
+    <main className="min-h-dvh bg-brand-soft p-4 sm:p-8">
       <div className="mx-auto max-w-md space-y-5">
-        <Link to="/student-dashboard" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-navy-900">
+        <Link to="/student-dashboard" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
           <ArrowLeft className="size-4" aria-hidden /> Dashboard
         </Link>
 
         <div>
-          <p className="text-sm font-semibold tracking-wide text-blue-700">CHECK IN</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-navy-900">Scan the class QR code</h1>
+          <p className="text-sm font-semibold tracking-wide text-brand-ink">CHECK IN</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Scan the class QR code</h1>
           <p className="mt-2 text-sm text-muted">Point your camera at the code your lecturer is showing. It changes every minute, so scan it live in class.</p>
         </div>
 
@@ -107,7 +107,7 @@ export function ScanPage() {
             <div className="relative">
               <QrCameraScanner onScan={handleScan} paused={state.step === 'checking'} />
               {state.step === 'checking' && (
-                <div role="status" className="absolute inset-0 grid place-items-center rounded-2xl bg-navy-900/70 text-sm font-semibold text-white">
+                <div role="status" className="absolute inset-0 grid place-items-center rounded-2xl bg-brand/70 text-sm font-semibold text-white">
                   <span className="flex items-center gap-2">
                     <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
                     {state.locating
@@ -118,7 +118,7 @@ export function ScanPage() {
               )}
             </div>
             {state.step === 'scanning' && state.hint ? (
-              <p role="alert" className="rounded-xl bg-gold-100 px-4 py-3 text-sm text-navy-900">{state.hint}</p>
+              <p role="alert" className="rounded-xl bg-accent-soft px-4 py-3 text-sm text-ink">{state.hint}</p>
             ) : (
               <p className="flex items-center gap-2 text-xs text-muted"><QrCode className="size-4" aria-hidden /> Hold steady until the code is inside the frame.</p>
             )}
@@ -128,23 +128,23 @@ export function ScanPage() {
 
         {state.step === 'success' && (
           <Card className="space-y-4 p-6 text-center" role="status">
-            <CheckCircle2 className="mx-auto size-12 text-green-600" aria-hidden />
+            <CheckCircle2 className="mx-auto size-12 text-success" aria-hidden />
             <div>
-              <h2 className="text-xl font-bold text-navy-900">You're marked present</h2>
+              <h2 className="text-xl font-bold text-ink">You're marked present</h2>
               <p className="mt-1 text-sm text-muted">{state.result.unitCode} · recorded at {formatTime(state.result.recordedAt)}</p>
             </div>
-            <Link to="/student-dashboard" className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-navy-900 text-sm font-semibold text-white">Done</Link>
+            <Link to="/student-dashboard" className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-brand text-sm font-semibold text-white">Done</Link>
           </Card>
         )}
 
         {state.step === 'already' && (
           <Card className="space-y-4 p-6 text-center" role="status">
-            <CheckCircle2 className="mx-auto size-12 text-green-600" aria-hidden />
+            <CheckCircle2 className="mx-auto size-12 text-success" aria-hidden />
             <div>
-              <h2 className="text-xl font-bold text-navy-900">Already checked in</h2>
+              <h2 className="text-xl font-bold text-ink">Already checked in</h2>
               <p className="mt-1 text-sm text-muted">{state.message}</p>
             </div>
-            <Link to="/student-dashboard" className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-navy-900 text-sm font-semibold text-white">Done</Link>
+            <Link to="/student-dashboard" className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-brand text-sm font-semibold text-white">Done</Link>
           </Card>
         )}
 
@@ -154,9 +154,9 @@ export function ScanPage() {
 
         {state.step === 'failed' && (
           <Card className="space-y-4 p-6 text-center" role="alert">
-            <XCircle className="mx-auto size-12 text-red-600" aria-hidden />
+            <XCircle className="mx-auto size-12 text-danger" aria-hidden />
             <div>
-              <h2 className="text-xl font-bold text-navy-900">Not checked in</h2>
+              <h2 className="text-xl font-bold text-ink">Not checked in</h2>
               <p className="mt-1 text-sm text-muted">{state.message}</p>
             </div>
             <Button variant="secondary" className="w-full" onClick={scanAgain}>
@@ -176,7 +176,7 @@ export function ScanPage() {
 function LocationLine({ status, accuracy }: { status: LocationStatus; accuracy: number | null }) {
   if (status === 'denied') {
     return (
-      <p role="note" className="flex gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+      <p role="note" className="flex gap-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
         <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
         Location is blocked for this site. Most classes need it to check you in: allow location in your browser's site settings, then reload this page.
       </p>
@@ -184,7 +184,7 @@ function LocationLine({ status, accuracy }: { status: LocationStatus; accuracy: 
   }
   if (status === 'unavailable') {
     return (
-      <p role="note" className="flex gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+      <p role="note" className="flex gap-2 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
         <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
         This browser can't share your location, which most classes need. Open this page in Chrome or Safari over https.
       </p>
@@ -193,7 +193,7 @@ function LocationLine({ status, accuracy }: { status: LocationStatus; accuracy: 
   const precise = accuracy !== null && accuracy <= 20
   return (
     <p className="flex items-center gap-2 text-xs text-muted">
-      <MapPin className={`size-4 ${precise ? 'text-green-600' : ''}`} aria-hidden />
+      <MapPin className={`size-4 ${precise ? 'text-success' : ''}`} aria-hidden />
       {accuracy === null
         ? 'Finding your location…'
         : precise

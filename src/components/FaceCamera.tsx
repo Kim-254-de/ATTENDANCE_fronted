@@ -88,8 +88,8 @@ export function FaceCamera({ onCapture, captureLabel, disabled = false, initialF
 
   if (problem) {
     return (
-      <div role="alert" className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 rounded-2xl bg-navy-900 p-6 text-center text-white">
-        <CameraOff className="size-8 text-blue-200" aria-hidden />
+      <div role="alert" className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 rounded-2xl bg-brand-950 p-6 text-center text-white">
+        <CameraOff className="size-8 text-brand-200" aria-hidden />
         <p className="text-sm leading-6">{PROBLEM_TEXT[problem]}</p>
       </div>
     )
@@ -97,7 +97,7 @@ export function FaceCamera({ onCapture, captureLabel, disabled = false, initialF
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-navy-900">
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-brand-950">
         <video
           ref={videoRef}
           className={`size-full object-cover ${facing === 'user' ? '-scale-x-100' : ''}`}
@@ -107,7 +107,7 @@ export function FaceCamera({ onCapture, captureLabel, disabled = false, initialF
         />
         {/* Where to put the face: a guide, not a crop. */}
         <div className="pointer-events-none absolute inset-x-[18%] top-[14%] bottom-[22%] rounded-[50%] border-2 border-dashed border-white/50" aria-hidden />
-        {!ready && <p role="status" className="absolute inset-0 grid place-items-center text-sm text-blue-200">Starting camera…</p>}
+        {!ready && <p role="status" className="absolute inset-0 grid place-items-center text-sm text-brand-200">Starting camera…</p>}
         <button
           type="button"
           onClick={() => setFacing((f) => (f === 'environment' ? 'user' : 'environment'))}
@@ -121,7 +121,7 @@ export function FaceCamera({ onCapture, captureLabel, disabled = false, initialF
         type="button"
         onClick={capture}
         disabled={disabled || !ready}
-        className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-base font-semibold text-navy-900 shadow-lg transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-base font-semibold text-brand-950 shadow-lg transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Camera className="size-5" aria-hidden /> {captureLabel}
       </button>

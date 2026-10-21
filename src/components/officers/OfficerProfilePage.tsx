@@ -1,28 +1,47 @@
 import { useNavigate } from 'react-router-dom'
 import { Mail, ShieldCheck, LogOut } from 'lucide-react'
+import { ChangePasswordCard } from '@/auth/ChangePasswordCard'
 import { useLogout, useMe } from '@/auth/authApi'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { initials } from '@/lib/format'
+import type { Account } from '@/types'
 
-export function AdminProfilePage() {
+type OfficerRole = 'admin' | 'department' | 'faculty' | 'qa'
+type Officer = Extract<Account, { role: OfficerRole }>
+
+/** "Department officer · Computer Science": what this account is, and over what. */
+export function officerSubtitle(user: Officer): string {
+  switch (user.role) {
+    case 'admin': return 'Administrator'
+    case 'department': return `Department officer · ${user.departmentName}`
+    case 'faculty': return `Faculty officer · ${user.facultyName}`
+    case 'qa': return user.title ? `Quality assurance · ${user.title}` : 'Quality assurance officer'
+  }
+}
+
+/**
+ * "My profile" for every invited officer (admin, faculty, department, QA). These accounts are
+ * provisioned, so there is nothing to edit; the page is for the password and for signing out.
+ */
+export function OfficerProfilePage({ role }: { role: OfficerRole }) {
   const { data: me } = useMe()
   const logout = useLogout()
   const navigate = useNavigate()
-  const user = me?.role === 'admin' ? me : undefined
+  const user = me?.role === role ? (me as Officer) : undefined
 
   if (!user) return null
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <Card className="overflow-hidden">
-        <div className="flex items-center gap-4 bg-navy-900 px-6 py-5 text-white">
+        <div className="flex items-center gap-4 bg-brand-800 px-6 py-5 text-white">
           <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-white/15 text-xl font-bold" aria-hidden>
             {initials(user.fullName)}
           </span>
           <div className="min-w-0">
             <h2 className="truncate text-lg font-bold">{user.fullName}</h2>
-            <p className="text-sm text-white/70">Administrator</p>
+            <p className="text-sm text-white/70">{officerSubtitle(user)}</p>
           </div>
         </div>
         <div className="space-y-5 p-6">
@@ -52,6 +71,7 @@ export function AdminProfilePage() {
           </div>
         </div>
       </Card>
+      <ChangePasswordCard />
     </div>
   )
 }
