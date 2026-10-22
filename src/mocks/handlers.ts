@@ -175,6 +175,7 @@ export const resetMocks = () => {
   currentAccount = lecturer
   sessions.clear()
   for (const key of [...accounts.keys()]) if (!BASE_ACCOUNT_KEYS.has(key)) accounts.delete(key)
+  for (const key of BASE_ACCOUNT_KEYS) accounts.get(key)!.password = 'password' // undo a test's change-password
   for (const u of units.slice(BASE_UNIT_COUNT)) { schedules.delete(u.id); unitStatuses.delete(u.id); allocations.delete(u.id); timetableCounts.delete(u.id) }
   units.length = BASE_UNIT_COUNT
   deletedUserIds.clear()

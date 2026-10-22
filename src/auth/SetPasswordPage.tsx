@@ -6,19 +6,13 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { errorMessage, fieldErrors } from '@/lib/api'
 import { Field } from './AuthCard'
+import { NEW_PASSWORD_HINT, newPasswordRule } from './passwordRules'
 import { AuthShell } from './AuthShell'
 import { useAcceptInvitation, useInvitationDetails, useResetPassword } from './authApi'
 
-/** The backend's passwordSchema rules, checked here first so the common mistakes never round-trip. */
 const schema = z
   .object({
-    password: z
-      .string()
-      .min(6, 'At least 6 characters.')
-      .max(128, 'At most 128 characters.')
-      .regex(/[a-z]/, 'Include a lowercase letter.')
-      .regex(/[A-Z]/, 'Include an uppercase letter.')
-      .regex(/[0-9]/, 'Include a digit.'),
+    password: newPasswordRule,
     confirmPassword: z.string(),
   })
   .refine((v) => v.password === v.confirmPassword, { path: ['confirmPassword'], message: 'Passwords do not match.' })
@@ -103,7 +97,7 @@ export function SetPasswordPage({ mode }: { mode: 'invite' | 'reset' }) {
         {submit.isError && Object.keys(serverErrors).length === 0 && (
           <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{errorMessage(submit.error)}</p>
         )}
-        <Field label="New password" error={errors.password?.message ?? serverErrors['password']} hint="At least 6 characters, with an uppercase letter, a lowercase letter and a digit.">
+        <Field label="New password" error={errors.password?.message ?? serverErrors['password']} hint={NEW_PASSWORD_HINT}>
           <input {...register('password')} type="password" autoComplete="new-password" className="input" />
         </Field>
         <Field label="Confirm new password" error={errors.confirmPassword?.message ?? serverErrors['confirmPassword']}>
