@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { Mail, ShieldCheck, LogOut } from 'lucide-react'
-import { ChangePasswordCard } from '@/auth/ChangePasswordCard'
+import { BadgeCheck, LogOut, Mail } from 'lucide-react'
+import { ChangePasswordRow } from '@/auth/ChangePasswordRow'
 import { useLogout, useMe } from '@/auth/authApi'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -22,7 +22,8 @@ export function officerSubtitle(user: Officer): string {
 
 /**
  * "My profile" for every invited officer (admin, faculty, department, QA). These accounts are
- * provisioned, so there is nothing to edit; the page is for the password and for signing out.
+ * provisioned, so there is nothing to edit and no Delete account. Same order as the lecturer and
+ * student pages: identity, details, the password, then Sign out.
  */
 export function OfficerProfilePage({ role }: { role: OfficerRole }) {
   const { data: me } = useMe()
@@ -44,7 +45,7 @@ export function OfficerProfilePage({ role }: { role: OfficerRole }) {
             <p className="text-sm text-white/70">{officerSubtitle(user)}</p>
           </div>
         </div>
-        <div className="space-y-5 p-6">
+        <div className="space-y-4 p-6">
           <div className="flex items-start gap-3">
             <Mail className="mt-0.5 size-5 text-muted" aria-hidden />
             <div>
@@ -52,26 +53,29 @@ export function OfficerProfilePage({ role }: { role: OfficerRole }) {
               <p className="mt-1 break-all text-sm font-medium text-ink">{user.email}</p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-0.5 size-5 text-success" aria-hidden />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Account status</p>
-              <p className="mt-1 text-sm font-medium text-success">{user.status === 'ACTIVE' ? 'Active and verified' : user.status.replaceAll('_', ' ')}</p>
+          {/* Only when it needs attention: anyone reading this page while ACTIVE knows they're active. */}
+          {user.status !== 'ACTIVE' && (
+            <div className="flex items-start gap-3">
+              <BadgeCheck className="mt-0.5 size-5 text-warning" aria-hidden />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">Account status</p>
+                <p className="mt-1 text-sm font-medium text-warning">{user.status.replaceAll('_', ' ').toLowerCase()}</p>
+              </div>
             </div>
-          </div>
-          <div className="border-t border-line pt-4">
-            <Button
-              variant="danger"
-              className="w-full justify-center"
-              onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/oversight', { replace: true }) })}
-              loading={logout.isPending}
-            >
-              <LogOut className="size-4" aria-hidden /> Sign Out
-            </Button>
-          </div>
+          )}
+        </div>
+        <div className="border-t border-line px-6 py-3">
+          <ChangePasswordRow />
         </div>
       </Card>
-      <ChangePasswordCard />
+      <Button
+        variant="danger"
+        className="w-full justify-center"
+        onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/oversight', { replace: true }) })}
+        loading={logout.isPending}
+      >
+        <LogOut className="size-4" aria-hidden /> Sign Out
+      </Button>
     </div>
   )
 }

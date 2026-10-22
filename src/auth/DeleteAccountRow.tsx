@@ -1,21 +1,21 @@
 import { useId, useState, type FormEvent } from 'react'
-import { AlertTriangle, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
 import { smartttAccounts } from '@/lib/env'
 import { useDeleteAccount, useMe } from './authApi'
 
 /**
- * Shared between the lecturer and student profile pages. Hidden behind a
- * button, then confirmed with the password: a session left open on a shared
+ * The last thing on the lecturer and student profile pages: a quiet red row, not a
+ * card, so it is easy to find without drawing the eye. Opens to a password
+ * confirmation: a session left open on a shared
  * computer must not be enough to delete an account.
  *
  * The backend anonymises rather than erases (auth.deletion.ts): attendance
  * already taken still counts in the class figures, without a name on it.
  */
-export function DeleteAccountCard() {
+export function DeleteAccountRow() {
   const { data: me } = useMe()
   const deleteAccount = useDeleteAccount()
   const navigate = useNavigate()
@@ -41,15 +41,10 @@ export function DeleteAccountCard() {
   }
 
   return (
-    <Card className="border-danger/30 p-6 sm:p-8">
-      <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-danger-soft text-danger"><AlertTriangle className="size-5" aria-hidden /></span>
-        <div>
-          <h3 className="font-bold text-ink">Delete account</h3>
-        </div>
-      </div>
+    <div className="px-1">
       {open ? (
-        <form className="mt-5 space-y-3" onSubmit={onSubmit}>
+        <form className="space-y-3 rounded-2xl border border-danger/30 bg-card p-5" onSubmit={onSubmit}>
+          <p className="font-semibold text-ink">Delete account</p>
           <div>
             <label htmlFor={passwordId} className="block text-sm font-semibold text-ink">
               {smartttAccounts() ? 'Your SMARTTT password' : 'Your password'}
@@ -79,10 +74,10 @@ export function DeleteAccountCard() {
           </div>
         </form>
       ) : (
-        <Button variant="danger" className="mt-5" onClick={() => setOpen(true)}>
+        <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-lg py-2 text-sm font-medium text-danger hover:underline">
           <Trash2 className="size-4" aria-hidden /> Delete account
-        </Button>
+        </button>
       )}
-    </Card>
+    </div>
   )
 }

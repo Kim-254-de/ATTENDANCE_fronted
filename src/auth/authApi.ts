@@ -93,6 +93,15 @@ export function useForgotPassword() {
   })
 }
 
+/** In-app change for lecturers and students: the current password stands in for the emailed link. Signs out every other device. */
+export function useChangePassword() {
+  return useMutation({
+    mutationKey: ['password', 'change'],
+    mutationFn: async (input: { currentPassword: string; newPassword: string; confirmNewPassword: string }) =>
+      (await api.post<{ message: string }>('/auth/change-password', input)).data,
+  })
+}
+
 export function useLogout() {
   const qc = useQueryClient()
   return useMutation({

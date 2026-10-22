@@ -78,6 +78,26 @@ describe('lecturer portal', () => {
     expect(screen.getByRole('button', { name: /i'm a student/i })).toBeInTheDocument()
   })
 
+  it('changes the password in the app, asking for the current one first', async () => {
+    const user = userEvent.setup()
+    renderApp('/profile')
+    await user.type(await screen.findByLabelText(/staff number or email/i), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    await user.click(await screen.findByRole('button', { name: /change password/i }))
+    await user.type(screen.getByLabelText('Current password'), 'wrong')
+    await user.type(screen.getByLabelText('New password'), 'Better1pass')
+    await user.type(screen.getByLabelText('Confirm new password'), 'Better1pass')
+    await user.click(screen.getByRole('button', { name: /save password/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/current password is incorrect/i)
+
+    await user.clear(screen.getByLabelText('Current password'))
+    await user.type(screen.getByLabelText('Current password'), 'password')
+    await user.click(screen.getByRole('button', { name: /save password/i }))
+    expect(await screen.findByRole('status')).toHaveTextContent(/password has been changed/i)
+  })
+
   it('lets a lecturer delete their own account from the profile', async () => {
     const user = userEvent.setup()
     renderApp('/profile')
@@ -104,10 +124,14 @@ describe('lecturer portal', () => {
 
     expect(await screen.findByText('Dr. Joseph K. Osei')).toBeInTheDocument()
     expect(screen.queryByText('Personal details')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /send reset link/i })).not.toBeInTheDocument()
+    // The title is part of the name, so the line under it gives the role, not "Dr." again.
+    expect(screen.getByText('Lecturer · Computer Science')).toBeInTheDocument()
+    expect(screen.queryByText(/active and verified/i)).not.toBeInTheDocument()
     // The sidebar has its own Sign Out; this is the profile page's.
     expect(within(screen.getByRole('main')).getByRole('button', { name: /sign out/i })).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: /dr\. joseph k\. osei/i }))
+    await user.click(screen.getByRole('link', { name: /edit profile/i }))
 
     // The layout's header shows the page title too; this is the page's own heading.
     expect(await within(screen.getByRole('main')).findByRole('heading', { name: /edit profile/i })).toBeInTheDocument()

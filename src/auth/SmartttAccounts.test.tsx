@@ -52,6 +52,30 @@ describe('signing in with a SMARTTT account', () => {
     expect(screen.queryByRole('button', { name: /send reset link/i })).not.toBeInTheDocument()
   })
 
+  it('sends a lecturer to SMARTTT to change their password, from the profile', async () => {
+    const user = userEvent.setup()
+    renderApp('/profile')
+    await user.type(await screen.findByLabelText('SMARTTT staff ID or email'), 'LEC00123')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    expect(await screen.findByText(/change it in smarttt/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /change password|send reset link/i })).not.toBeInTheDocument()
+  })
+
+  it('still lets an officer change their attendance password from the profile', async () => {
+    const user = userEvent.setup()
+    renderApp('/admin-profile')
+    await user.type(await screen.findByLabelText(/^email$/i), 'admin@university.edu')
+    await user.type(screen.getByLabelText(/^password$/i), 'password')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+    await user.click(await screen.findByRole('button', { name: 'Change password' }))
+    await user.type(screen.getByLabelText('Current password'), 'password')
+    await user.type(screen.getByLabelText('New password'), 'Better1pass')
+    await user.type(screen.getByLabelText('Confirm new password'), 'Better1pass')
+    await user.click(screen.getByRole('button', { name: /save password/i }))
+    expect(await screen.findByRole('status')).toHaveTextContent(/password has been changed/i)
+  })
+
   it('still lets an officer reset their attendance password', async () => {
     renderApp('/forgot-password?role=oversight')
     expect(await screen.findByRole('button', { name: /send reset link/i })).toBeInTheDocument()

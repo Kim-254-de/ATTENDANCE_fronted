@@ -218,7 +218,7 @@ describe('the account menu', () => {
     expect(within(header).getByText(subtitle)).toBeInTheDocument()
 
     await user.click(within(header).getByRole('link', { name: /my profile/i }))
-    expect(await screen.findByRole('heading', { name: 'Change password' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Change password' })).toBeInTheDocument()
 
     await user.click(within(screen.getByRole('banner')).getByRole('button', { name: /account menu/i }))
     await user.click(within(screen.getByRole('banner')).getByRole('button', { name: /sign out/i }))

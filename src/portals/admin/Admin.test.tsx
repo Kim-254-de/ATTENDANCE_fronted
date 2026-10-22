@@ -74,7 +74,7 @@ describe('admin console', () => {
     expect(await screen.findByRole('heading', { name: 'My Profile' })).toBeInTheDocument()
     expect(screen.getAllByText('Ms. Aisha Njeri').length).toBeGreaterThan(0)
     expect(screen.getAllByText('admin@university.edu').length).toBeGreaterThan(0)
-    expect(screen.getByRole('heading', { name: 'Change password' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change password' })).toBeInTheDocument()
   })
 
   it('invites a QA officer, who needs no faculty', async () => {
