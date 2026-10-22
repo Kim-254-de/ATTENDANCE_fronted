@@ -2,6 +2,7 @@ import { LogOut, UserRound } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useLogout } from '@/auth/authApi'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { initials } from '@/lib/format'
 
 interface Props {
@@ -37,7 +38,8 @@ export function AccountMenu({ user, subtitle, profileTo, signOutTo }: Props) {
   const itemClass = 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition'
 
   return (
-    <div ref={ref} className="relative border-l border-line pl-4">
+    <div ref={ref} className="relative flex items-center gap-2 border-l border-line pl-4">
+      <ThemeToggle />
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

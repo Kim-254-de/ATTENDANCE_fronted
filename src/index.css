@@ -53,38 +53,44 @@
   --color-warning-soft: #fff4e0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-surface: #0d1321;
-    --color-card: #162040;
-    --color-ink: #f7f8fa;
-    --color-muted: #94a3b8;
-    --color-line: #243564;
-    --color-brand: #2952c4;
-    --color-brand-strong: #3561d6;
-    --color-brand-ink: #9db4f5;
-    --color-brand-soft: #22346b;
-    --color-sidebar: #111a33;
-    --color-sidebar-active: #22346b;
-    --color-accent-ink: #f5a623;
-    --color-accent-soft: #3a2e14;
-    --color-danger: #fca5a5;
-    --color-danger-soft: #3a1c2a;
-    --color-success: #6edc8c;
-    --color-success-soft: #14322a;
-    --color-warning: #fbbf24;
-    --color-warning-soft: #3a2e14;
-  }
+/*
+ * Dark values. index.html sets data-theme before first paint from the saved choice
+ * (System / Light / Dark, see lib/theme.ts), resolving System against the device setting.
+ */
+:root[data-theme='dark'] {
+  --color-surface: #0d1321;
+  --color-card: #162040;
+  --color-ink: #f7f8fa;
+  --color-muted: #94a3b8;
+  --color-line: #243564;
+  --color-brand: #2952c4;
+  --color-brand-strong: #3561d6;
+  --color-brand-ink: #9db4f5;
+  --color-brand-soft: #22346b;
+  --color-sidebar: #111a33;
+  --color-sidebar-active: #22346b;
+  --color-accent-ink: #f5a623;
+  --color-accent-soft: #3a2e14;
+  --color-danger: #fca5a5;
+  --color-danger-soft: #3a1c2a;
+  --color-success: #6edc8c;
+  --color-success-soft: #14322a;
+  --color-warning: #fbbf24;
+  --color-warning-soft: #3a2e14;
 }
 
 @layer base {
   html {
-    color-scheme: light dark; /* native controls follow the theme; our own tokens handle the rest */
+    color-scheme: light; /* native controls follow the theme; our own tokens handle the rest */
     -webkit-text-size-adjust: 100%; /* iOS landscape must not inflate text */
     text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     scrollbar-width: thin; /* consistent scrollbars on Linux/Windows */
     scrollbar-color: var(--color-line) transparent;
+  }
+
+  html[data-theme='dark'] {
+    color-scheme: dark;
   }
 
   html,
