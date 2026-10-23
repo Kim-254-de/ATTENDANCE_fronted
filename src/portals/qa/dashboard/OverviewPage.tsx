@@ -41,7 +41,7 @@ export function OverviewPage() {
       <Card className="p-5">
         <form aria-label="Dashboard filters" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" onSubmit={(e) => e.preventDefault()}>
           <TargetFilters value={filters} onChange={(next) => setFilters({ ...next, groupBy: filters.groupBy })} />
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink">
             Trend by
             <select value={filters.groupBy} onChange={(e) => setFilters((f) => ({ ...f, groupBy: e.target.value as 'week' | 'month' }))} className="input">
               <option value="month">Month</option>
@@ -53,8 +53,8 @@ export function OverviewPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the KPI dashboard.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the KPI dashboard.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : (
         <section aria-label="Key statistics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -79,7 +79,7 @@ export function OverviewPage() {
       {!error && (
         <section aria-label="Compliance by category" className="grid gap-4 lg:grid-cols-2">
           <Card className="p-5">
-            <h2 className="font-semibold text-navy-900">Compliance by Category</h2>
+            <h2 className="font-semibold text-ink">Compliance by Category</h2>
             {isPending || !data ? (
               <div className="mt-4 space-y-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8" />)}</div>
             ) : data.complianceByCategory.length === 0 ? (
@@ -89,12 +89,12 @@ export function OverviewPage() {
                 {data.complianceByCategory.map((c) => (
                   <li key={c.category} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-navy-900">{CATEGORY_LABELS[c.category] ?? c.category}</span>
+                      <span className="font-medium text-ink">{CATEGORY_LABELS[c.category] ?? c.category}</span>
                       <span className="text-muted">{c.avgScore === null ? '—' : `${c.avgScore.toFixed(1)}%`} <span className="text-xs">({c.sampleCount})</span></span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-line">
                       <div
-                        className={c.avgScore === null ? 'h-full bg-line' : c.avgScore >= 80 ? 'h-full bg-success' : c.avgScore >= 50 ? 'h-full bg-amber-400' : 'h-full bg-red-500'}
+                        className={c.avgScore === null ? 'h-full bg-line' : c.avgScore >= 80 ? 'h-full bg-success-solid' : c.avgScore >= 50 ? 'h-full bg-warning-solid' : 'h-full bg-danger-solid'}
                         style={{ width: `${c.avgScore ?? 0}%` }}
                       />
                     </div>
@@ -105,7 +105,7 @@ export function OverviewPage() {
           </Card>
 
           <Card className="p-5">
-            <h2 className="font-semibold text-navy-900">Compliance by Standard</h2>
+            <h2 className="font-semibold text-ink">Compliance by Standard</h2>
             {isPending || !data ? (
               <div className="mt-4 space-y-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-8" />)}</div>
             ) : data.complianceByStandard.length === 0 ? (
@@ -118,9 +118,9 @@ export function OverviewPage() {
                   .map((s) => (
                     <div key={s.standardId} className="flex items-center justify-between gap-3 rounded-lg bg-surface px-3 py-2 text-sm">
                       <span className="min-w-0 truncate">
-                        <span className="font-mono text-xs text-violet-700">{s.standardCode}</span> {s.standardTitle}
+                        <span className="font-mono text-xs text-brand-ink">{s.standardCode}</span> {s.standardTitle}
                       </span>
-                      <span className="shrink-0 font-semibold text-navy-900">{s.avgScore === null ? '—' : `${s.avgScore.toFixed(1)}%`}</span>
+                      <span className="shrink-0 font-semibold text-ink">{s.avgScore === null ? '—' : `${s.avgScore.toFixed(1)}%`}</span>
                     </div>
                   ))}
               </div>
@@ -130,9 +130,9 @@ export function OverviewPage() {
       )}
 
       {!error && !isPending && data && data.overdueCapaCount > 0 && (
-        <Card className="flex items-center gap-3 border border-amber-200 bg-amber-50 p-4">
-          <AlertTriangle className="size-5 shrink-0 text-amber-600" aria-hidden />
-          <p className="text-sm text-amber-800">
+        <Card className="flex items-center gap-3 border border-warning/30 bg-warning-soft p-4">
+          <AlertTriangle className="size-5 shrink-0 text-warning" aria-hidden />
+          <p className="text-sm text-warning">
             {data.overdueCapaCount} corrective action{data.overdueCapaCount === 1 ? '' : 's'} past due date.{' '}
             <Link to="/qa-corrective-actions" className="font-semibold underline">See Corrective Actions</Link>
           </p>
@@ -141,7 +141,7 @@ export function OverviewPage() {
 
       {!error && (
         <Card className="p-5">
-          <h2 className="font-semibold text-navy-900">Attendance Rate Trend</h2>
+          <h2 className="font-semibold text-ink">Attendance Rate Trend</h2>
           <p className="mt-0.5 text-sm text-muted">Average share of enrolled students present per class, by department — the same figure each department's own officer sees.</p>
           {isPending || !data ? (
             <Skeleton className="mt-4 h-32" />
@@ -156,7 +156,7 @@ export function OverviewPage() {
   )
 }
 
-const rateClass = (rate: number) => (rate >= 80 ? 'text-success' : rate >= 50 ? 'text-amber-700' : 'text-red-600')
+const rateClass = (rate: number) => (rate >= 80 ? 'text-success' : rate >= 50 ? 'text-warning' : 'text-danger')
 
 /** Departments down, periods across — a table rather than a chart, so every figure can be read exactly. */
 function AttendanceTrendTable({ points, groupBy }: { points: QaAttendanceTrendPoint[]; groupBy: 'week' | 'month' }) {
@@ -187,7 +187,7 @@ function AttendanceTrendTable({ points, groupBy }: { points: QaAttendanceTrendPo
         <tbody>
           {rows.map(([id, row]) => (
             <tr key={id} className="border-b border-line last:border-0">
-              <th scope="row" className="py-2 pr-4 text-left font-medium text-navy-900">{row.name}</th>
+              <th scope="row" className="py-2 pr-4 text-left font-medium text-ink">{row.name}</th>
               {periods.map((p) => {
                 const rate = row.rates.get(p)
                 return (

@@ -11,18 +11,7 @@ function GoogleGlyph() {
   )
 }
 
-function MicrosoftGlyph() {
-  return (
-    <svg viewBox="0 0 23 23" className="size-4" aria-hidden>
-      <rect width="10" height="10" x="1" y="1" fill="#F25022" />
-      <rect width="10" height="10" x="12" y="1" fill="#7FBA00" />
-      <rect width="10" height="10" x="1" y="12" fill="#00A4EF" />
-      <rect width="10" height="10" x="12" y="12" fill="#FFB900" />
-    </svg>
-  )
-}
-
-/** "or continue with" divider plus Google/Microsoft buttons. Neither provider is wired up yet. */
+/** "or continue with" divider plus a Google button. Google sign-in is not wired up yet. */
 export function SocialSignIn() {
   const [notice, setNotice] = useState<string | null>(null)
   return (
@@ -33,20 +22,13 @@ export function SocialSignIn() {
         <div className="h-px flex-1 bg-line" aria-hidden />
       </div>
       {notice && <p role="status" className="text-center text-xs text-muted">{notice}</p>}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <button
           type="button"
           onClick={() => setNotice('Google sign-in is coming soon.')}
-          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-white text-sm font-semibold text-navy-900 transition hover:bg-surface"
+          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-card text-sm font-semibold text-ink transition hover:bg-surface"
         >
           <GoogleGlyph /> Google
-        </button>
-        <button
-          type="button"
-          onClick={() => setNotice('Microsoft sign-in is coming soon.')}
-          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-line bg-white text-sm font-semibold text-navy-900 transition hover:bg-surface"
-        >
-          <MicrosoftGlyph /> Microsoft
         </button>
       </div>
     </div>

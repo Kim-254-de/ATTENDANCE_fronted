@@ -17,8 +17,8 @@ export function EvaluationRoundList({ rounds, isPending, error, refetch, linkTo 
   if (error) {
     return (
       <Card className="flex items-center justify-between p-5" role="alert">
-        <p className="text-sm text-red-700">{errorMessage(error, 'Could not load course evaluations.')}</p>
-        <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+        <p className="text-sm text-danger">{errorMessage(error, 'Could not load course evaluations.')}</p>
+        <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
       </Card>
     )
   }
@@ -27,7 +27,7 @@ export function EvaluationRoundList({ rounds, isPending, error, refetch, linkTo 
     return (
       <Card className="p-10 text-center">
         <MessageSquareQuote className="mx-auto size-8 text-muted" aria-hidden />
-        <p className="mt-3 font-semibold text-navy-900">No evaluations yet</p>
+        <p className="mt-3 font-semibold text-ink">No evaluations yet</p>
         <p className="mt-1 text-sm text-muted">Rounds appear here once the QA directorate opens one to students.</p>
       </Card>
     )
@@ -39,7 +39,7 @@ export function EvaluationRoundList({ rounds, isPending, error, refetch, linkTo 
           <Link to={linkTo(r.id)} className="block">
             <Card className="flex items-center gap-4 p-5 transition hover:shadow-md">
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-navy-900">{r.title}</p>
+                <p className="font-semibold text-ink">{r.title}</p>
                 <p className="mt-1 text-sm text-muted">
                   {new Date(r.opensAt).toLocaleDateString([], { day: 'numeric', month: 'short' })} – {new Date(r.closesAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>

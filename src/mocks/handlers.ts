@@ -2142,8 +2142,8 @@ const invitationHandlers = [
   http.post(`${API}/admin/invitations`, async ({ request }) => {
     const blocked = requireAdmin()
     if (blocked) return blocked
-    const input = (await request.json()) as { role: 'admin' | 'faculty'; fullName: string; email: string; facultyId?: string }
-    if (input.role === 'admin') return inviteOfficer(input, { role: 'admin', facultyId: null, facultyName: null, departmentId: null, departmentName: null })
+    const input = (await request.json()) as { role: 'admin' | 'qa' | 'faculty'; fullName: string; email: string; facultyId?: string }
+    if (input.role !== 'faculty') return inviteOfficer(input, { role: input.role, facultyId: null, facultyName: null, departmentId: null, departmentName: null })
     const faculty = adminFaculties.find((f) => f.facultyId === input.facultyId)
     if (!faculty) return fail(400, 'BAD_REQUEST', 'That faculty does not exist.')
     const res = inviteOfficer(input, { role: 'faculty', facultyId: faculty.facultyId, facultyName: faculty.name, departmentId: null, departmentName: null })

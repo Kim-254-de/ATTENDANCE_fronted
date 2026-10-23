@@ -18,10 +18,10 @@ import type { AccountStatus } from '@/types'
 
 const STATUS_STYLE: Record<AccountStatus, { label: string; className: string }> = {
   ACTIVE: { label: 'Active and verified', className: 'text-success' },
-  PENDING_VERIFICATION: { label: 'Pending email verification', className: 'text-orange-600' },
-  PENDING_APPROVAL: { label: 'Pending administrator approval', className: 'text-orange-600' },
-  SUSPENDED: { label: 'Suspended', className: 'text-red-600' },
-  DEACTIVATED: { label: 'Deactivated', className: 'text-red-600' },
+  PENDING_VERIFICATION: { label: 'Pending email verification', className: 'text-warning' },
+  PENDING_APPROVAL: { label: 'Pending administrator approval', className: 'text-warning' },
+  SUSPENDED: { label: 'Suspended', className: 'text-danger' },
+  DEACTIVATED: { label: 'Deactivated', className: 'text-danger' },
 }
 
 export function ProfilePage() {
@@ -51,7 +51,7 @@ export function ProfilePage() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
         <Card className="h-fit overflow-hidden">
-          <div className="bg-linear-to-b from-blue-600 to-blue-700 px-5 py-4 text-white sm:px-6">
+          <div className="bg-linear-to-b from-brand-600 to-brand-800 px-5 py-4 text-white sm:px-6">
             <div className="flex items-center gap-4">
             <div className="relative inline-block shrink-0">
               {user.avatarUrl ? (
@@ -64,7 +64,7 @@ export function ProfilePage() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={setAvatar.isPending}
                 aria-label="Change photo"
-                className="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full bg-blue-700 text-white shadow-md hover:bg-blue-800"
+                className="absolute -bottom-2 -right-2 grid size-8 place-items-center rounded-full bg-brand text-white shadow-md hover:bg-brand-strong"
               >
                 <Camera className="size-4" aria-hidden />
               </button>
@@ -72,8 +72,8 @@ export function ProfilePage() {
             </div>
             <Link to="/profile/edit" className="group min-w-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
               <span className="flex items-center gap-2 text-lg font-bold group-hover:underline">{user.fullName}<Pencil className="size-4 shrink-0 opacity-80" aria-hidden /></span>
-              <span className="mt-0.5 block text-sm text-blue-200">{user.title || 'Lecturer'} · {user.department}</span>
-              <span className="mt-0.5 block text-xs text-blue-200">Edit profile</span>
+              <span className="mt-0.5 block text-sm text-brand-200">{user.title || 'Lecturer'} · {user.department}</span>
+              <span className="mt-0.5 block text-xs text-brand-200">Edit profile</span>
             </Link>
             </div>
             {(user.avatarUrl || setAvatar.isPending || removeAvatar.isPending) && (
@@ -81,7 +81,7 @@ export function ProfilePage() {
                 type="button"
                 onClick={() => removeAvatar.mutate()}
                 disabled={removeAvatar.isPending || setAvatar.isPending}
-                className="mt-2 text-xs font-medium text-blue-200 underline hover:text-white"
+                className="mt-2 text-xs font-medium text-brand-200 underline hover:text-white"
               >
                 {setAvatar.isPending ? 'Uploading…' : removeAvatar.isPending ? 'Removing…' : 'Remove photo'}
               </button>
@@ -99,15 +99,15 @@ export function ProfilePage() {
               <ShieldCheck className={`mt-0.5 size-5 ${status.className}`} aria-hidden />
               <div><p className="text-xs font-semibold uppercase tracking-wider text-muted">Account status</p><p className={`mt-1 text-sm font-medium ${status.className}`}>{status.label}</p></div>
             </div>
-            <div className="border-t border-line pt-3"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Staff number</p><p className="mt-1 font-mono text-sm font-semibold text-navy-900">{user.staffNumber}</p></div>
+            <div className="border-t border-line pt-3"><p className="text-xs font-semibold uppercase tracking-wider text-muted">Staff number</p><p className="mt-1 font-mono text-sm font-semibold text-ink">{user.staffNumber}</p></div>
             {forgotPassword.isSuccess ? (
               <p role="status" className="flex items-center gap-2 text-sm font-medium text-success"><MailCheck className="size-4" aria-hidden /> Check your inbox for the reset link.</p>
             ) : (
               <>
-                <Button variant="lecturer" className="w-full justify-center" onClick={() => forgotPassword.mutate(user.email)} loading={forgotPassword.isPending}>
+                <Button className="w-full justify-center" onClick={() => forgotPassword.mutate(user.email)} loading={forgotPassword.isPending}>
                   <Mail className="size-4" aria-hidden /> Send reset link
                 </Button>
-                {forgotPassword.isError && <p role="alert" className="text-sm text-red-600">{errorMessage(forgotPassword.error)}</p>}
+                {forgotPassword.isError && <p role="alert" className="text-sm text-danger">{errorMessage(forgotPassword.error)}</p>}
               </>
             )}
             <Button

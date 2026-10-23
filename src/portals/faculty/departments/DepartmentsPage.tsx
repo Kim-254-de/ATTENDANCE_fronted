@@ -32,7 +32,7 @@ export function DepartmentsPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex justify-end">
         {!adding && (
-          <Button variant="brightGold" onClick={() => setAdding(true)}>
+          <Button onClick={() => setAdding(true)}>
             <Plus className="size-4" aria-hidden /> New department
           </Button>
         )}
@@ -56,15 +56,15 @@ export function DepartmentsPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load the faculty’s departments.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load the faculty’s departments.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !departments ? (
         <div className="space-y-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-14" />)}</div>
       ) : departments.length === 0 ? (
         <Card className="p-10 text-center">
           <Building2 className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No departments yet</p>
+          <p className="mt-3 font-semibold text-ink">No departments yet</p>
           <p className="mt-1 text-sm text-muted">Departments appear here once they exist in this faculty.</p>
         </Card>
       ) : rows.length === 0 ? (
@@ -99,11 +99,11 @@ function NewDepartmentForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <Card className="border border-teal-500/30 p-5">
+    <Card className="border border-brand-ink/30 p-5">
       <form onSubmit={submit} className="space-y-4" noValidate>
-        <h3 className="font-semibold text-navy-900">New department</h3>
+        <h3 className="font-semibold text-ink">New department</h3>
         <div className="max-w-sm space-y-1.5">
-          <label htmlFor={`${id}-name`} className="text-sm font-medium text-navy-900">Department name</label>
+          <label htmlFor={`${id}-name`} className="text-sm font-medium text-ink">Department name</label>
           <input
             id={`${id}-name`}
             className="input"
@@ -115,10 +115,10 @@ function NewDepartmentForm({ onDone }: { onDone: () => void }) {
             autoFocus
             aria-invalid={!!fields.name || undefined}
           />
-          {fields.name && <p className="text-xs text-red-600">{fields.name}</p>}
+          {fields.name && <p className="text-xs text-danger">{fields.name}</p>}
         </div>
         {create.error && !fields.name && (
-          <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>
+          <p role="alert" className="text-sm text-danger">{errorMessage(create.error)}</p>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onDone}>Cancel</Button>
@@ -133,18 +133,18 @@ function NewDepartmentForm({ onDone }: { onDone: () => void }) {
 
 function DepartmentRow({ department }: { department: FacultyDepartment }) {
   return (
-    <tr className="transition-colors hover:bg-teal-50/60">
+    <tr className="transition-colors hover:bg-brand-soft/60">
       <td className="px-5 py-3">
         <Link to={`/faculty-departments/${department.departmentId}`} className="flex items-center gap-2.5 hover:underline">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-teal-700 text-white"><Building2 className="size-4" aria-hidden /></span>
-          <span className="font-medium text-navy-900">{department.departmentName}</span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-white"><Building2 className="size-4" aria-hidden /></span>
+          <span className="font-medium text-ink">{department.departmentName}</span>
         </Link>
       </td>
-      <td className="px-5 py-3 text-navy-900">{department.lecturerCount}</td>
-      <td className="px-5 py-3 text-navy-900">{department.studentCount}</td>
-      <td className="px-5 py-3 text-navy-900">{department.unitCount}</td>
+      <td className="px-5 py-3 text-ink">{department.lecturerCount}</td>
+      <td className="px-5 py-3 text-ink">{department.studentCount}</td>
+      <td className="px-5 py-3 text-ink">{department.unitCount}</td>
       <td className="px-5 py-3"><RateBar rate={department.avgAttendanceRate} label={`${department.departmentName} average attendance`} /></td>
-      <td className="px-5 py-3 text-navy-900">{department.sessionsHeld}</td>
+      <td className="px-5 py-3 text-ink">{department.sessionsHeld}</td>
       <td className="px-5 py-3"><RateBar rate={department.onTimeRate} label={`${department.departmentName} on-time rate`} /></td>
     </tr>
   )

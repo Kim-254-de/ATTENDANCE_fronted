@@ -86,15 +86,15 @@ export function StudentsPage() {
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load your students.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load your students.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !students ? (
         <div className="space-y-3">{Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-14" />)}</div>
       ) : students.length === 0 ? (
         <Card className="p-10 text-center">
           <Users className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">No students yet</p>
+          <p className="mt-3 font-semibold text-ink">No students yet</p>
           <p className="mt-1 text-sm text-muted">Students appear here once they're registered on a unit you teach.</p>
         </Card>
       ) : rows.length === 0 ? (
@@ -107,7 +107,7 @@ export function StudentsPage() {
                 <th className="px-5 py-3 font-semibold">Student ID</th>
                 {COLUMNS.map((c) => (
                   <th key={c.key} className="px-5 py-3 font-semibold">
-                    <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex cursor-pointer items-center gap-1 hover:text-navy-900">
+                    <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex cursor-pointer items-center gap-1 hover:text-ink">
                       {c.label}
                       {sortKey !== c.key ? <ArrowUpDown className="size-3.5" aria-hidden />
                         : sortDir === 'asc' ? <ArrowUp className="size-3.5" aria-hidden /> : <ArrowDown className="size-3.5" aria-hidden />}
@@ -133,21 +133,21 @@ function StudentRow({ student }: { student: LecturerStudent }) {
       <td className="px-5 py-3 font-mono text-xs text-muted">{student.registrationNumber ?? '—'}</td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-blue-700 text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
-          <span className="font-medium text-navy-900">{student.fullName ?? 'Unnamed student'}</span>
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-xs font-bold text-white">{initials(student.fullName ?? '?')}</span>
+          <span className="font-medium text-ink">{student.fullName ?? 'Unnamed student'}</span>
         </div>
       </td>
-      <td className="px-5 py-3"><span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800 ring-1 ring-inset ring-blue-100">{student.unitCode}</span></td>
+      <td className="px-5 py-3"><span className="rounded-md bg-brand-soft px-2 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{student.unitCode}</span></td>
       <td className="px-5 py-3">
         <div className="flex items-center gap-2">
           <div className="h-1.5 w-20 overflow-hidden rounded-full bg-line">
-            <div className={`h-full rounded-full ${atRisk ? 'bg-orange-500' : 'bg-success'}`} style={{ width: `${student.attendanceRate ?? 0}%` }} />
+            <div className={`h-full rounded-full ${atRisk ? 'bg-warning-solid' : 'bg-success-solid'}`} style={{ width: `${student.attendanceRate ?? 0}%` }} />
           </div>
-          <span className={`text-xs font-semibold ${atRisk ? 'text-orange-600' : 'text-success'}`}>{formatRate(student.attendanceRate)}</span>
+          <span className={`text-xs font-semibold ${atRisk ? 'text-warning' : 'text-success'}`}>{formatRate(student.attendanceRate)}</span>
         </div>
       </td>
       <td className="px-5 py-3">
-        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${atRisk ? 'bg-orange-100 text-orange-600' : 'bg-emerald-50 text-success'}`}>
+        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${atRisk ? 'bg-warning-soft text-warning' : 'bg-success-soft text-success'}`}>
           {atRisk ? 'At Risk' : 'Active'}
         </span>
       </td>

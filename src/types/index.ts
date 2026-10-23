@@ -96,7 +96,7 @@ export type Account = Lecturer | Student | DepartmentOfficer | FacultyOfficer | 
  */
 export interface Officer {
   userId: string
-  role: 'admin' | 'faculty' | 'department'
+  role: 'admin' | 'faculty' | 'department' | 'qa'
   fullName: string
   email: string
   status: AccountStatus
@@ -120,7 +120,7 @@ export interface InvitationResult {
 export interface InvitationDetails {
   fullName: string
   email: string
-  role: 'admin' | 'faculty' | 'department'
+  role: 'admin' | 'faculty' | 'department' | 'qa'
   /** The faculty's or department's name; null for an administrator. */
   scopeName: string | null
   expiresAt: string

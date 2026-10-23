@@ -14,14 +14,14 @@ export function RecentSessions({ limit = 5 }: { limit?: number }) {
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between p-5">
-        <h2 className="font-semibold text-navy-900">Recent Sessions</h2>
-        <Link to="/attendance" className="text-sm font-semibold text-navy-900 hover:underline">View all →</Link>
+        <h2 className="font-semibold text-ink">Recent Sessions</h2>
+        <Link to="/attendance" className="text-sm font-semibold text-ink hover:underline">View all →</Link>
       </div>
 
       {error ? (
         <div role="alert" className="flex items-center justify-between border-t border-line p-5 text-sm">
-          <span className="text-red-700">{errorMessage(error, 'Could not load recent sessions.')}</span>
-          <button onClick={() => refetch()} className="font-semibold text-navy-900 underline">Retry</button>
+          <span className="text-danger">{errorMessage(error, 'Could not load recent sessions.')}</span>
+          <button onClick={() => refetch()} className="font-semibold text-ink underline">Retry</button>
         </div>
       ) : isPending ? (
         <div className="space-y-2 border-t border-line p-5">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-9" />)}</div>
@@ -50,12 +50,12 @@ function Row({ s }: { s: RecentSession }) {
   return (
     <tr>
       <td className="whitespace-nowrap px-5 py-4 text-muted">{formatShortDate(s.date)}</td>
-      <td className="px-5 py-4"><span className="rounded-md bg-navy-900/5 px-2.5 py-1 text-xs font-semibold text-navy-900">{s.unitCode}</span></td>
-      <td className="px-5 py-4"><b className="text-navy-900">{s.present}</b><span className="text-muted">/{s.total}</span></td>
+      <td className="px-5 py-4"><span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-ink">{s.unitCode}</span></td>
+      <td className="px-5 py-4"><b className="text-ink">{s.present}</b><span className="text-muted">/{s.total}</span></td>
       <td className="px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="h-1.5 w-12 rounded-full bg-line" role="img" aria-label={`${rate}% attendance`}>
-            <div className="h-full rounded-full bg-success" style={{ width: `${rate}%` }} />
+            <div className="h-full rounded-full bg-success-solid" style={{ width: `${rate}%` }} />
           </div>
           <span className="font-semibold text-success">{rate}%</span>
         </div>
@@ -77,7 +77,7 @@ function CopyRef({ value }: { value: string }) {
     }
   }
   return (
-    <button onClick={copy} title="Copy reference" aria-label={`Copy reference ${value}`} className="group flex items-center gap-2 font-mono text-xs text-muted hover:text-navy-900">
+    <button onClick={copy} title="Copy reference" aria-label={`Copy reference ${value}`} className="group flex items-center gap-2 font-mono text-xs text-muted hover:text-ink">
       {value}
       {copied ? <Check className="size-3.5 text-success" aria-hidden /> : <Copy className="size-3.5 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden />}
     </button>

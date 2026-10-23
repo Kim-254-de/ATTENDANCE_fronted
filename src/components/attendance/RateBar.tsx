@@ -16,11 +16,11 @@ const formatRate = (rate: number | null) => (rate === null ? '—' : `${rate.toF
 export function RateBar({ rate, label }: { rate: number | null; label: string }) {
   const minimum = useMinAttendance()
   const below = rate !== null && rate < minimum
-  const tone = rate === null ? 'text-muted' : below ? 'text-orange-600' : 'text-success'
+  const tone = rate === null ? 'text-muted' : below ? 'text-warning' : 'text-success'
   return (
     <div className="flex items-center gap-3">
       <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-line" role="img" aria-label={`${label}: ${formatRate(rate)}`}>
-        <div className={`h-full rounded-full ${below ? 'bg-orange-500' : 'bg-success'}`} style={{ width: `${rate ?? 0}%` }} />
+        <div className={`h-full rounded-full ${below ? 'bg-warning-solid' : 'bg-success-solid'}`} style={{ width: `${rate ?? 0}%` }} />
       </div>
       <span className={`text-xs font-semibold ${tone}`}>{formatRate(rate)}</span>
     </div>
@@ -33,9 +33,9 @@ export function LateMinutes({ minutes }: { minutes: number | null }) {
     return <span className="text-xs text-muted" title="This unit has no issued schedule to be late against">Unscheduled</span>
   }
   const tone =
-    minutes < LATE_MINUTES_THRESHOLD ? 'bg-emerald-50 text-success'
-      : minutes < VERY_LATE_MINUTES_THRESHOLD ? 'bg-orange-100 text-orange-600'
-        : 'bg-red-100 text-red-700'
+    minutes < LATE_MINUTES_THRESHOLD ? 'bg-success-soft text-success'
+      : minutes < VERY_LATE_MINUTES_THRESHOLD ? 'bg-warning-soft text-warning'
+        : 'bg-danger-soft text-danger'
   const text = minutes === 0 ? 'On time' : minutes < 0 ? `${Math.abs(minutes)} min early` : `${minutes} min late`
   return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{text}</span>
 }
@@ -44,7 +44,7 @@ export function LateMinutes({ minutes }: { minutes: number | null }) {
 export function AvgLateMinutes({ minutes }: { minutes: number | null }) {
   if (minutes === null) return null
   return (
-    <span className={`mt-1 block text-xs ${minutes >= LATE_MINUTES_THRESHOLD ? 'text-orange-600' : 'text-muted'}`}>
+    <span className={`mt-1 block text-xs ${minutes >= LATE_MINUTES_THRESHOLD ? 'text-warning' : 'text-muted'}`}>
       {minutes <= 0 ? `${Math.abs(minutes).toFixed(1)} min early on average` : `${minutes.toFixed(1)} min late on average`}
     </span>
   )

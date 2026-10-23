@@ -30,34 +30,34 @@ export function ForgotPasswordPage() {
 
   // A student's or lecturer's password is their SMARTTT one: nothing to reset here.
   if (smartttAccounts() && !isStaff) {
-    return <AuthShell student={isStudent} title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'}>
-      <div className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" role="status">
-        <div className={`grid size-14 place-items-center rounded-2xl ${isStudent ? 'bg-blue-50 text-blue-700' : 'bg-orange-100 text-orange-600'}`}><Mail className="size-7" aria-hidden /></div>
+    return <AuthShell title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'}>
+      <div className="space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" role="status">
+        <div className={`grid size-14 place-items-center rounded-2xl ${isStudent ? 'bg-brand-soft text-brand-ink' : 'bg-warning-soft text-warning'}`}><Mail className="size-7" aria-hidden /></div>
         <div>
-          <h2 className="text-xl font-bold text-navy-900">Reset it in SMARTTT</h2>
-          <p className="mt-2 text-sm leading-6 text-muted">You sign in here with your SMARTTT password. Use <strong className="text-navy-900">Forgot password</strong> on the SMARTTT sign-in screen, then come back and sign in with the new one.</p>
+          <h2 className="text-xl font-bold text-ink">Reset it in SMARTTT</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">You sign in here with your SMARTTT password. Use <strong className="text-ink">Forgot password</strong> on the SMARTTT sign-in screen, then come back and sign in with the new one.</p>
         </div>
-        <Link to={loginLink} className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Return to sign in</Link>
+        <Link to={loginLink} className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-ink hover:bg-surface">Return to sign in</Link>
       </div>
     </AuthShell>
   }
 
-  return <AuthShell student={isStudent} title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'} subtitle={isStudent ? 'Reset the password for your attendance dashboard.' : undefined}>
-    {submittedEmail ? <div className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" role="status">
-      <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-success"><CheckCircle2 className="size-7" aria-hidden /></div>
-      <div><h2 className="text-xl font-bold text-navy-900">Check your inbox</h2><p className="mt-2 text-sm leading-6 text-muted">If an account exists for <strong className="text-navy-900">{submittedEmail}</strong>, reset instructions will arrive shortly. Remember to check your spam folder.</p></div>
-      <Link to={loginLink} className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Return to sign in</Link>
-    </div> : <form className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={handleSubmit((values) => request.mutate(values.email, { onSuccess: () => setSubmittedEmail(values.email) }))}>
-      <div className={`grid size-14 place-items-center rounded-2xl ${isStudent ? 'bg-blue-50 text-blue-700' : 'bg-orange-100 text-orange-600'}`}><Mail className="size-7" aria-hidden /></div>
+  return <AuthShell title={isStudent ? 'STUDENT PORTAL' : 'Reset your password'} subtitle={isStudent ? 'Reset the password for your attendance dashboard.' : undefined}>
+    {submittedEmail ? <div className="space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" role="status">
+      <div className="grid size-14 place-items-center rounded-full bg-success-soft text-success"><CheckCircle2 className="size-7" aria-hidden /></div>
+      <div><h2 className="text-xl font-bold text-ink">Check your inbox</h2><p className="mt-2 text-sm leading-6 text-muted">If an account exists for <strong className="text-ink">{submittedEmail}</strong>, reset instructions will arrive shortly. Remember to check your spam folder.</p></div>
+      <Link to={loginLink} className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-ink hover:bg-surface">Return to sign in</Link>
+    </div> : <form className="space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8" noValidate onSubmit={handleSubmit((values) => request.mutate(values.email, { onSuccess: () => setSubmittedEmail(values.email) }))}>
+      <div className={`grid size-14 place-items-center rounded-2xl ${isStudent ? 'bg-brand-soft text-brand-ink' : 'bg-warning-soft text-warning'}`}><Mail className="size-7" aria-hidden /></div>
       <p className="text-sm leading-6 text-muted">{isStudent ? 'Enter the email connected to your student account and we will send you a secure password reset link.' : isStaff ? 'Enter the email your invitation was sent to and we will send you a secure password reset link.' : 'Enter the school email connected to your lecturer account and we will send you a secure password reset link.'}</p>
-      {request.isError && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage(request.error, 'We could not process your request.')}</p>}
+      {request.isError && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{errorMessage(request.error, 'We could not process your request.')}</p>}
       {isStudent ? (
         <IconField id="forgot-password-email" label="Email" icon={Mail} {...register('email')} type="email" autoComplete="email" placeholder="you@students.tharaka.ac.ke" error={errors.email?.message} />
       ) : (
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">School email<input {...register('email')} type="email" autoComplete="email" placeholder="j.osei@university.edu.gh" className="input" />{errors.email && <span role="alert" className="block text-xs font-normal text-red-600">{errors.email.message}</span>}</label>
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">School email<input {...register('email')} type="email" autoComplete="email" placeholder="j.osei@university.edu.gh" className="input" />{errors.email && <span role="alert" className="block text-xs font-normal text-danger">{errors.email.message}</span>}</label>
       )}
-      <Button type="submit" variant={isStudent ? 'accent' : 'lecturer'} loading={request.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">Send reset link</Button>
+      <Button type="submit" loading={request.isPending} className="w-full transition-transform hover:scale-[1.01] active:scale-[0.99]">Send reset link</Button>
     </form>}
-    {!submittedEmail && <p className="mt-6 text-center text-base text-muted">Remembered your password? <Link to={loginLink} className="font-semibold text-navy-900 hover:underline">Back to sign in</Link></p>}
+    {!submittedEmail && <p className="mt-6 text-center text-base text-muted">Remembered your password? <Link to={loginLink} className="font-semibold text-ink hover:underline">Back to sign in</Link></p>}
   </AuthShell>
 }

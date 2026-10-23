@@ -10,16 +10,16 @@ import { ADMIN_OFFICERS_KEY, useAdminFaculties, useAdminInvite, useAdminOfficers
 
 /**
  * Who has access to the oversight portals. Administrators invite faculty
- * officers here; department officers are invited by their own faculty officer,
- * but appear here too so access can be removed. With SMARTTT accounts on,
- * administrators are SMARTTT administrators and are not invited here.
+ * officers and QA officers here; department officers are invited by their own
+ * faculty officer, but appear here too so access can be removed. With SMARTTT
+ * accounts on, administrators are SMARTTT administrators and are not invited here.
  */
 export function OfficersPage() {
   const { data: me } = useMe()
   const officers = useAdminOfficers()
   const faculties = useAdminFaculties()
   const invite = useAdminInvite()
-  const [role, setRole] = useState<'faculty' | 'admin'>('faculty')
+  const [role, setRole] = useState<'faculty' | 'qa' | 'admin'>('faculty')
   const [facultyId, setFacultyId] = useState('')
   const [notice, setNotice] = useState<{ text: string; warn: boolean } | null>(null)
   const adminsInSmarttt = smartttAccounts()
@@ -31,9 +31,9 @@ export function OfficersPage() {
         description="They get an email with a link to choose their own password, valid for 72 hours. Use their own work email, not a shared mailbox."
         pending={invite.isPending}
         error={invite.error}
-        canSubmit={role === 'admin' || !!facultyId}
+        canSubmit={role !== 'faculty' || !!facultyId}
         onInvite={(invitee, done) =>
-          invite.mutate(role === 'admin' ? { role, ...invitee } : { role, facultyId, ...invitee }, {
+          invite.mutate(role === 'faculty' ? { role, facultyId, ...invitee } : { role, ...invitee }, {
             onSuccess: (result) => {
               done()
               setNotice(result.emailSent
@@ -42,15 +42,16 @@ export function OfficersPage() {
             },
           })}
       >
-        <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+        <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Role
-          <select value={role} onChange={(e) => setRole(e.target.value as 'faculty' | 'admin')} className="input">
+          <select value={role} onChange={(e) => setRole(e.target.value as 'faculty' | 'qa' | 'admin')} className="input">
             <option value="faculty">Faculty officer</option>
+            <option value="qa">QA officer</option>
             {!adminsInSmarttt && <option value="admin">Administrator</option>}
           </select>
         </label>
         {role === 'faculty' && (
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink">
             Faculty
             <select value={facultyId} onChange={(e) => setFacultyId(e.target.value)} className="input">
               <option value="">Choose a faculty…</option>
@@ -60,15 +61,15 @@ export function OfficersPage() {
         )}
       </InviteForm>
       {adminsInSmarttt && (
-        <p className="rounded-lg bg-white px-4 py-3 text-sm text-muted shadow-[0_1px_3px_rgba(18,48,95,0.08)]">
-          <strong className="text-navy-900">Administrators</strong> are SMARTTT administrators: give the person staff status in SMARTTT
+        <p className="rounded-lg bg-card px-4 py-3 text-sm text-muted shadow-[0_1px_3px_rgba(18,48,95,0.08)]">
+          <strong className="text-ink">Administrators</strong> are SMARTTT administrators: give the person staff status in SMARTTT
           (a non-teaching account) and they sign in here with their SMARTTT login. There is no separate invitation.
         </p>
       )}
-      {notice && <p role="status" className={`rounded-lg px-3 py-2 text-sm ${notice.warn ? 'bg-orange-50 text-orange-700' : 'bg-emerald-50 text-success'}`}>{notice.text}</p>}
+      {notice && <p role="status" className={`rounded-lg px-3 py-2 text-sm ${notice.warn ? 'bg-warning-soft text-warning' : 'bg-success-soft text-success'}`}>{notice.text}</p>}
 
       {officers.error ? (
-        <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(officers.error, 'Could not load officers.')}</Card>
+        <Card className="p-5 text-sm text-danger" role="alert">{errorMessage(officers.error, 'Could not load officers.')}</Card>
       ) : officers.isPending ? (
         <Skeleton className="h-48" />
       ) : (

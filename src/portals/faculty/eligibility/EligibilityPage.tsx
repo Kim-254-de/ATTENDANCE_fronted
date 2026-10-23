@@ -20,7 +20,7 @@ export function EligibilityPage() {
         onShowAllChange={setShowAll}
         showDepartment
         filters={
-          <label className="block space-y-1.5 text-sm font-semibold text-navy-900">
+          <label className="block space-y-1.5 text-sm font-semibold text-ink">
             Department
             <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input">
               <option value="">All departments</option>

@@ -33,7 +33,7 @@ export function AuditDetailPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to="/qa-audits" className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-800 hover:underline">
+        <Link to="/qa-audits" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline">
           <ArrowLeft className="size-4" aria-hidden /> Audits
         </Link>
         {audit && <ExportLinks basePath={`audits/${audit.id}/export`} label="audit report" />}
@@ -41,8 +41,8 @@ export function AuditDetailPage() {
 
       {auditError ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(auditError, 'Could not load this audit.')}</p>
-          <button onClick={() => refetchAudit()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(auditError, 'Could not load this audit.')}</p>
+          <button onClick={() => refetchAudit()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : auditPending || !audit ? (
         <Skeleton className="h-40" />
@@ -50,13 +50,13 @@ export function AuditDetailPage() {
         <Card className="space-y-3 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-navy-900">{audit.title}</h2>
+              <h2 className="font-semibold text-ink">{audit.title}</h2>
               <p className="mt-0.5 text-sm text-muted">{audit.targetDepartmentName ?? audit.targetFacultyName} · {audit.checklistTemplateName} · Scheduled {audit.scheduledDate}</p>
             </div>
-            <span className="rounded-md bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-800 ring-1 ring-inset ring-violet-100">{STATUS_LABELS[audit.status] ?? audit.status}</span>
+            <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{STATUS_LABELS[audit.status] ?? audit.status}</span>
           </div>
           <p className="text-sm text-muted">{audit.findingsRecorded} of {audit.totalItems} checklist items have a finding.</p>
-          {audit.notes && <p className="border-t border-line pt-3 text-sm text-navy-900">{audit.notes}</p>}
+          {audit.notes && <p className="border-t border-line pt-3 text-sm text-ink">{audit.notes}</p>}
           {nextStatus && (
             <div className="border-t border-line pt-3">
               <Button
@@ -66,14 +66,14 @@ export function AuditDetailPage() {
               >
                 {NEXT_LABEL[audit.status]}
               </Button>
-              {updateAudit.error && <p role="alert" className="mt-2 text-sm text-red-600">{errorMessage(updateAudit.error)}</p>}
+              {updateAudit.error && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(updateAudit.error)}</p>}
             </div>
           )}
         </Card>
       )}
 
       {itemsError ? (
-        <Card className="p-5 text-sm text-red-700" role="alert">{errorMessage(itemsError, 'Could not load the checklist.')}</Card>
+        <Card className="p-5 text-sm text-danger" role="alert">{errorMessage(itemsError, 'Could not load the checklist.')}</Card>
       ) : itemsPending || !items ? (
         <div className="space-y-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : (
@@ -104,8 +104,8 @@ function ChecklistItemRow({ auditId, item, locked, leadAuditorUserId }: { auditI
   return (
     <Card role="group" aria-label={item.prompt} className="space-y-3 p-4">
       <div>
-        <span className="rounded-md bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-800 ring-1 ring-inset ring-violet-100">{item.standardCode}</span>
-        <p className="mt-1.5 font-medium text-navy-900">{item.prompt}</p>
+        <span className="rounded-md bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{item.standardCode}</span>
+        <p className="mt-1.5 font-medium text-ink">{item.prompt}</p>
         {item.guidance && <p className="mt-0.5 text-sm text-muted">{item.guidance}</p>}
       </div>
 
@@ -125,12 +125,12 @@ function ChecklistItemRow({ auditId, item, locked, leadAuditorUserId }: { auditI
           {item.finding ? 'Update' : 'Save'}
         </Button>
       </form>
-      {upsert.error && <p role="alert" className="text-sm text-red-600">{errorMessage(upsert.error)}</p>}
+      {upsert.error && <p role="alert" className="text-sm text-danger">{errorMessage(upsert.error)}</p>}
 
       {needsCorrectiveAction && item.finding && (
         <div className="border-t border-line pt-3">
           {!showCapa ? (
-            <button type="button" onClick={() => setShowCapa(true)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-800 hover:underline">
+            <button type="button" onClick={() => setShowCapa(true)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:underline">
               <Wrench className="size-4" aria-hidden /> Raise a corrective action
             </button>
           ) : (
@@ -164,7 +164,7 @@ function RaiseCapaForm({ findingId, defaultOwnerUserId, onDone }: { findingId: s
         <Button type="submit" loading={create.isPending} disabled={!description.trim() || !dueDate}>Raise</Button>
         <button type="button" onClick={onDone} className="text-sm text-muted hover:underline">Cancel</button>
       </div>
-      {create.error && <p role="alert" className="text-sm text-red-600">{errorMessage(create.error)}</p>}
+      {create.error && <p role="alert" className="text-sm text-danger">{errorMessage(create.error)}</p>}
     </form>
   )
 }

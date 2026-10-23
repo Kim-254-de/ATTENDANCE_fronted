@@ -14,9 +14,9 @@ export const useSessionReports = (unitId?: string) =>
 
 /** Text/bar colour for an attendance rate, from red (low) through orange to green (high). */
 export function rateColour(rate: number) {
-  if (rate >= 90) return { text: 'text-success', bar: 'bg-success' }
-  if (rate >= 70) return { text: 'text-orange-500', bar: 'bg-orange-500' }
-  return { text: 'text-red-600', bar: 'bg-red-600' }
+  if (rate >= 90) return { text: 'text-success', bar: 'bg-success-solid' }
+  if (rate >= 70) return { text: 'text-warning', bar: 'bg-warning-solid' }
+  return { text: 'text-danger', bar: 'bg-danger-solid' }
 }
 
 /** Each taught unit's semester-to-date average attendance rate, derived from the session log. */

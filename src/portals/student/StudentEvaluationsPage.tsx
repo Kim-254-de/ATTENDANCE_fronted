@@ -20,21 +20,21 @@ export function StudentEvaluationsPage() {
   return (
     <div className="space-y-5">
       <Card className="flex items-start gap-3 p-4">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><ShieldCheck className="size-5" aria-hidden /></span>
-        <p className="text-sm text-muted">Your answers are anonymous. Nothing you submit is stored with your name, and lecturers only see results once several students have answered.</p>
+        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-ink"><ShieldCheck className="size-5" aria-hidden /></span>
+        <p className="text-sm text-muted">Anonymous. Your name is never stored with your answers.</p>
       </Card>
 
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load evaluations.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load evaluations.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !rounds ? (
         <Skeleton className="h-40" />
       ) : rounds.length === 0 ? (
         <Card className="p-8 text-center">
           <MessageSquareQuote className="mx-auto size-8 text-muted" aria-hidden />
-          <p className="mt-3 font-semibold text-navy-900">Nothing to evaluate right now</p>
+          <p className="mt-3 font-semibold text-ink">Nothing to evaluate right now</p>
           <p className="mt-1 text-sm text-muted">You will see your units here when the university opens a course evaluation.</p>
         </Card>
       ) : (
@@ -50,7 +50,7 @@ function RoundSection({ round }: { round: StudentEvaluationRound }) {
   return (
     <section aria-labelledby={`round-${round.id}`} className="space-y-3">
       <div>
-        <h2 id={`round-${round.id}`} className="text-lg font-bold text-navy-900">{round.title}</h2>
+        <h2 id={`round-${round.id}`} className="text-lg font-bold text-ink">{round.title}</h2>
         <p className="text-xs text-muted">
           {done} of {round.units.length} done · closes {new Date(round.closesAt).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })}
         </p>
@@ -66,7 +66,7 @@ function RoundSection({ round }: { round: StudentEvaluationRound }) {
             className="flex w-full items-center gap-3 p-4 text-left"
           >
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-navy-900">{unit.unitCode}</p>
+              <p className="font-semibold text-ink">{unit.unitCode}</p>
               <p className="truncate text-xs text-muted">{unit.unitName ?? unit.unitCode} · {unit.lecturerName}</p>
             </div>
             {unit.submitted
@@ -103,7 +103,7 @@ function EvaluationForm({ roundId, unitId, questions, onDone }: { roundId: strin
     <form onSubmit={onSubmit} className="space-y-5 border-t border-line p-4">
       {questions.map((q, i) => (
         <fieldset key={q.id}>
-          <legend className="text-sm font-semibold text-navy-900">
+          <legend className="text-sm font-semibold text-ink">
             {i + 1}. {q.prompt}{!q.required && <span className="font-normal text-muted"> (optional)</span>}
           </legend>
           {q.kind === 'RATING' ? (
@@ -122,10 +122,10 @@ function EvaluationForm({ roundId, unitId, questions, onDone }: { roundId: strin
                     onClick={() => setRatings((r) => ({ ...r, [q.id]: value }))}
                     className={clsx(
                       'flex h-11 flex-1 items-center justify-center gap-1 rounded-xl border text-sm font-semibold transition',
-                      selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-line bg-white text-navy-900 hover:bg-blue-50',
+                      selected ? 'border-brand-ink bg-brand text-white' : 'border-line bg-card text-ink hover:bg-brand-soft',
                     )}
                   >
-                    {value}<Star className={clsx('size-3.5', selected ? 'text-white' : 'text-gold-500')} aria-hidden />
+                    {value}<Star className={clsx('size-3.5', selected ? 'text-white' : 'text-accent')} aria-hidden />
                   </button>
                 )
               })}
@@ -142,8 +142,8 @@ function EvaluationForm({ roundId, unitId, questions, onDone }: { roundId: strin
           {q.kind === 'RATING' && <p className="mt-1 flex justify-between text-[11px] text-muted"><span>{SCALE[0]}</span><span>{SCALE[4]}</span></p>}
         </fieldset>
       ))}
-      <Button type="submit" variant="accent" className="w-full" loading={submit.isPending} disabled={missing.length > 0}>Submit evaluation</Button>
-      {submit.error && <p role="alert" className="text-sm text-red-600">{errorMessage(submit.error)}</p>}
+      <Button type="submit" className="w-full" loading={submit.isPending} disabled={missing.length > 0}>Submit evaluation</Button>
+      {submit.error && <p role="alert" className="text-sm text-danger">{errorMessage(submit.error)}</p>}
     </form>
   )
 }

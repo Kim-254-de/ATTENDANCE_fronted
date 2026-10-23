@@ -16,7 +16,7 @@ export function EvaluationResultsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to="/faculty-evaluations" className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-900 hover:underline">
+        <Link to="/faculty-evaluations" className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink hover:underline">
           <ArrowLeft className="size-4" aria-hidden /> All evaluations
         </Link>
         <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} aria-label="Filter by department" className="input w-full sm:w-64">
@@ -26,8 +26,8 @@ export function EvaluationResultsPage() {
       </div>
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
-          <p className="text-sm text-red-700">{errorMessage(error, 'Could not load these results.')}</p>
-          <button onClick={() => refetch()} className="text-sm font-semibold text-navy-900 underline">Retry</button>
+          <p className="text-sm text-danger">{errorMessage(error, 'Could not load these results.')}</p>
+          <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
         </Card>
       ) : isPending || !data ? (
         <Skeleton className="h-64" />

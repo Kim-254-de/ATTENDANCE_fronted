@@ -12,7 +12,7 @@ export function VerifyEmailPage() {
 
   return (
     <AuthShell title="Email confirmation">
-      <div className="space-y-5 rounded-2xl border border-line bg-white p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8">
+      <div className="space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8">
       {!token ? (
         <Notice ok={false}>This link is missing its confirmation token. Open the link from your email again.</Notice>
       ) : verify.isPending ? (
@@ -22,7 +22,7 @@ export function VerifyEmailPage() {
       ) : (
         <Notice ok>{verify.data.message}</Notice>
       )}
-      <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-navy-900 hover:bg-surface">Go to sign in</Link>
+      <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 text-sm font-semibold text-ink hover:bg-surface">Go to sign in</Link>
       </div>
     </AuthShell>
   )
@@ -31,7 +31,7 @@ export function VerifyEmailPage() {
 function Notice({ ok, children }: { ok: boolean; children: React.ReactNode }) {
   const Icon = ok ? CircleCheck : CircleAlert
   return (
-    <div role={ok ? 'status' : 'alert'} className={`flex gap-3 rounded-xl p-4 text-sm ${ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>
+    <div role={ok ? 'status' : 'alert'} className={`flex gap-3 rounded-xl p-4 text-sm ${ok ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'}`}>
       <Icon className="mt-0.5 size-5 shrink-0" aria-hidden />
       <p>{children}</p>
     </div>
