@@ -120,6 +120,27 @@ describe('admin console', () => {
     expect(await screen.findByRole('heading', { name: 'University Attendance' })).toBeInTheDocument()
   })
 
+  it('invites the timetabling office, who are sent to the Timetable Generator to sign in', async () => {
+    const user = userEvent.setup()
+    const admin = await signInAtOversight(user, 'admin@university.edu')
+    await screen.findByRole('table')
+
+    await user.type(screen.getByLabelText('Full name'), 'Dee Director')
+    await user.type(screen.getByLabelText('Work email'), 'director@university.edu')
+    await user.selectOptions(screen.getByLabelText('Role'), 'timetabling')
+    expect(screen.getByText(/they sign in at the timetable generator, not here/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /send invitation/i }))
+
+    expect(await screen.findByText('Invitation sent to director@university.edu.')).toBeInTheDocument()
+    const row = (await screen.findByText('Dee Director')).closest('tr')!
+    expect(within(row).getByText('Timetabling office')).toBeInTheDocument()
+    await signOut(user, admin)
+
+    await acceptInvitation(user, lastMockInvitationToken()!, 'NewPass1')
+    expect(await screen.findByRole('heading', { name: /your account is ready/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /open the timetable generator/i })).toHaveAttribute('href', 'https://generator.test.local')
+  })
+
   it('refuses an unknown or already-used invitation link', async () => {
     renderApp('/accept-invite?token=invite-does-not-exist')
     expect(await screen.findByRole('alert')).toHaveTextContent(/invalid, has expired or has already been used/i)

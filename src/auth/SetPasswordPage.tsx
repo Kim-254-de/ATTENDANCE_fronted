@@ -24,7 +24,7 @@ const schema = z
   .refine((v) => v.password === v.confirmPassword, { path: ['confirmPassword'], message: 'Passwords do not match.' })
 type Values = z.infer<typeof schema>
 
-const ROLE_LABEL = { admin: 'an administrator', management: 'a member of management', department: 'department officer', qa: 'quality assurance officer' } as const
+const ROLE_LABEL = { admin: 'an administrator', management: 'a member of management', department: 'department officer', qa: 'quality assurance officer', timetabling: 'a member of the timetabling office' } as const
 
 const CARD = 'space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8'
 
@@ -77,13 +77,28 @@ export function SetPasswordPage({ mode }: { mode: 'invite' | 'reset' }) {
   }
 
   const details = invitation.data
+  // The timetabling office signs in at the Timetable Generator, not here.
+  if (mode === 'invite' && accept.isSuccess && details?.role === 'timetabling') {
+    return (
+      <AuthShell title="Your account is ready">
+        <div className={CARD} role="status">
+          <div className="grid size-14 place-items-center rounded-full bg-success-soft text-success"><CheckCircle2 className="size-7" aria-hidden /></div>
+          <p className="text-sm leading-6 text-muted">Sign in at the Timetable Generator with <strong className="text-ink">{details.email}</strong> and your new password.</p>
+          {details.signInUrl
+            ? <a href={details.signInUrl} className="inline-flex h-11 items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong">Open the Timetable Generator</a>
+            : <p className="text-sm text-muted">Ask the administrator for the Generator's address.</p>}
+        </div>
+      </AuthShell>
+    )
+  }
   const serverErrors = submit.isError ? fieldErrors(submit.error) : {}
 
   const onSubmit = handleSubmit((values) => {
     const input = { token, ...values }
     if (mode === 'invite') {
       accept.mutate(input, {
-        onSuccess: () => navigate('/oversight', { replace: true, state: { message: 'Your account is ready. Sign in with your email and new password.' } }),
+        // The timetabling office stays here to be shown the way to the Generator (above).
+        onSuccess: () => { if (details?.role !== 'timetabling') navigate('/oversight', { replace: true, state: { message: 'Your account is ready. Sign in with your email and new password.' } }) },
       })
     } else {
       reset.mutate(input)

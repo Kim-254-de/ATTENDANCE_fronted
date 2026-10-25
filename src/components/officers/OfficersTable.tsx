@@ -5,7 +5,7 @@ import { formatDateTime, initials } from '@/lib/format'
 import type { Officer } from '@/types'
 import { useOfficerActions } from './useOfficerActions'
 
-const ROLE_LABEL: Record<Officer['role'], string> = { admin: 'Administrator', management: 'Management', department: 'Department officer', qa: 'QA officer' }
+const ROLE_LABEL: Record<Officer['role'], string> = { admin: 'Administrator', management: 'Management', department: 'Department officer', qa: 'QA officer', timetabling: 'Timetabling office' }
 
 function StatusBadge({ officer }: { officer: Officer }) {
   if (officer.status === 'ACTIVE') return <span className="rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success">Active</span>
@@ -78,7 +78,7 @@ export function OfficersTable({
               </td>
               <td className="px-5 py-3">
                 <p className="text-ink">{ROLE_LABEL[o.role]}</p>
-                <p className="text-xs text-muted">{o.departmentName ?? (o.role === 'management' ? 'Whole university' : '—')}</p>
+                <p className="text-xs text-muted">{o.departmentName ?? (o.role === 'management' ? 'Whole university' : o.role === 'timetabling' ? 'Signs in at the Timetable Generator' : '—')}</p>
               </td>
               <td className="px-5 py-3"><StatusBadge officer={o} /></td>
               <td className="px-5 py-3 text-muted">{o.lastLoginAt ? formatDateTime(o.lastLoginAt) : 'Never'}</td>

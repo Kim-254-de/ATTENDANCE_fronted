@@ -19,7 +19,7 @@ export function OfficersPage() {
   const officers = useAdminOfficers()
   const departments = useAdminDepartments()
   const invite = useAdminInvite()
-  const [role, setRole] = useState<'management' | 'department' | 'qa' | 'admin'>('management')
+  const [role, setRole] = useState<'management' | 'department' | 'qa' | 'admin' | 'timetabling'>('management')
   const [departmentId, setDepartmentId] = useState('')
   const [notice, setNotice] = useState<{ text: string; warn: boolean } | null>(null)
   const adminsInSmarttt = smartttAccounts()
@@ -44,13 +44,17 @@ export function OfficersPage() {
       >
         <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Role
-          <select value={role} onChange={(e) => setRole(e.target.value as 'management' | 'department' | 'qa' | 'admin')} className="input">
+          <select value={role} onChange={(e) => setRole(e.target.value as 'management' | 'department' | 'qa' | 'admin' | 'timetabling')} className="input">
             <option value="management">Management</option>
             <option value="department">Department officer</option>
             <option value="qa">QA officer</option>
+            <option value="timetabling">Timetabling office (Timetable Generator)</option>
             {!adminsInSmarttt && <option value="admin">Administrator</option>}
           </select>
         </label>
+        {role === 'timetabling' && (
+          <p className="text-xs text-muted">For the Directorate of Examinations and Timetabling. They sign in at the Timetable Generator, not here.</p>
+        )}
         {role === 'department' && (
           <label className="block space-y-1.5 text-sm font-semibold text-ink">
             Department
