@@ -5,20 +5,7 @@ import { useLogout, useMe } from '@/auth/authApi'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { initials } from '@/lib/format'
-import type { Account } from '@/types'
-
-type OfficerRole = 'admin' | 'department' | 'management' | 'qa'
-type Officer = Extract<Account, { role: OfficerRole }>
-
-/** "Department officer · Computer Science": what this account is, and over what. */
-export function officerSubtitle(user: Officer): string {
-  switch (user.role) {
-    case 'admin': return 'Administrator'
-    case 'department': return `Department officer · ${user.departmentName}`
-    case 'management': return 'Management'
-    case 'qa': return user.title ? `Quality assurance · ${user.title}` : 'Quality assurance officer'
-  }
-}
+import { officerSubtitle, type Officer, type OfficerRole } from './officerSubtitle'
 
 /**
  * "My profile" for every invited officer (admin, management, department, QA). These accounts are

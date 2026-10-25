@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { StudentAttendanceRecord } from '@/types'
 import { displayMark, type DisplayMark } from './attendanceStats'
 
-export const MARKS: Record<DisplayMark, { label: string; tone: string; square: string }> = {
+const MARKS: Record<DisplayMark, { label: string; tone: string; square: string }> = {
   PRESENT: { label: 'Present', tone: 'text-success', square: 'bg-success-soft text-success' },
   LATE: { label: 'Late', tone: 'text-warning', square: 'bg-warning-soft text-warning' },
   ABSENT: { label: 'Absent', tone: 'text-danger', square: 'bg-danger-soft text-danger' },

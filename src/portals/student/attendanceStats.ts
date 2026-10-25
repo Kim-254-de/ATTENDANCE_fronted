@@ -105,3 +105,8 @@ export function thisMonthsWeeks(records: StudentAttendanceRecord[]): WeekRate[] 
 
   return buckets.map((b, i) => ({ label: `W${i + 1}`, rate: b.held ? Math.round((b.attended / b.held) * 1000) / 10 : null }))
 }
+
+/** An attendance rate as shown everywhere in the student portal: "82%", or "—" with nothing held yet. */
+export const formatRate = (rate: number | null) => (rate === null ? '—' : `${Math.round(rate)}%`)
+export const rateTone = (rate: number | null) =>
+  rate === null ? 'text-muted' : rate >= 75 ? 'text-success' : rate >= 50 ? 'text-accent-ink' : 'text-danger'

@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useMe } from '@/auth/authApi'
 import { errorMessage } from '@/lib/api'
 import { RecordRow } from './AttendanceRecordRow'
-import { attendanceStreak, todaysRecords } from './attendanceStats'
+import { attendanceStreak, formatRate, todaysRecords } from './attendanceStats'
 import { EvaluationPrompt } from './EvaluationPrompt'
 import { useMyAttendance } from './studentApi'
 
@@ -13,7 +13,6 @@ import { useMyAttendance } from './studentApi'
 // pulling the full history the dedicated Progress page fetches.
 const HOME_ATTENDANCE_LIMIT = 20
 
-const formatRate = (rate: number | null) => (rate === null ? '—' : `${Math.round(rate)}%`)
 
 /**
  * The student's home: today's stats at a glance, QR check-in, and today's classes.
