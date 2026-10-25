@@ -1922,6 +1922,23 @@ const invitationHandlers = [
     ADMIN_DEPARTMENTS.push(department)
     return ok({ departmentId: department.departmentId, name: department.name, code: department.code }, 201)
   }),
+  http.patch(`${API}/admin/departments/:departmentId`, async ({ params, request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
+    if (!department) return fail(404, 'NOT_FOUND', 'No such department.')
+    const { name, code } = (await request.json()) as { name?: string; code?: string }
+    const trimmed = name?.trim() ?? ''
+    const upper = code?.trim().toUpperCase() ?? ''
+    if (trimmed.length < 3 || !/^[A-Z0-9][A-Z0-9 ./&-]{0,31}$/.test(upper)) return fail(400, 'VALIDATION_FAILED', 'Enter the department name and a code, e.g. DCOMP.')
+    // Mirrors directory.service.ts editDepartment: another department's name, spelling or code is refused.
+    const same = departmentForName(trimmed)
+    if (same && same.departmentId !== department.departmentId) return fail(409, 'CONFLICT', `"${trimmed}" is the same department as "${same.name}", which already exists.`)
+    const holder = ADMIN_DEPARTMENTS.find((d) => d !== department && d.code?.toUpperCase() === upper)
+    if (holder) return fail(409, 'CONFLICT', `The code ${upper} is already used by ${holder.name}.`)
+    Object.assign(department, { name: trimmed, code: upper })
+    return ok({ departmentId: department.departmentId, name: department.name, code: department.code })
+  }),
   http.get(`${API}/admin/officers`, () => requireAdmin() ?? ok(officers)),
   http.get(`${API}/admin/units/pending`, () => requireAdmin() ?? ok(pendingUnits)),
   http.post(`${API}/admin/units/:unitId/verify`, ({ params }) => {
