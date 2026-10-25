@@ -372,28 +372,6 @@ export interface DepartmentUnit {
   attendanceRate: number | null
 }
 
-/**
- * Course provisioning: a course is provided to a department (`course_offerings`),
- * the department decides how many lecturer-taught sections it needs and
- * allocates lecturers to them.
- */
-
-/** GET /departments/courses — a course offering as the department sees it. */
-export interface CourseOffering {
-  id: string
-  code: string
-  name: string | null
-  segmentsPlanned: number
-  /** How many of segmentsPlanned already have a lecturer. */
-  segmentsFilled: number
-}
-
-/** POST /departments/courses/:offeringId/segments — the unit that allocation just created. */
-export interface AllocatedUnit {
-  unitId: string
-  code: string
-}
-
 /** GET /students/me/units: a unit the student is on, with their attendance in it. */
 export interface StudentUnit {
   /** Null for a unit known only from the timetable app (onRoster false). */
@@ -896,16 +874,6 @@ export interface QaDashboard {
   complianceByCategory: QaComplianceByCategory[]
   overdueCapaCount: number
   attendanceTrends: QaAttendanceTrendPoint[]
-}
-
-/** GET /departments/lecturer-directory — anyone who can be allocated to a section, own staff first. */
-export interface LecturerDirectoryEntry {
-  userId: string
-  fullName: string
-  staffNumber: string
-  title: string | null
-  departmentId: string | null
-  departmentName: string | null
 }
 
 /** GET /admin/lecturers — a lecturer and the department they belong to, if any. */

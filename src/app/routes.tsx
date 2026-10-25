@@ -169,10 +169,12 @@ export const routes = [
             handle: { title: 'Performance Dashboard' },
           },
           {
-            path: 'department-courses',
-            lazy: async () => ({ Component: (await import('@/portals/department/courses/CoursesPage')).CoursesPage }),
-            handle: { title: 'Courses' },
+            path: 'department-teaching',
+            lazy: async () => ({ Component: (await import('@/portals/department/teaching/TeachingPage')).TeachingPage }),
+            handle: { title: 'Teaching' },
           },
+          // The old Courses page: teaching replaced it.
+          { path: 'department-courses', element: <Navigate to="/department-teaching" replace /> },
           {
             path: 'department-lecturers',
             lazy: async () => ({ Component: (await import('@/portals/department/lecturers/LecturersPage')).LecturersPage }),

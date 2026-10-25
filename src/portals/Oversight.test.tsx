@@ -4,8 +4,8 @@ import { afterEach, vi } from 'vitest'
 import { renderApp } from '@/test/renderApp'
 
 /**
- * The oversight backlog across portals: exam eligibility, borrowing a lecturer from another
- * department, placing lecturers in departments, and student course evaluations.
+ * The oversight backlog across portals: exam eligibility, placing lecturers in departments,
+ * and student course evaluations.
  */
 
 afterEach(() => { vi.restoreAllMocks() })
@@ -67,22 +67,6 @@ describe('exam eligibility', () => {
       expect(within(row).getByText('At risk')).toBeInTheDocument()
     })
     expect(await screen.findByText(/last changed by ms\. susan achieng/i)).toBeInTheDocument()
-  })
-})
-
-describe('allocating a lecturer from another department', () => {
-  it('offers other departments’ lecturers, grouped apart, and allocates one', async () => {
-    const user = await signInAtOversight(DEPARTMENT)
-    await screen.findAllByRole('link', { name: /^courses$/i })
-    await user.click(navLink(/^courses$/i))
-
-    const select = await screen.findByLabelText(/lecturer for the next section/i)
-    const others = await within(select).findByRole('group', { name: /other departments/i })
-    expect(within(others).getByRole('option', { name: /dr\. ruth kamau — mathematics/i })).toBeInTheDocument()
-
-    await user.selectOptions(select, within(others).getByRole('option', { name: /ruth kamau/i }))
-    await user.click(screen.getByRole('button', { name: /assign to next open section/i }))
-    expect(await screen.findByText(/every section has a lecturer/i)).toBeInTheDocument()
   })
 })
 

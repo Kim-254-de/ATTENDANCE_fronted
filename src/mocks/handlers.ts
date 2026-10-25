@@ -1,6 +1,7 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { EnrolmentStudent, Terminal, TerminalCapability } from '@/portals/department/terminals/terminalsApi'
-import type { Account, Admin, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, InvitationDetails, Officer, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, LecturerDirectoryEntry, PlacementLecturer, StudentEvaluationRound, PendingUnit, ManagementAccount, ManagementDepartment, ManagementDepartmentYears, ManagementStudent, ManagementUnit, ManagementUniversity, ManagementYearDetail } from '@/types'
+import { resetTeaching, teachingHandlers } from './teaching'
+import type { Account, Admin, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, InvitationDetails, Officer, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, PlacementLecturer, StudentEvaluationRound, PendingUnit, ManagementAccount, ManagementDepartment, ManagementDepartmentYears, ManagementStudent, ManagementUnit, ManagementUniversity, ManagementYearDetail } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -180,6 +181,7 @@ export const resetMocks = () => {
   resetQaMocks()
   resetTerminalMocks()
   resetOversightMocks()
+  resetTeaching()
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -1131,59 +1133,7 @@ const departmentHandlers = [
     return ok(rows)
   }),
 
-  /** Courses provided to the signed-in officer's own department. */
-  http.get(`${API}/departments/courses`, async () => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    await delay(150)
-    const officer = currentAccount as DepartmentOfficer
-    const rows: CourseOffering[] = COURSE_OFFERINGS
-      .filter((o) => o.departmentId === officer.departmentId)
-      .map(({ departmentId: _departmentId, ...offering }) => offering)
-    return ok(rows)
-  }),
-
-  http.patch(`${API}/departments/courses/:offeringId`, async ({ params, request }) => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    await delay(150)
-    const officer = currentAccount as DepartmentOfficer
-    const offering = COURSE_OFFERINGS.find((o) => o.id === params.offeringId)
-    if (!offering || offering.departmentId !== officer.departmentId) {
-      return fail(404, 'NOT_FOUND', 'No such course in your department.')
-    }
-    const { segmentsPlanned } = (await request.json()) as { segmentsPlanned?: number }
-    if (!segmentsPlanned || segmentsPlanned < 1 || segmentsPlanned > 26) {
-      return fail(400, 'VALIDATION_FAILED', 'Sections must be between 1 and 26.')
-    }
-    if (segmentsPlanned < offering.segmentsFilled) {
-      return fail(400, 'VALIDATION_FAILED', `This course already has ${offering.segmentsFilled} section(s) assigned; it cannot be reduced below that.`)
-    }
-    offering.segmentsPlanned = segmentsPlanned
-    return ok({ offeringId: offering.id, segmentsPlanned })
-  }),
-
-  /** Allocates a lecturer (own or borrowed) to the next open segment — mirrors department.repository.ts allocateLecturerToSegment. */
-  http.post(`${API}/departments/courses/:offeringId/segments`, async ({ params, request }) => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    await delay(150)
-    const officer = currentAccount as DepartmentOfficer
-    const offering = COURSE_OFFERINGS.find((o) => o.id === params.offeringId)
-    if (!offering || offering.departmentId !== officer.departmentId) {
-      return fail(404, 'NOT_FOUND', 'No such course in your department.')
-    }
-    const { lecturerUserId } = (await request.json()) as { lecturerUserId?: string }
-    if (!LECTURER_DIRECTORY.some((l) => l.userId === lecturerUserId)) return fail(400, 'VALIDATION_FAILED', 'No such lecturer.')
-    if (offering.segmentsFilled >= offering.segmentsPlanned) {
-      return fail(409, 'CONFLICT', 'This course already has a lecturer assigned to every planned section.')
-    }
-    const multiSegment = offering.segmentsPlanned > 1
-    const letter = String.fromCharCode('A'.charCodeAt(0) + offering.segmentsFilled)
-    offering.segmentsFilled += 1
-    const code = multiSegment ? `${offering.code} GR ${letter}` : offering.code
-    return ok({ unitId: `unit-${++courseOfferingSeq}`, code }, 201)
-  }),
+  ...teachingHandlers(API, requireDepartment),
 ]
 
 /* ------------------------------------------------------------------ *
@@ -1215,26 +1165,6 @@ const SEED_UNITS: SeedUnit[] = [
   // Timetabled but never activated yet — the real backend's COALESCE(...,0) means this reads 0%, not null.
   { unitId: 'u5', unitCode: 'CS410', unitName: 'Distributed Systems', lecturerUserId: 'lec-2', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', activeStudents: 41, sessionsHeld: 0, avgAttendanceRate: 0 },
 ]
-
-/**
- * Course provisioning's shared state: provided to a department, which reads
- * and fills them. One array, like the real course_offerings table, so both
- * mock sections below agree with each other.
- */
-interface MockCourseOffering {
-  id: string
-  code: string
-  name: string | null
-  departmentId: string
-  segmentsPlanned: number
-  segmentsFilled: number
-}
-const COURSE_OFFERINGS: MockCourseOffering[] = [
-  // Provided but not yet fully staffed, in the seeded department officer's own department —
-  // so the department's Courses page has something real to show by default.
-  { id: 'offering-seed-1', code: 'CS610', name: 'Distributed Databases', departmentId: 'dept-cs', segmentsPlanned: 2, segmentsFilled: 1 },
-]
-let courseOfferingSeq = 0
 
 /* ------------------------------------------------------------------ *
  * Management portal (GET /management/*): university-wide.
@@ -2204,12 +2134,6 @@ function eligibilityReport(filter: (r: (typeof STANDING_SEED)[number]) => boolea
   return { policy: attendancePolicy, summary, rows }
 }
 
-/** Lecturers anywhere in the institution, for the allocation picker: the department's own, plus one from another department. */
-const LECTURER_DIRECTORY: LecturerDirectoryEntry[] = [
-  ...DEPARTMENT_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, departmentId: 'dept-cs', departmentName: 'Computer Science' })),
-  { userId: 'lec-4', fullName: 'Dr. Ruth Kamau', staffNumber: 'STF/04112', title: 'Dr.', departmentId: 'dept-math', departmentName: 'Mathematics' },
-]
-
 const ADMIN_DEPARTMENTS_SEED = (): AdminDepartment[] => [
   ...DEPARTMENTS_SEED.map((d) => ({ departmentId: d.id, name: d.name, code: d.code, inSmarttt: true, lecturerCount: SEED_LECTURERS.filter((l) => l.departmentId === d.id).length })),
   { departmentId: 'dept-math', name: 'Mathematics', code: 'DMATH', inSmarttt: true, lecturerCount: 1 },
@@ -2397,13 +2321,6 @@ const oversightHandlers = [
     const url = new URL(request.url)
     const departmentId = url.searchParams.get('departmentId')
     return ok(eligibilityReport((r) => !departmentId || r.departmentId === departmentId, url.searchParams.get('all') === 'true'))
-  }),
-
-  http.get(`${API}/departments/lecturer-directory`, ({ request }) => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    const q = new URL(request.url).searchParams.get('q')?.trim().toLowerCase() ?? ''
-    return ok(LECTURER_DIRECTORY.filter((l) => !q || l.fullName.toLowerCase().includes(q) || l.staffNumber.toLowerCase().includes(q)))
   }),
 
   http.get(`${API}/admin/departments`, () => requireAdmin() ?? ok(ADMIN_DEPARTMENTS)),
