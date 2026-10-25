@@ -3,11 +3,10 @@ import { api } from '@/lib/api'
 import type { InvitationResult } from '@/types'
 
 /**
- * Re-send and deactivate, for whichever list manages the officers:
- * `/admin/officers` (administrators) or `/faculties/officers` (a faculty's
- * department officers). Both refetch `listKey` afterwards.
+ * Re-send and deactivate, for the administrator's officer list
+ * (`/admin/officers`). Refetches `listKey` afterwards.
  */
-export function useOfficerActions(base: '/admin/officers' | '/faculties/officers', listKey: readonly unknown[]) {
+export function useOfficerActions(base: '/admin/officers', listKey: readonly unknown[]) {
   const qc = useQueryClient()
   const refresh = () => qc.invalidateQueries({ queryKey: listKey })
   const resend = useMutation({

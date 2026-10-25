@@ -9,8 +9,8 @@ import { useDepartmentProfile } from '../dashboard/dashboardApi'
 import { useAllocateLecturer, useDepartmentCourses, useLecturerDirectory, useSetSegmentCount } from './coursesApi'
 
 /**
- * How this university fills a class, the department's half: faculty has
- * already provided these courses (manually — no ERP check); from here the
+ * How this university fills a class, the department's half: these courses
+ * have already been provided to it (manually — no ERP check); from here the
  * department decides how many lecturer-taught sections each needs and
  * assigns lecturers to them — its own, or borrowed from another department
  * (the unit stays this department's either way). Assigning is immediate — the moment it
@@ -34,7 +34,7 @@ export function CoursesPage() {
         <Card className="p-10 text-center">
           <Library className="mx-auto size-8 text-muted" aria-hidden />
           <p className="mt-3 font-semibold text-ink">No courses yet</p>
-          <p className="mt-1 text-sm text-muted">Courses appear here once your faculty provides one to this department.</p>
+          <p className="mt-1 text-sm text-muted">Courses appear here once one is provided to this department.</p>
         </Card>
       ) : (
         <div className="space-y-4">

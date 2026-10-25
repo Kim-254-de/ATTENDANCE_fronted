@@ -26,7 +26,7 @@ describe('signing in with a SMARTTT account', () => {
   it('leaves officers on their attendance password, and sends administrators to their SMARTTT login', async () => {
     renderApp('/oversight')
     expect(await screen.findByLabelText('Email')).toBeInTheDocument()
-    expect(screen.getByText(/faculty and department officers: the email your invitation was sent to/i)).toBeInTheDocument()
+    expect(screen.getByText(/management and department officers: the email your invitation was sent to/i)).toBeInTheDocument()
     expect(screen.getByText(/administrators: your smarttt login and password/i)).toBeInTheDocument()
   })
 

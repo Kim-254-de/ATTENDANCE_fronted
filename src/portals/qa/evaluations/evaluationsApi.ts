@@ -19,12 +19,12 @@ export const useEvaluationRound = (roundId: string | undefined) =>
     staleTime: 30_000,
   })
 
-export const useEvaluationResults = (roundId: string | undefined, filters: { departmentId?: string; facultyId?: string }) =>
+export const useEvaluationResults = (roundId: string | undefined, filters: { departmentId?: string }) =>
   useQuery({
     queryKey: [...ROUNDS_KEY, roundId, 'results', filters],
     queryFn: async () =>
       (await api.get<EvaluationResults>(`/quality-assurance/evaluations/${roundId}/results`, {
-        params: { ...(filters.departmentId ? { departmentId: filters.departmentId } : {}), ...(filters.facultyId ? { facultyId: filters.facultyId } : {}) },
+        params: filters.departmentId ? { departmentId: filters.departmentId } : {},
       })).data,
     enabled: !!roundId,
     staleTime: 30_000,

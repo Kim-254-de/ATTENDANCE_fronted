@@ -45,7 +45,7 @@ export function CapaPage() {
           <TargetFilters
             dates={false}
             value={filters}
-            onChange={(next) => setFilters((f) => ({ ...f, targetDepartmentId: next.targetDepartmentId, targetFacultyId: next.targetFacultyId }))}
+            onChange={(next) => setFilters((f) => ({ ...f, targetDepartmentId: next.targetDepartmentId }))}
           />
           <label className="flex items-center gap-2 self-end pb-2.5 text-sm font-semibold text-ink">
             <input type="checkbox" checked={filters.overdue === true} onChange={(e) => setFilters((f) => ({ ...f, overdue: e.target.checked || undefined }))} />

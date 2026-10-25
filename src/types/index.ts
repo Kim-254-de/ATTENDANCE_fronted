@@ -38,29 +38,23 @@ export interface DepartmentOfficer {
   email: string
   departmentId: string
   departmentName: string
-  facultyName: string | null
   status: AccountStatus
   avatarUrl: string | null
 }
 
-/**
- * A signed-in faculty officer: oversees every department, lecturer, unit and
- * student in one faculty, read-only. The department role one level up.
- */
-export interface FacultyOfficer {
+/** A signed-in member of management: attendance across every department in the university, read-only. */
+export interface ManagementAccount {
   id: string
-  role: 'faculty'
+  role: 'management'
   fullName: string
   email: string
-  facultyId: string
-  facultyName: string
   status: AccountStatus
   avatarUrl: string | null
 }
 
 /**
- * A signed-in administrator: creates faculties and invites faculty officers
- * and other administrators. Invited, never self-registered.
+ * A signed-in administrator: creates departments and invites officers.
+ * Invited, or a SMARTTT administrator.
  */
 export interface Admin {
   id: string
@@ -73,7 +67,7 @@ export interface Admin {
 
 /**
  * A signed-in QA officer: institution-wide standards, audits and corrective
- * actions — no department/faculty scope of its own, unlike every other
+ * actions — no department scope of its own, unlike every other
  * officer role. Invited, never self-registered.
  */
 export interface QaOfficer {
@@ -86,22 +80,20 @@ export interface QaOfficer {
   avatarUrl: string | null
 }
 
-/** Whoever is signed in. Check `role` before using lecturer-, student-, department-, faculty-, admin- or qa-only fields. */
-export type Account = Lecturer | Student | DepartmentOfficer | FacultyOfficer | Admin | QaOfficer
+/** Whoever is signed in. Check `role` before using lecturer-, student-, department-, management-, admin- or qa-only fields. */
+export type Account = Lecturer | Student | DepartmentOfficer | ManagementAccount | Admin | QaOfficer
 
 /**
- * An administrator, faculty officer or department officer as the admin console
- * and the faculty portal list them. PENDING_VERIFICATION means invited but
- * not yet accepted.
+ * An administrator, member of management, department or QA officer as the
+ * admin console lists them. PENDING_VERIFICATION means invited but not yet
+ * accepted.
  */
 export interface Officer {
   userId: string
-  role: 'admin' | 'faculty' | 'department' | 'qa'
+  role: 'admin' | 'management' | 'department' | 'qa'
   fullName: string
   email: string
   status: AccountStatus
-  facultyId: string | null
-  facultyName: string | null
   departmentId: string | null
   departmentName: string | null
   invitedAt: string | null
@@ -110,7 +102,7 @@ export interface Officer {
   lastLoginAt: string | null
 }
 
-/** POST /admin/invitations and the faculty's invite: emailSent false means the account exists but the email failed — re-send it. */
+/** POST /admin/invitations: emailSent false means the account exists but the email failed — re-send it. */
 export interface InvitationResult {
   userId: string
   emailSent: boolean
@@ -120,32 +112,22 @@ export interface InvitationResult {
 export interface InvitationDetails {
   fullName: string
   email: string
-  role: 'admin' | 'faculty' | 'department' | 'qa'
-  /** The faculty's or department's name; null for an administrator. */
+  role: 'admin' | 'management' | 'department' | 'qa'
+  /** The department's name; null for the university-wide roles. */
   scopeName: string | null
   expiresAt: string
 }
 
-/** GET /admin/faculties */
-export interface AdminFaculty {
-  facultyId: string
-  name: string
-  departmentCount: number
-  officerCount: number
-  /** Linked to SMARTTT's faculty (SMARTTT owns faculties and departments); false for one only here. */
-  inSmarttt: boolean
-}
-
-/** GET /admin/directory — faculties and departments not yet in SMARTTT. */
+/** GET /admin/directory — departments not yet in SMARTTT. */
 export interface DirectoryStatus {
   smartttConnected: boolean
-  onlyHere: { faculties: number; departments: number }
+  onlyHere: { departments: number }
 }
 
 /** POST /admin/directory/sync */
 export interface DirectorySyncResult {
-  fromSmarttt: { faculties: { linked: number; created: number }; departments: { linked: number; created: number }; skipped: string[] } | null
-  toSmarttt: { faculties: number; departments: number; skipped: string[] }
+  fromSmarttt: { departments: { linked: number; created: number }; skipped: string[] } | null
+  toSmarttt: { departments: number; skipped: string[] }
 }
 
 /*
@@ -314,7 +296,8 @@ export interface PendingUnit {
 export interface DepartmentProfile {
   departmentId: string
   departmentName: string
-  facultyName: string | null
+  /** Unique across the university; null for one made before codes existed. */
+  departmentCode: string | null
 }
 
 /** GET /departments/overview — the department dashboard's stat tiles. Rates are 0–100. */
@@ -390,177 +373,10 @@ export interface DepartmentUnit {
 }
 
 /**
- * Faculty types mirror the backend's faculty.service.ts DTOs field-for-field
- * (verified against the running API, not inferred) — no renaming/mapping
- * layer, unlike the department module's unit/lecturer-detail endpoints.
+ * Course provisioning: a course is provided to a department (`course_offerings`),
+ * the department decides how many lecturer-taught sections it needs and
+ * allocates lecturers to them.
  */
-
-/** GET /faculties/me — the faculty the signed-in officer oversees. */
-export interface FacultyProfile {
-  facultyId: string
-  facultyName: string
-}
-
-/** GET /faculties/overview — the faculty dashboard's stat tiles. Rates are 0–100. */
-export interface FacultyOverview {
-  facultyId: string
-  facultyName: string
-  departmentCount: number
-  lecturerCount: number
-  studentCount: number
-  unitCount: number
-  avgAttendanceRate: number
-  sessionsHeld: number
-  /** 0–100; null until any session in the faculty has a scheduled start to measure against. */
-  onTimeRate: number | null
-  graceMinutes: number
-  periodLabel: string
-}
-
-/** GET /faculties/departments — one row per department, the faculty's distinguishing view. */
-export interface FacultyDepartment {
-  departmentId: string
-  departmentName: string
-  lecturerCount: number
-  studentCount: number
-  unitCount: number
-  avgAttendanceRate: number
-  sessionsHeld: number
-  onTimeRate: number | null
-}
-
-/** GET /faculties/lecturers — one row per lecturer across the whole faculty. */
-export interface FacultyLecturer {
-  userId: string
-  fullName: string
-  staffNumber: string
-  /** Home department; null while unassigned, and possibly outside the faculty for a borrowed lecturer. */
-  departmentId: string | null
-  departmentName: string | null
-  /** False for a lecturer from elsewhere teaching one of the faculty's units. */
-  isOwnStaff: boolean
-  unitsTaught: number
-  unitsElsewhere: number
-  studentsTaught: number
-  avgAttendanceRate: number
-  sessionsHeld: number
-  avgLateMinutes: number | null
-  onTimeRate: number | null
-}
-
-/** A unit as the faculty's lists read it — one row per section (e.g. "CSC102 GR A" is its own row). */
-export interface FacultyUnit {
-  unitId: string
-  unitCode: string
-  unitName: string | null
-  lecturerUserId: string
-  lecturerName: string
-  departmentId: string
-  departmentName: string
-  activeStudents: number
-  sessionsHeld: number
-  avgAttendanceRate: number
-}
-
-/** GET /faculties/departments/:departmentId — the drill-down for one department. */
-export interface FacultyDepartmentDetail {
-  departmentId: string
-  departmentName: string
-  lecturers: FacultyLecturer[]
-  units: FacultyUnit[]
-  courses: CourseOffering[]
-}
-
-/** One class meeting as a faculty lecturer drill-down reads it. */
-export interface FacultyLecturerSession {
-  sessionId: string
-  unitId: string
-  unitCode: string
-  title: string | null
-  status: string
-  opensAt: string
-  closesAt: string
-  /** Null for a unit with no issued schedule, so there is nothing to be late against. */
-  scheduledStartAt: string | null
-  /** Minutes after the scheduled start; negative means early. Null when unscheduled. */
-  lateMinutes: number | null
-  present: number
-  total: number
-  attendanceRate: number | null
-}
-
-/** GET /faculties/lecturers/:lecturerUserId — the drill-down for one lecturer. */
-export interface FacultyLecturerDetail {
-  lecturer: {
-    userId: string
-    fullName: string
-    staffNumber: string
-    title: string | null
-    email: string
-    /** Home department; null while unassigned. */
-    departmentId: string | null
-    departmentName: string | null
-  }
-  units: FacultyUnit[]
-  sessions: FacultyLecturerSession[]
-}
-
-/** GET /faculties/students — one row per (student, unit) across the whole faculty. */
-export interface FacultyStudent {
-  id: string
-  registrationNumber: string | null
-  studentUserId: string | null
-  fullName: string | null
-  unitId: string
-  unitCode: string
-  unitName: string | null
-  lecturerUserId: string
-  lecturerName: string
-  departmentId: string
-  departmentName: string
-  sessionsHeld: number
-  sessionsAttended: number
-  attendanceRate: number | null
-}
-
-/** GET /faculties/timekeeping — recent sessions across the faculty, newest first. */
-export interface FacultyTimekeepingEntry {
-  sessionId: string
-  unitId: string
-  unitCode: string
-  lecturerUserId: string
-  lecturerName: string
-  departmentId: string
-  departmentName: string
-  title: string | null
-  scheduledStartAt: string
-  opensAt: string
-  lateMinutes: number
-  onTime: boolean
-}
-
-/**
- * Course provisioning: faculty provides a course to a department (manually —
- * no ERP check), the department decides how many lecturer-taught sections it
- * needs and allocates its own lecturers to them. Types mirror the real
- * backend's response shapes field-for-field, same discipline as the rest of
- * the faculty module.
- */
-
-/** POST /faculties/departments */
-export interface CreateDepartmentResult {
-  departmentId: string
-  departmentName: string
-}
-
-/** POST /faculties/departments/:departmentId/courses */
-export interface ProvidedCourse {
-  id: string
-  code: string
-  name: string | null
-  departmentId: string
-  segmentsPlanned: number
-}
 
 /** GET /departments/courses — a course offering as the department sees it. */
 export interface CourseOffering {
@@ -569,17 +385,6 @@ export interface CourseOffering {
   name: string | null
   segmentsPlanned: number
   /** How many of segmentsPlanned already have a lecturer. */
-  segmentsFilled: number
-}
-
-/** GET /faculties/courses — every course offering across every department, department named. */
-export interface FacultyCourse {
-  id: string
-  code: string
-  name: string | null
-  departmentId: string
-  departmentName: string
-  segmentsPlanned: number
   segmentsFilled: number
 }
 
@@ -907,7 +712,7 @@ export interface RecentSession {
 /**
  * Quality assurance: standards, checklist-driven audits, findings and
  * corrective actions (CAPA), plus a KPI dashboard. Not auto-scoped to the
- * officer — unlike department/faculty, a QA officer's remit is the whole
+ * officer — unlike a department officer, a QA officer's remit is the whole
  * institution, so list endpoints take explicit filters instead. Types mirror
  * the real backend's response shapes field-for-field, verified against the
  * running API.
@@ -969,15 +774,13 @@ export interface QaChecklistTemplateDetail extends QaChecklistTemplate {
 export const QA_AUDIT_STATUSES = ['PLANNED', 'IN_PROGRESS', 'COMPLETED'] as const
 export type QaAuditStatus = (typeof QA_AUDIT_STATUSES)[number]
 
-/** GET/POST /quality-assurance/audits — one audit targets exactly one department or one faculty. */
+/** GET/POST /quality-assurance/audits — one audit targets exactly one department. */
 export interface QaAudit {
   id: string
   title: string
   auditType: string
-  targetDepartmentId: string | null
-  targetDepartmentName: string | null
-  targetFacultyId: string | null
-  targetFacultyName: string | null
+  targetDepartmentId: string
+  targetDepartmentName: string
   checklistTemplateId: string
   checklistTemplateName: string
   leadAuditorUserId: string
@@ -1050,8 +853,7 @@ export interface QaCorrectiveAction {
   rating: QaFindingRating
   standardCode: string
   standardTitle: string
-  targetDepartmentId: string | null
-  targetFacultyId: string | null
+  targetDepartmentId: string
   createdAt: string
   updatedAt: string
 }
@@ -1078,7 +880,7 @@ export interface QaAttendanceTrendPoint {
   avgAttendanceRate: number
 }
 
-/** GET /quality-assurance/departments and /quality-assurance/faculties — bare id/name lookups for the audit-target picker. */
+/** GET /quality-assurance/departments — a bare id/name lookup for the audit-target picker. */
 export interface QaDirectoryEntry {
   id: string
   name: string
@@ -1106,7 +908,7 @@ export interface LecturerDirectoryEntry {
   departmentName: string | null
 }
 
-/** GET /faculties/lecturer-placement and /admin/lecturers — a lecturer and the department they belong to, if any. */
+/** GET /admin/lecturers — a lecturer and the department they belong to, if any. */
 export interface PlacementLecturer {
   userId: string
   fullName: string
@@ -1116,11 +918,8 @@ export interface PlacementLecturer {
   /** Null while unassigned: SMARTTT's department name matched no department here. */
   departmentId: string | null
   departmentName: string | null
-  facultyId: string | null
-  facultyName: string | null
-  /** What SMARTTT/ERP called their department and faculty, to help decide where they belong. */
+  /** What SMARTTT/ERP called their department, to help decide where they belong. */
   reportedDepartment: string | null
-  reportedFaculty: string | null
   unitCount: number
 }
 
@@ -1128,9 +927,18 @@ export interface PlacementLecturer {
 export interface AdminDepartment {
   departmentId: string
   name: string
-  facultyId: string | null
-  facultyName: string | null
+  /** Unique across the university ("DCOMP"); how the Timetable Allocator and Generator know it. Null for one made before codes existed. */
+  code: string | null
+  /** Linked to SMARTTT's department (SMARTTT owns departments); false for one only here. */
+  inSmarttt: boolean
   lecturerCount: number
+}
+
+/** POST /admin/departments */
+export interface CreatedDepartment {
+  departmentId: string
+  name: string
+  code: string
 }
 
 /** GET /attendance-policy — the minimum attendance to sit exams, one setting for the institution. */
@@ -1161,7 +969,7 @@ export interface EligibilityRow {
   status: EligibilityStatus
 }
 
-/** GET /departments/eligibility, /faculties/eligibility, /quality-assurance/eligibility */
+/** GET /departments/eligibility, /quality-assurance/eligibility */
 export interface EligibilityReport {
   policy: AttendancePolicy
   summary: { total: number; eligible: number; atRisk: number; notEligible: number; notYetMeasured: number }
@@ -1279,7 +1087,6 @@ export interface DepartmentAlias {
   alias: string
   departmentId: string
   departmentName: string
-  facultyName: string | null
   source: 'PLACEMENT' | 'MERGE'
   createdByName: string | null
   createdAt: string
@@ -1289,8 +1096,87 @@ export interface DepartmentAlias {
 export interface DuplicateDepartment {
   departmentId: string
   name: string
-  facultyId: string | null
-  facultyName: string | null
+  code: string | null
   lecturerCount: number
   unitCount: number
+}
+
+/*
+ * Management (GET /management/*): university-wide attendance in three levels,
+ * departments -> a department's Years 1-4 -> one year's units with their
+ * lecturer and students. Mirrors src/modules/management on the backend. A
+ * rate is null, not 0, until a class with a roster has been held.
+ */
+
+/** One department in the university, as the management overview compares them. */
+export interface ManagementDepartment {
+  departmentId: string
+  departmentName: string
+  departmentCode: string | null
+  unitCount: number
+  studentCount: number
+  sessionsHeld: number
+  /** Check-ins recorded in the department's classes. */
+  checkIns: number
+  /** Mean per-session attendance rate, 0-100. */
+  avgAttendanceRate: number | null
+}
+
+/** GET /management/departments */
+export interface ManagementUniversity {
+  totals: { departmentCount: number; checkIns: number; sessionsHeld: number }
+  departments: ManagementDepartment[]
+}
+
+/** One year of study within a department. */
+export interface ManagementYear {
+  year: number
+  unitCount: number
+  studentCount: number
+  sessionsHeld: number
+  checkIns: number
+  avgAttendanceRate: number | null
+}
+
+/** GET /management/departments/:departmentId — always Years 1-4, even when empty. */
+export interface ManagementDepartmentYears {
+  departmentId: string
+  departmentName: string
+  departmentCode: string | null
+  years: ManagementYear[]
+  /** Units whose code puts them in no year (postgraduate). */
+  unitsWithoutYear: number
+}
+
+/** A student on a unit's roster, with how many of its classes they attended. */
+export interface ManagementStudent {
+  studentUserId: string | null
+  registrationNumber: string | null
+  fullName: string | null
+  yearOfStudy: number | null
+  sessionsHeld: number
+  sessionsAttended: number
+  attendanceRate: number | null
+}
+
+/** One unit taught in a year, with its lecturer and every student taking it. */
+export interface ManagementUnit {
+  unitId: string
+  unitCode: string
+  unitName: string | null
+  lecturerUserId: string
+  lecturerName: string
+  staffNumber: string | null
+  sessionsHeld: number
+  avgAttendanceRate: number | null
+  students: ManagementStudent[]
+}
+
+/** GET /management/departments/:departmentId/years/:year */
+export interface ManagementYearDetail {
+  departmentId: string
+  departmentName: string
+  departmentCode: string | null
+  year: number
+  units: ManagementUnit[]
 }

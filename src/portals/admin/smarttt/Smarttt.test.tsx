@@ -6,7 +6,7 @@ import { renderApp } from '@/test/renderApp'
 
 /**
  * The one admin console: SMARTTT's admin functions (its old separate admin
- * page) and SMARTTT-owned faculties, against the mock API.
+ * page) and SMARTTT-owned departments, against the mock API.
  */
 
 afterEach(() => { vi.restoreAllMocks() })
@@ -141,22 +141,22 @@ describe("SMARTTT's admin functions in the console", () => {
   })
 })
 
-describe('faculties, owned by SMARTTT', () => {
-  it('marks a faculty that only exists here and sends it to SMARTTT', async () => {
+describe('departments, owned by SMARTTT', () => {
+  it('marks a department that only exists here and sends it to SMARTTT', async () => {
     const user = userEvent.setup()
     await signInAsAdmin(user, '/oversight')
-    await user.click(screen.getAllByRole('link', { name: /^faculties$/i })[0]!)
+    await user.click(screen.getAllByRole('link', { name: /^departments$/i })[0]!)
 
-    const row = (await screen.findByRole('cell', { name: 'Business and Economics' })).closest('tr')!
+    const row = (await screen.findByRole('cell', { name: 'Accounting' })).closest('tr')!
     expect(within(row).getByText('Only here')).toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: /send to smarttt/i }))
-    expect(await screen.findByText(/Sent 1 faculty\(ies\) and 0 department\(s\) to SMARTTT/)).toBeInTheDocument()
-    await vi.waitFor(() => expect(within(screen.getByRole('cell', { name: 'Business and Economics' }).closest('tr')!).getByText('Linked')).toBeInTheDocument())
+    expect(await screen.findByText(/Sent 1 department\(s\) to SMARTTT/)).toBeInTheDocument()
+    await vi.waitFor(() => expect(within(screen.getByRole('cell', { name: 'Accounting' }).closest('tr')!).getByText('Linked')).toBeInTheDocument())
   })
 })
 
 describe('administrators come from SMARTTT', () => {
-  it('offers only faculty officer invitations, and says how administrators are added', async () => {
+  it('offers no administrator invitations, and says how administrators are added', async () => {
     vi.stubEnv('VITE_SMARTTT_ACCOUNTS', 'true')
     const user = userEvent.setup()
     await signInAsAdmin(user)

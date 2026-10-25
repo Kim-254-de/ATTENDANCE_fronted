@@ -51,7 +51,7 @@ export function AuditDetailPage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="font-semibold text-ink">{audit.title}</h2>
-              <p className="mt-0.5 text-sm text-muted">{audit.targetDepartmentName ?? audit.targetFacultyName} · {audit.checklistTemplateName} · Scheduled {audit.scheduledDate}</p>
+              <p className="mt-0.5 text-sm text-muted">{audit.targetDepartmentName} · {audit.checklistTemplateName} · Scheduled {audit.scheduledDate}</p>
             </div>
             <span className="rounded-md bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink ring-1 ring-inset ring-brand-ink/15">{STATUS_LABELS[audit.status] ?? audit.status}</span>
           </div>

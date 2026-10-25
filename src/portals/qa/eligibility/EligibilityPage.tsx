@@ -10,13 +10,13 @@ import { useQaEligibility, useUpdatePolicy } from './eligibilityApi'
 
 /**
  * The exam-eligibility rule and who it catches. The Senate decides the minimum; QA keeps the
- * system in line with it here, and every portal (students, lecturers, departments, faculties)
+ * system in line with it here, and every portal (students, lecturers, departments)
  * judges attendance against the same number.
  */
 export function EligibilityPage() {
   const [showAll, setShowAll] = useState(false)
   const [filters, setFilters] = useState<TargetFilterValues>({})
-  const report = useQaEligibility({ all: showAll, departmentId: filters.targetDepartmentId, facultyId: filters.targetFacultyId })
+  const report = useQaEligibility({ all: showAll, departmentId: filters.targetDepartmentId })
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">

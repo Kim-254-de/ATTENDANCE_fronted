@@ -25,14 +25,14 @@ interface Props {
   refetch: () => void
   showAll: boolean
   onShowAllChange: (next: boolean) => void
-  /** Faculty and QA span several departments, so they show which one owns each unit. */
+  /** QA spans every department, so it shows which one owns each unit. */
   showDepartment?: boolean
-  /** Filters (department, faculty) the page puts above the report. */
+  /** Filters (department) the page puts above the report. */
   filters?: ReactNode
 }
 
 /**
- * The exam-eligibility report, shared by the department, faculty and QA portals: summary
+ * The exam-eligibility report, shared by the department and QA portals: summary
  * counts against the institution's minimum attendance, then the students who are below it or
  * close to it, worst first. Each row is one student on one unit, the way the rule is applied.
  */

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { LecturerPlacement } from '@/components/oversight/LecturerPlacement'
 import { useAdminDepartments, useAdminLecturers, useAdminMoveLecturer } from './adminApi'
 
-/** Placing lecturers in departments across the whole institution — the one place a lecturer can change faculty. */
+/** Placing lecturers in departments across the whole institution. */
 export function LecturersPage() {
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -23,7 +23,7 @@ export function LecturersPage() {
         isPending={isPending}
         error={error}
         refetch={refetch}
-        departments={(departments ?? []).map((d) => ({ id: d.departmentId, name: d.name, group: d.facultyName ?? 'No faculty' }))}
+        departments={(departments ?? []).map((d) => ({ id: d.departmentId, name: d.name, code: d.code }))}
         search={search}
         onSearchChange={setSearch}
         unassignedOnly={unassignedOnly}

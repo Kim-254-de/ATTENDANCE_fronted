@@ -4,7 +4,7 @@ import type { AllocatedUnit, CourseOffering, LecturerDirectoryEntry } from '@/ty
 
 const COURSES_KEY = ['department', 'courses'] as const
 
-/** Courses faculty has provided to the department, with how many of their planned segments are filled. */
+/** Courses provided to the department, with how many of their planned segments are filled. */
 export const useDepartmentCourses = () =>
   useQuery({
     queryKey: COURSES_KEY,

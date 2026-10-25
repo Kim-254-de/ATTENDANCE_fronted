@@ -6,7 +6,6 @@ export interface CapaFilters {
   status?: QaCapaStatus
   ownerUserId?: string
   targetDepartmentId?: string
-  targetFacultyId?: string
   overdue?: boolean
 }
 

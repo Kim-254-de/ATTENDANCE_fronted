@@ -9,7 +9,7 @@ const formatRate = (rate: number | null) => (rate === null ? '—' : `${rate.toF
 
 /**
  * The lecturer dashboard's inline rate bar (see RecentSessions), shared by
- * the department and faculty portals: a track with a filled width, plus the
+ * the department portal: a track with a filled width, plus the
  * number. Anything under the exam-eligibility threshold reads amber rather
  * than green, so a column of rates can be scanned without reading any of them.
  */

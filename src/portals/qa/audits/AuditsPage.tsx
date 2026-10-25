@@ -10,7 +10,7 @@ import { QA_AUDIT_STATUSES, type QaAuditStatus } from '@/types'
 import { useChecklistTemplates } from '../checklists/checklistsApi'
 import { ExportLinks } from '../exportLinks'
 import { TargetFilters } from '../TargetFilters'
-import { useAudits, useCreateAudit, useQaDepartments, useQaFaculties, type AuditFilters } from './auditsApi'
+import { useAudits, useCreateAudit, useQaDepartments, type AuditFilters } from './auditsApi'
 
 const STATUS_LABELS: Record<string, string> = { PLANNED: 'Planned', IN_PROGRESS: 'In Progress', COMPLETED: 'Completed' }
 const STATUS_STYLES: Record<string, string> = {
@@ -27,11 +27,9 @@ export function AuditsPage() {
   const { data: me } = useMe()
   const officer = me?.role === 'qa' ? me : undefined
   const { data: departments } = useQaDepartments()
-  const { data: faculties } = useQaFaculties()
   const { data: templates } = useChecklistTemplates()
   const create = useCreateAudit()
 
-  const [targetType, setTargetType] = useState<'department' | 'faculty'>('department')
   const [form, setForm] = useState({ title: '', targetId: '', checklistTemplateId: '', scheduledDate: '', notes: '' })
 
   const submit = (e: React.FormEvent) => {
@@ -40,7 +38,7 @@ export function AuditsPage() {
     create.mutate(
       {
         title: form.title.trim(),
-        ...(targetType === 'department' ? { targetDepartmentId: form.targetId } : { targetFacultyId: form.targetId }),
+        targetDepartmentId: form.targetId,
         checklistTemplateId: form.checklistTemplateId,
         leadAuditorUserId: officer.id,
         scheduledDate: form.scheduledDate,
@@ -52,7 +50,7 @@ export function AuditsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <p className="max-w-2xl text-sm text-muted">Internal audits of one department or faculty, against a checklist template. You are the lead auditor.</p>
+      <p className="max-w-2xl text-sm text-muted">Internal audits of one department, against a checklist template. You are the lead auditor.</p>
 
       <Card className="p-5">
         <h2 className="font-semibold text-ink">New audit</h2>
@@ -62,24 +60,13 @@ export function AuditsPage() {
             <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="input" required />
           </label>
 
-          <div className="space-y-1.5 text-sm font-semibold text-ink sm:col-span-2">
-            Target
-            <div className="flex gap-4 text-sm font-medium text-ink">
-              <label className="flex items-center gap-1.5">
-                <input type="radio" checked={targetType === 'department'} onChange={() => { setTargetType('department'); setForm((f) => ({ ...f, targetId: '' })) }} />
-                Department
-              </label>
-              <label className="flex items-center gap-1.5">
-                <input type="radio" checked={targetType === 'faculty'} onChange={() => { setTargetType('faculty'); setForm((f) => ({ ...f, targetId: '' })) }} />
-                Faculty
-              </label>
-            </div>
-          </div>
-          <label className="sr-only" htmlFor="audit-target">{targetType === 'department' ? 'Department' : 'Faculty'}</label>
-          <select id="audit-target" value={form.targetId} onChange={(e) => setForm((f) => ({ ...f, targetId: e.target.value }))} className="input sm:col-span-2" required>
-            <option value="">Choose a {targetType}…</option>
-            {(targetType === 'department' ? departments : faculties)?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
+          <label className="block space-y-1.5 text-sm font-semibold text-ink sm:col-span-2">
+            Department
+            <select id="audit-target" value={form.targetId} onChange={(e) => setForm((f) => ({ ...f, targetId: e.target.value }))} className="input" required>
+              <option value="">Choose a department…</option>
+              {departments?.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </label>
 
           <label className="block space-y-1.5 text-sm font-semibold text-ink">
             Checklist template
@@ -143,7 +130,7 @@ export function AuditsPage() {
               <Card className="flex flex-wrap items-center justify-between gap-3 p-4 transition hover:shadow-md">
                 <div className="min-w-0">
                   <p className="font-semibold text-ink">{a.title}</p>
-                  <p className="mt-0.5 text-sm text-muted">{a.targetDepartmentName ?? a.targetFacultyName} · {a.scheduledDate}</p>
+                  <p className="mt-0.5 text-sm text-muted">{a.targetDepartmentName} · {a.scheduledDate}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="text-sm text-muted">{a.findingsRecorded} / {a.totalItems} findings</span>

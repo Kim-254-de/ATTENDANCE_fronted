@@ -1,6 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { EnrolmentStudent, Terminal, TerminalCapability } from '@/portals/department/terminals/terminalsApi'
-import type { Account, Admin, AdminFaculty, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, InvitationDetails, Officer, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, LecturerDirectoryEntry, PlacementLecturer, StudentEvaluationRound, PendingUnit } from '@/types'
+import type { Account, Admin, Allocation, AttendanceMark, CheckInResult, CourseOffering, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, InvitationDetails, Officer, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, LecturerDirectoryEntry, PlacementLecturer, StudentEvaluationRound, PendingUnit, ManagementAccount, ManagementDepartment, ManagementDepartmentYears, ManagementStudent, ManagementUnit, ManagementUniversity, ManagementYearDetail } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -39,7 +39,6 @@ const departmentOfficer: DepartmentOfficer = {
   email: 'g.mutiso@university.edu',
   departmentId: 'dept-cs',
   departmentName: 'Computer Science',
-  facultyName: 'Physical Engineering and Technologies',
   status: 'ACTIVE',
   avatarUrl: null,
 }
@@ -54,19 +53,17 @@ const adminUser: Admin = {
   avatarUrl: null,
 }
 
-/** Faculty accounts are provisioned the same way department ones are. */
-const facultyOfficer: FacultyOfficer = {
-  id: 'fac-1',
-  role: 'faculty',
+/** Management accounts are invited the same way department ones are; university-wide, so no scope. */
+const managementAccount: ManagementAccount = {
+  id: 'mgmt-1',
+  role: 'management',
   fullName: 'Prof. Daniel K. Rotich',
   email: 'd.rotich@university.edu',
-  facultyId: 'fac-pet',
-  facultyName: 'Physical Engineering and Technologies',
   status: 'ACTIVE',
   avatarUrl: null,
 }
 
-/** QA accounts are provisioned too: no department/faculty of its own, so nothing org-unit-scoped to resolve here. */
+/** QA accounts are provisioned too: no department of its own, so nothing org-unit-scoped to resolve here. */
 const qaOfficer: QaOfficer = {
   id: 'qa-1',
   role: 'qa',
@@ -83,7 +80,7 @@ const accounts = new Map<string, { user: Account; password: string }>([
   [lecturer.email.toLowerCase(), { user: lecturer, password: 'password' }],
   [student.email.toLowerCase(), { user: student, password: 'password' }],
   [departmentOfficer.email.toLowerCase(), { user: departmentOfficer, password: 'password' }],
-  [facultyOfficer.email.toLowerCase(), { user: facultyOfficer, password: 'password' }],
+  [managementAccount.email.toLowerCase(), { user: managementAccount, password: 'password' }],
   [adminUser.email.toLowerCase(), { user: adminUser, password: 'password' }],
   [qaOfficer.email.toLowerCase(), { user: qaOfficer, password: 'password' }],
 ])
@@ -988,7 +985,7 @@ const departmentHandlers = [
     const profile: DepartmentProfile = {
       departmentId: officer.departmentId,
       departmentName: officer.departmentName,
-      facultyName: officer.facultyName,
+      departmentCode: 'DCOMP',
     }
     return ok(profile)
   }),
@@ -1134,7 +1131,7 @@ const departmentHandlers = [
     return ok(rows)
   }),
 
-  /** Courses faculty has provided to the signed-in officer's own department. */
+  /** Courses provided to the signed-in officer's own department. */
   http.get(`${API}/departments/courses`, async () => {
     const blocked = requireDepartment()
     if (blocked) return blocked
@@ -1190,31 +1187,27 @@ const departmentHandlers = [
 ]
 
 /* ------------------------------------------------------------------ *
- * Faculty portal (GET /faculties/*)
- *
- * One officer oversees a whole faculty, so these rows are wider again than
- * the department portal's: three departments (one with no lecturers yet,
- * matching how a freshly created department looks for real), the same three
- * lecturers the department mock uses so the two portals never disagree about
- * them, and a punctuality log spanning two departments. Types mirror the
- * real backend's response shapes field-for-field, so — unlike the department
- * mocks — nothing here needs a raw/mapped split.
+ * Departments, lecturers and units: seed data shared by the department,
+ * management and admin mocks below, so the portals never disagree about them.
  * ------------------------------------------------------------------ */
 
-const FACULTY_DEPARTMENTS_SEED = [
-  { id: 'dept-cs', name: 'Computer Science' },
-  { id: 'dept-se', name: 'Software Engineering' },
+const DEPARTMENTS_SEED = [
+  { id: 'dept-cs', name: 'Computer Science', code: 'DCOMP' },
+  { id: 'dept-se', name: 'Software Engineering', code: 'DSE' },
   // Exists but nobody has been assigned to it yet — the real seeded data has departments like this.
-  { id: 'dept-as', name: 'Actuarial Science' },
+  { id: 'dept-as', name: 'Actuarial Science', code: 'DAS' },
 ]
 
-const FACULTY_LECTURERS: FacultyLecturer[] = [
+interface SeedLecturer { userId: string; fullName: string; staffNumber: string; departmentId: string; departmentName: string; isOwnStaff: boolean; unitsTaught: number; unitsElsewhere: number; studentsTaught: number; avgAttendanceRate: number; sessionsHeld: number; avgLateMinutes: number; onTimeRate: number }
+interface SeedUnit { unitId: string; unitCode: string; unitName: string | null; lecturerUserId: string; lecturerName: string; departmentId: string; departmentName: string; activeStudents: number; sessionsHeld: number; avgAttendanceRate: number }
+
+const SEED_LECTURERS: SeedLecturer[] = [
   { userId: lecturer.id, fullName: lecturer.fullName, staffNumber: lecturer.staffNumber, departmentId: 'dept-cs', departmentName: 'Computer Science', isOwnStaff: true, unitsTaught: 2, unitsElsewhere: 0, studentsTaught: 151, avgAttendanceRate: 92.5, sessionsHeld: 38, avgLateMinutes: 1.2, onTimeRate: 94.7 },
   { userId: 'lec-2', fullName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', departmentId: 'dept-cs', departmentName: 'Computer Science', isOwnStaff: true, unitsTaught: 2, unitsElsewhere: 1, studentsTaught: 93, avgAttendanceRate: 76, sessionsHeld: 22, avgLateMinutes: 8.4, onTimeRate: 63.6 },
   { userId: 'lec-3', fullName: 'Mr. Peter Njuguna', staffNumber: 'STF/03480', departmentId: 'dept-se', departmentName: 'Software Engineering', isOwnStaff: true, unitsTaught: 1, unitsElsewhere: 0, studentsTaught: 110, avgAttendanceRate: 68, sessionsHeld: 14, avgLateMinutes: 17.9, onTimeRate: 42.9 },
 ]
 
-const FACULTY_UNITS: FacultyUnit[] = [
+const SEED_UNITS: SeedUnit[] = [
   { unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', lecturerUserId: lecturer.id, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', activeStudents: 87, sessionsHeld: 20, avgAttendanceRate: 90 },
   { unitId: 'u2', unitCode: 'CS405', unitName: 'Database Management Systems', lecturerUserId: lecturer.id, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', activeStudents: 64, sessionsHeld: 18, avgAttendanceRate: 95 },
   { unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', lecturerUserId: 'lec-2', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', activeStudents: 52, sessionsHeld: 14, avgAttendanceRate: 76 },
@@ -1224,27 +1217,8 @@ const FACULTY_UNITS: FacultyUnit[] = [
 ]
 
 /**
- * The timekeeping log: scheduled start against when the class was actually
- * opened, spanning both staffed departments.
- */
-const FACULTY_TIMEKEEPING: FacultyTimekeepingEntry[] = [
-  { sessionId: 'fts-1', unitId: 'u1', unitCode: 'CS301', lecturerUserId: lecturer.id, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', title: null, scheduledStartAt: hoursAgo(4).toISOString(), opensAt: hoursAgo(4).toISOString(), lateMinutes: 0, onTime: true },
-  { sessionId: 'fts-2', unitId: 'u2', unitCode: 'CS405', lecturerUserId: lecturer.id, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', title: null, scheduledStartAt: hoursAgo(28).toISOString(), opensAt: new Date(hoursAgo(28).getTime() - 3 * 60_000).toISOString(), lateMinutes: -3, onTime: true },
-  { sessionId: 'fts-3', unitId: 'u3', unitCode: 'CS502', lecturerUserId: 'lec-2', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', title: null, scheduledStartAt: hoursAgo(7).toISOString(), opensAt: new Date(hoursAgo(7).getTime() + 9 * 60_000).toISOString(), lateMinutes: 9, onTime: false },
-  { sessionId: 'fts-4', unitId: 'u4', unitCode: 'CS210', lecturerUserId: 'lec-3', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', title: null, scheduledStartAt: hoursAgo(9).toISOString(), opensAt: new Date(hoursAgo(9).getTime() + 23 * 60_000).toISOString(), lateMinutes: 23, onTime: false },
-  { sessionId: 'fts-5', unitId: 'u4', unitCode: 'CS210', lecturerUserId: 'lec-3', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', title: null, scheduledStartAt: hoursAgo(33).toISOString(), opensAt: new Date(hoursAgo(33).getTime() + 16 * 60_000).toISOString(), lateMinutes: 16, onTime: false },
-]
-
-/** Faculty pages are for faculty accounts only — mirrors the backend's role guard. */
-const requireFaculty = () => {
-  if (!store.get()) return unauthorized()
-  if (currentAccount.role !== 'faculty') return fail(403, 'FORBIDDEN', 'Forbidden')
-  return null
-}
-
-/**
- * Course provisioning's shared state: faculty creates these, departments read
- * and write them. One array, like the real course_offerings table, so both
+ * Course provisioning's shared state: provided to a department, which reads
+ * and fills them. One array, like the real course_offerings table, so both
  * mock sections below agree with each other.
  */
 interface MockCourseOffering {
@@ -1257,237 +1231,136 @@ interface MockCourseOffering {
 }
 const COURSE_OFFERINGS: MockCourseOffering[] = [
   // Provided but not yet fully staffed, in the seeded department officer's own department —
-  // so both the department and faculty Courses pages have something real to show by default.
+  // so the department's Courses page has something real to show by default.
   { id: 'offering-seed-1', code: 'CS610', name: 'Distributed Databases', departmentId: 'dept-cs', segmentsPlanned: 2, segmentsFilled: 1 },
 ]
 let courseOfferingSeq = 0
 
-const facultyHandlers = [
-  http.post(`${API}/faculties/departments`, async ({ request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(150)
-    const { name } = (await request.json()) as { name?: string }
-    const trimmed = name?.trim()
-    if (!trimmed) return fail(400, 'VALIDATION_FAILED', 'Enter the department name.')
-    // Mirrors faculty.service.ts createDepartment: another spelling of an existing department is a duplicate.
-    const existing = FACULTY_DEPARTMENTS_SEED.find((d) => departmentKey(d.name) === departmentKey(trimmed))
-    if (existing) return fail(409, 'CONFLICT', `"${trimmed}" is the same department as "${existing.name}", which already exists.`)
-    const id = `dept-${++courseOfferingSeq}`
-    FACULTY_DEPARTMENTS_SEED.push({ id, name: trimmed })
-    return ok({ departmentId: id, departmentName: trimmed }, 201)
-  }),
+/* ------------------------------------------------------------------ *
+ * Management portal (GET /management/*): university-wide.
+ *
+ * The seeded departments plus Business Administration, each with its code.
+ * A unit's year is the
+ * first digit of its code, as on the backend (CS502 is postgraduate and in
+ * no year). Each unit's roster is generated from a few names, attended
+ * classes spread around the unit's rate, so every figure is derived from
+ * the same rows and the levels always agree with each other.
+ * ------------------------------------------------------------------ */
 
-  http.post(`${API}/faculties/departments/:departmentId/courses`, async ({ params, request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(150)
-    const dept = FACULTY_DEPARTMENTS_SEED.find((d) => d.id === params.departmentId)
-    if (!dept) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
-    const { code, name } = (await request.json()) as { code?: string; name?: string }
-    const normalised = code?.trim().toUpperCase().replace(/\s+/g, ' ') ?? ''
-    if (!normalised) return fail(400, 'VALIDATION_FAILED', 'Enter the course code, e.g. COSC 100.')
-    if (COURSE_OFFERINGS.some((o) => o.code === normalised)) {
-      return fail(409, 'CONFLICT', `${normalised} already exists as a course or unit.`)
-    }
-    const offering: MockCourseOffering = {
-      id: `offering-${++courseOfferingSeq}`,
-      code: normalised,
-      name: name?.trim() || null,
-      departmentId: dept.id,
-      segmentsPlanned: 1,
-      segmentsFilled: 0,
-    }
-    COURSE_OFFERINGS.push(offering)
-    const { segmentsFilled: _segmentsFilled, ...created } = offering
-    return ok(created, 201)
-  }),
+const MANAGEMENT_DEPARTMENTS = [
+  ...DEPARTMENTS_SEED.map((d) => ({ departmentId: d.id, departmentName: d.name, departmentCode: d.code })),
+  { departmentId: 'dept-ba', departmentName: 'Business Administration', departmentCode: 'DBA' },
+]
 
-  /** Every course offering across every department in the faculty, department named. */
-  http.get(`${API}/faculties/courses`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(150)
-    const rows = COURSE_OFFERINGS.map((o) => ({
-      ...o,
-      departmentName: FACULTY_DEPARTMENTS_SEED.find((d) => d.id === o.departmentId)?.name ?? 'Unknown',
-    }))
-    return ok(rows)
+const MANAGEMENT_UNITS_SEED: { unitId: string; unitCode: string; unitName: string | null; departmentId: string; lecturerUserId: string; lecturerName: string; staffNumber: string | null; sessionsHeld: number; rate: number }[] = [
+  { unitId: 'u6', unitCode: 'CS110', unitName: 'Introduction to Programming', departmentId: 'dept-cs', lecturerUserId: 'lec-2', lecturerName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', sessionsHeld: 16, rate: 82 },
+  ...SEED_UNITS.map((u) => {
+    const teacher = SEED_LECTURERS.find((l) => l.userId === u.lecturerUserId)!
+    return { unitId: u.unitId, unitCode: u.unitCode, unitName: u.unitName, departmentId: u.departmentId, lecturerUserId: u.lecturerUserId, lecturerName: u.lecturerName, staffNumber: teacher.staffNumber, sessionsHeld: u.sessionsHeld, rate: u.avgAttendanceRate }
   }),
+  { unitId: 'u7', unitCode: 'BBA101', unitName: 'Principles of Management', departmentId: 'dept-ba', lecturerUserId: 'lec-4', lecturerName: 'Dr. Ruth Kendi', staffNumber: 'STF/04102', sessionsHeld: 12, rate: 61 },
+]
 
-  http.get(`${API}/faculties/me`, () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const officer = currentAccount as FacultyOfficer
-    const profile: FacultyProfile = { facultyId: officer.facultyId, facultyName: officer.facultyName }
-    return ok(profile)
-  }),
+const ROSTER = ['Ama Mensah', 'Brian Kiprono', 'Cynthia Atieno', 'David Mwangi', 'Esther Chebet', 'Felix Omondi']
+/** How far each roster position sits from the unit's rate, in points: one student well under, the rest around it. */
+const ROSTER_SPREAD = [-30, -8, 0, 4, 8, 12]
 
-  http.get(`${API}/faculties/overview`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const overview: FacultyOverview = {
-      facultyId: facultyOfficer.facultyId,
-      facultyName: facultyOfficer.facultyName,
-      departmentCount: FACULTY_DEPARTMENTS_SEED.length,
-      lecturerCount: FACULTY_LECTURERS.length,
-      studentCount: 260,
-      unitCount: FACULTY_UNITS.length,
-      avgAttendanceRate: Math.round((FACULTY_UNITS.reduce((n, u) => n + u.avgAttendanceRate, 0) / FACULTY_UNITS.length) * 10) / 10,
-      sessionsHeld: FACULTY_LECTURERS.reduce((n, l) => n + l.sessionsHeld, 0),
-      onTimeRate: 71.4,
-      graceMinutes: 5,
-      periodLabel: 'All time',
-    }
-    return ok(overview)
-  }),
-
-  http.get(`${API}/faculties/departments`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const rows: FacultyDepartment[] = FACULTY_DEPARTMENTS_SEED.map((d) => {
-      const lecturers = FACULTY_LECTURERS.filter((l) => l.departmentId === d.id)
-      const units = FACULTY_UNITS.filter((u) => u.departmentId === d.id)
+/** Every unit with its roster; `departmentId` is the mock's own, for filtering, and is not sent. */
+const managementUnits = (): (ManagementUnit & { departmentId: string })[] =>
+  MANAGEMENT_UNITS_SEED.map(({ rate, ...u }) => {
+    const students: ManagementStudent[] = ROSTER.map((fullName, i) => {
+      const attended = Math.max(0, Math.min(u.sessionsHeld, Math.round((u.sessionsHeld * (rate + ROSTER_SPREAD[i]!)) / 100)))
       return {
-        departmentId: d.id,
-        departmentName: d.name,
-        lecturerCount: lecturers.length,
-        studentCount: lecturers.reduce((n, l) => n + l.studentsTaught, 0),
-        unitCount: units.length,
-        avgAttendanceRate: units.length ? Math.round((units.reduce((n, u) => n + u.avgAttendanceRate, 0) / units.length) * 10) / 10 : 0,
-        sessionsHeld: lecturers.reduce((n, l) => n + l.sessionsHeld, 0),
-        onTimeRate: lecturers.length ? Math.round((lecturers.reduce((n, l) => n + (l.onTimeRate ?? 0), 0) / lecturers.length) * 10) / 10 : null,
+        studentUserId: `mstu-${i + 1}`,
+        registrationNumber: `EBT1/${String(1000 + i)}/23`,
+        fullName,
+        yearOfStudy: unitYear(u.unitCode),
+        sessionsHeld: u.sessionsHeld,
+        sessionsAttended: attended,
+        attendanceRate: u.sessionsHeld > 0 ? (attended / u.sessionsHeld) * 100 : null,
       }
     })
-    return ok(rows)
-  }),
+    return { ...u, avgAttendanceRate: u.sessionsHeld > 0 ? rate : null, students }
+  })
 
-  http.get(`${API}/faculties/departments/:departmentId`, async ({ params }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const dept = FACULTY_DEPARTMENTS_SEED.find((d) => d.id === params.departmentId)
-    if (!dept) return fail(404, 'NOT_FOUND', 'Department not found in this faculty.')
-    return ok({
-      departmentId: dept.id,
-      departmentName: dept.name,
-      lecturers: FACULTY_LECTURERS.filter((l) => l.departmentId === dept.id),
-      units: FACULTY_UNITS.filter((u) => u.departmentId === dept.id),
-      courses: COURSE_OFFERINGS.filter((o) => o.departmentId === dept.id),
-    })
-  }),
+/** The first digit of the code, when it is 1–4 (management.repository.ts UNIT_YEAR). */
+const unitYear = (code: string): number | null => {
+  const digit = Number(code.match(/[0-9]/)?.[0])
+  return digit >= 1 && digit <= 4 ? digit : null
+}
 
-  http.get(`${API}/faculties/lecturers`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    return ok(FACULTY_LECTURERS.filter((l) => !isDeleted(l.userId)))
-  }),
+const mean = (rates: (number | null)[]) => {
+  const measured = rates.filter((r): r is number => r !== null)
+  return measured.length ? measured.reduce((n, r) => n + r, 0) / measured.length : null
+}
 
-  http.get(`${API}/faculties/lecturers/:lecturerUserId`, async ({ params }) => {
-    const blocked = requireFaculty()
+const summarise = (list: ManagementUnit[]) => ({
+  unitCount: list.length,
+  studentCount: new Set(list.flatMap((u) => u.students.map((s) => s.registrationNumber))).size,
+  sessionsHeld: list.reduce((n, u) => n + u.sessionsHeld, 0),
+  checkIns: list.reduce((n, u) => n + u.students.reduce((m, s) => m + s.sessionsAttended, 0), 0),
+  avgAttendanceRate: mean(list.map((u) => u.avgAttendanceRate)),
+})
+
+/** Management pages are for the management role only. */
+const requireManagement = () => {
+  if (!store.get()) return unauthorized()
+  if (currentAccount.role !== 'management') return fail(403, 'FORBIDDEN', 'Forbidden')
+  return null
+}
+
+const managementHandlers = [
+  http.get(`${API}/management/departments`, async () => {
+    const blocked = requireManagement()
     if (blocked) return blocked
-    await delay(200)
-    const row = FACULTY_LECTURERS.find((l) => l.userId === params.lecturerUserId && !isDeleted(l.userId))
-    if (!row) return fail(404, 'NOT_FOUND', 'Lecturer not found in this faculty.')
-    const sessions = FACULTY_TIMEKEEPING.filter((t) => t.lecturerUserId === row.userId)
-      .map((t) => ({
-        sessionId: t.sessionId, unitId: t.unitId, unitCode: t.unitCode, title: null, status: 'CLOSED',
-        opensAt: t.opensAt, closesAt: t.opensAt, scheduledStartAt: t.scheduledStartAt,
-        lateMinutes: t.lateMinutes, present: 0, total: 0, attendanceRate: null,
-      }))
-      .sort((a, b) => b.opensAt.localeCompare(a.opensAt))
-    return ok({
-      lecturer: {
-        userId: row.userId, fullName: row.fullName, staffNumber: row.staffNumber, title: 'Dr.',
-        email: `${row.userId}@university.edu`, departmentId: row.departmentId, departmentName: row.departmentName,
+    await delay(150)
+    const all = managementUnits()
+    const departments: ManagementDepartment[] = MANAGEMENT_DEPARTMENTS
+      .map((d) => ({ ...d, ...summarise(all.filter((u) => u.departmentId === d.departmentId)) }))
+      .sort((a, b) => b.checkIns - a.checkIns || a.departmentName.localeCompare(b.departmentName))
+    const university: ManagementUniversity = {
+      totals: {
+        departmentCount: departments.length,
+        checkIns: departments.reduce((n, d) => n + d.checkIns, 0),
+        sessionsHeld: departments.reduce((n, d) => n + d.sessionsHeld, 0),
       },
-      units: FACULTY_UNITS.filter((u) => u.lecturerUserId === row.userId),
-      sessions,
-    })
-  }),
-
-  http.delete(`${API}/faculties/lecturers/:lecturerUserId`, async ({ params }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const row = FACULTY_LECTURERS.find((l) => l.userId === params.lecturerUserId && !isDeleted(l.userId))
-    if (!row) return fail(404, 'NOT_FOUND', 'No such lecturer in your faculty.')
-    deletedUserIds.add(row.userId)
-    return new HttpResponse(null, { status: 204 })
-  }),
-
-  http.delete(`${API}/faculties/students/:studentUserId`, async ({ params }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const studentUserId = params.studentUserId as string
-    const found = !isDeleted(studentUserId) && [...allocations.values()].some((roster) => roster.some((a) => a.studentUserId === studentUserId))
-    if (found) deletedUserIds.add(studentUserId)
-    return found ? new HttpResponse(null, { status: 204 }) : fail(404, 'NOT_FOUND', 'No such student in your faculty.')
-  }),
-
-  /** One row per (student, unit) across the faculty — department's students mock, widened and department-tagged. */
-  http.get(`${API}/faculties/students`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    let i = 0
-    const rows: FacultyStudent[] = [...allocations.entries()].flatMap(([unitId, roster]) => {
-      const unit = FACULTY_UNITS.find((u) => u.unitId === unitId)
-      if (!unit) return []
-      return roster.filter((a) => !isDeleted(a.studentUserId)).map((a): FacultyStudent => {
-        const rate = DEMO_DEPARTMENT_STUDENT_RATES[i++ % DEMO_DEPARTMENT_STUDENT_RATES.length]!
-        return {
-          id: a.id, registrationNumber: a.registrationNumber, studentUserId: a.studentUserId, fullName: a.fullName,
-          unitId, unitCode: unit.unitCode, unitName: unit.unitName,
-          lecturerUserId: unit.lecturerUserId, lecturerName: unit.lecturerName,
-          departmentId: unit.departmentId, departmentName: unit.departmentName,
-          sessionsHeld: 20, sessionsAttended: Math.round((rate / 100) * 20), attendanceRate: rate,
-        }
-      })
-    })
-    for (const extra of DEPARTMENT_EXTRA_STUDENTS) {
-      const unit = FACULTY_UNITS.find((u) => u.unitId === extra.unitId)
-      if (!unit) continue
-      const rate = DEMO_DEPARTMENT_STUDENT_RATES[i++ % DEMO_DEPARTMENT_STUDENT_RATES.length]!
-      rows.push({
-        id: `fac-alloc-${extra.registrationNumber}`, registrationNumber: extra.registrationNumber, studentUserId: null, fullName: extra.fullName,
-        unitId: unit.unitId, unitCode: unit.unitCode, unitName: unit.unitName,
-        lecturerUserId: unit.lecturerUserId, lecturerName: unit.lecturerName,
-        departmentId: unit.departmentId, departmentName: unit.departmentName,
-        sessionsHeld: 18, sessionsAttended: Math.round((rate / 100) * 18), attendanceRate: rate,
-      })
+      departments,
     }
-    return ok(rows)
+    return ok(university)
   }),
 
-  http.get(`${API}/faculties/units`, async () => {
-    const blocked = requireFaculty()
+  http.get(`${API}/management/departments/:departmentId`, async ({ params }) => {
+    const blocked = requireManagement()
     if (blocked) return blocked
-    await delay(200)
-    return ok(FACULTY_UNITS)
+    await delay(150)
+    const department = MANAGEMENT_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
+    if (!department) return fail(404, 'NOT_FOUND', 'Department not found.')
+    const own = managementUnits().filter((u) => u.departmentId === department.departmentId)
+    const detail: ManagementDepartmentYears = {
+      ...department,
+      years: [1, 2, 3, 4].map((year) => ({ year, ...summarise(own.filter((u) => unitYear(u.unitCode) === year)) })),
+      unitsWithoutYear: own.filter((u) => unitYear(u.unitCode) === null).length,
+    }
+    return ok(detail)
   }),
 
-  http.get(`${API}/faculties/timekeeping`, async ({ request }) => {
-    const blocked = requireFaculty()
+  http.get(`${API}/management/departments/:departmentId/years/:year`, async ({ params }) => {
+    const blocked = requireManagement()
     if (blocked) return blocked
-    await delay(200)
-    const query = new URL(request.url).searchParams
-    const lecturerUserId = query.get('lecturerUserId')
-    const unitId = query.get('unitId')
-    const departmentId = query.get('departmentId')
-    const limit = Number(query.get('limit') ?? 20)
-    const rows = FACULTY_TIMEKEEPING
-      .filter((t) =>
-        (!lecturerUserId || t.lecturerUserId === lecturerUserId)
-        && (!unitId || t.unitId === unitId)
-        && (!departmentId || t.departmentId === departmentId))
-      .sort((a, b) => b.opensAt.localeCompare(a.opensAt))
-      .slice(0, Number.isFinite(limit) && limit > 0 ? limit : 20)
-    return ok(rows)
+    await delay(150)
+    const year = Number(params.year)
+    if (!Number.isInteger(year) || year < 1 || year > 4) return fail(400, 'VALIDATION_FAILED', 'Year 1 to 4.')
+    const department = MANAGEMENT_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
+    if (!department) return fail(404, 'NOT_FOUND', 'Department not found.')
+    const detail: ManagementYearDetail = {
+      ...department,
+      year,
+      units: managementUnits()
+        .filter((u) => u.departmentId === department.departmentId && unitYear(u.unitCode) === year)
+        .sort((a, b) => a.unitCode.localeCompare(b.unitCode))
+        .map(({ departmentId: _departmentId, ...unit }) => unit),
+    }
+    return ok(detail)
   }),
 ]
 
@@ -1496,14 +1369,9 @@ const facultyHandlers = [
  * Invitation links are `invite-<n>`; tests read the newest with lastMockInvitationToken().
  */
 const OFFICERS_SEED = (): Officer[] => [
-  { userId: adminUser.id, role: 'admin', fullName: adminUser.fullName, email: adminUser.email, status: 'ACTIVE', facultyId: null, facultyName: null, departmentId: null, departmentName: null, invitedAt: '2026-09-01T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-10T07:30:00Z' },
-  { userId: facultyOfficer.id, role: 'faculty', fullName: facultyOfficer.fullName, email: facultyOfficer.email, status: 'ACTIVE', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: null, departmentName: null, invitedAt: '2026-09-02T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-09T09:00:00Z' },
-  { userId: departmentOfficer.id, role: 'department', fullName: departmentOfficer.fullName, email: departmentOfficer.email, status: 'ACTIVE', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: 'dept-cs', departmentName: 'Computer Science', invitedAt: '2026-09-03T08:00:00Z', invitationExpiresAt: null, lastLoginAt: null },
-]
-const FACULTIES_SEED = (): AdminFaculty[] => [
-  { facultyId: 'fac-pet', name: 'Physical Engineering and Technologies', departmentCount: FACULTY_DEPARTMENTS_SEED.length, officerCount: 1, inSmarttt: true },
-  // Created here before SMARTTT owned faculties: the console offers to send it there.
-  { facultyId: 'fac-bus', name: 'Business and Economics', departmentCount: 0, officerCount: 0, inSmarttt: false },
+  { userId: adminUser.id, role: 'admin', fullName: adminUser.fullName, email: adminUser.email, status: 'ACTIVE', departmentId: null, departmentName: null, invitedAt: '2026-09-01T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-10T07:30:00Z' },
+  { userId: managementAccount.id, role: 'management', fullName: managementAccount.fullName, email: managementAccount.email, status: 'ACTIVE', departmentId: null, departmentName: null, invitedAt: '2026-09-02T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-09T09:00:00Z' },
+  { userId: departmentOfficer.id, role: 'department', fullName: departmentOfficer.fullName, email: departmentOfficer.email, status: 'ACTIVE', departmentId: 'dept-cs', departmentName: 'Computer Science', invitedAt: '2026-09-03T08:00:00Z', invitationExpiresAt: null, lastLoginAt: null },
 ]
 const PENDING_UNITS_SEED = (): PendingUnit[] => [
   {
@@ -1544,7 +1412,6 @@ const SMARTTT_ADMIN_SEED = () => ({
 let smartttAdmin = SMARTTT_ADMIN_SEED()
 
 let officers = OFFICERS_SEED()
-let adminFaculties = FACULTIES_SEED()
 let pendingUnits = PENDING_UNITS_SEED()
 /** token -> invited user id */
 const invitations = new Map<string, string>()
@@ -1552,7 +1419,6 @@ let invitationCounter = 0
 
 function resetOfficerMocks() {
   officers = OFFICERS_SEED()
-  adminFaculties = FACULTIES_SEED()
   pendingUnits = PENDING_UNITS_SEED()
   smartttAdmin = SMARTTT_ADMIN_SEED()
   invitations.clear()
@@ -1577,7 +1443,7 @@ const issueInvitation = (userId: string) => {
   return ok({ userId, emailSent: true }, 201)
 }
 
-const inviteOfficer = (invitee: { fullName?: string; email?: string }, scope: Pick<Officer, 'role' | 'facultyId' | 'facultyName' | 'departmentId' | 'departmentName'>) => {
+const inviteOfficer = (invitee: { fullName?: string; email?: string }, scope: Pick<Officer, 'role' | 'departmentId' | 'departmentName'>) => {
   const email = invitee.email?.trim().toLowerCase() ?? ''
   if (!invitee.fullName?.trim() || !email.includes('@')) return fail(400, 'VALIDATION_FAILED', 'Enter a full name and a valid email.')
   if (accounts.has(email) || officers.some((o) => o.email === email)) return fail(409, 'ACCOUNT_ALREADY_EXISTS', 'Someone already has an account with this email address.')
@@ -1606,7 +1472,7 @@ const deactivateOfficer = (officer: Officer | undefined) => {
  *
  * Not auto-scoped to the officer — a QA officer's remit is the whole
  * institution — so every list handler below takes explicit filters
- * instead of resolving a department/faculty from the signed-in account.
+ * instead of resolving a department from the signed-in account.
  * One completed audit (with a non-compliant finding and its corrective
  * action already raised) and one planned audit with nothing filled in yet,
  * so both the dashboard and the "fill checklist" flow have something real
@@ -1638,22 +1504,22 @@ const QA_ITEMS_SEED = (): MockQaItem[] => [
 
 interface MockQaTemplate { id: string; name: string; description: string | null; isActive: boolean; createdAt: string; updatedAt: string }
 const QA_TEMPLATES_SEED = (): MockQaTemplate[] => [
-  { id: 'tmpl-1', name: 'General Internal Audit Checklist', description: 'One checklist item per standard, for a routine department/faculty audit.', isActive: true, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
+  { id: 'tmpl-1', name: 'General Internal Audit Checklist', description: 'One checklist item per standard, for a routine department audit.', isActive: true, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
 ]
 
 interface MockQaAudit {
-  id: string; title: string; auditType: 'INTERNAL'; targetDepartmentId: string | null; targetFacultyId: string | null;
+  id: string; title: string; auditType: 'INTERNAL'; targetDepartmentId: string;
   checklistTemplateId: string; leadAuditorUserId: string; scheduledDate: string; status: QaAuditStatus;
   startedAt: string | null; completedAt: string | null; notes: string | null; createdAt: string; updatedAt: string;
 }
 const QA_AUDITS_SEED = (): MockQaAudit[] => [
   {
-    id: 'audit-1', title: 'CS Department Q3 Internal Audit', auditType: 'INTERNAL', targetDepartmentId: 'dept-cs', targetFacultyId: null,
+    id: 'audit-1', title: 'CS Department Q3 Internal Audit', auditType: 'INTERNAL', targetDepartmentId: 'dept-cs',
     checklistTemplateId: 'tmpl-1', leadAuditorUserId: qaOfficer.id, scheduledDate: '2026-09-15', status: 'COMPLETED',
     startedAt: '2026-09-15T08:00:00Z', completedAt: '2026-09-16T10:00:00Z', notes: null, createdAt: '2026-09-10T08:00:00Z', updatedAt: '2026-09-16T10:00:00Z',
   },
   {
-    id: 'audit-2', title: 'PET Faculty Annual Review', auditType: 'INTERNAL', targetDepartmentId: null, targetFacultyId: 'fac-pet',
+    id: 'audit-2', title: 'Software Engineering Annual Review', auditType: 'INTERNAL', targetDepartmentId: 'dept-se',
     checklistTemplateId: 'tmpl-1', leadAuditorUserId: qaOfficer.id, scheduledDate: '2026-12-01', status: 'PLANNED',
     startedAt: null, completedAt: null, notes: null, createdAt: '2026-10-01T08:00:00Z', updatedAt: '2026-10-01T08:00:00Z',
   },
@@ -1724,9 +1590,7 @@ function toAuditDto(a: MockQaAudit): QaAudit {
   return {
     id: a.id, title: a.title, auditType: a.auditType,
     targetDepartmentId: a.targetDepartmentId,
-    targetDepartmentName: a.targetDepartmentId ? FACULTY_DEPARTMENTS_SEED.find((d) => d.id === a.targetDepartmentId)?.name ?? null : null,
-    targetFacultyId: a.targetFacultyId,
-    targetFacultyName: a.targetFacultyId ? adminFaculties.find((f) => f.facultyId === a.targetFacultyId)?.name ?? null : null,
+    targetDepartmentName: DEPARTMENTS_SEED.find((d) => d.id === a.targetDepartmentId)?.name ?? 'Unknown',
     checklistTemplateId: a.checklistTemplateId, checklistTemplateName: template?.name ?? 'Unknown',
     leadAuditorUserId: a.leadAuditorUserId, leadAuditorName: a.leadAuditorUserId === qaOfficer.id ? qaOfficer.fullName : 'Unknown',
     scheduledDate: a.scheduledDate, status: a.status, startedAt: a.startedAt, completedAt: a.completedAt, notes: a.notes,
@@ -1743,7 +1607,7 @@ function toCapaDto(c: MockQaCapa): QaCorrectiveAction {
     id: c.id, findingId: c.findingId, description: c.description, ownerUserId: c.ownerUserId, ownerName: c.ownerName,
     dueDate: c.dueDate, status: c.status, verifiedByUserId: c.verifiedByUserId, verifiedByName: c.verifiedByName, verifiedAt: c.verifiedAt,
     isOverdue: overdue, auditId: audit.id, auditTitle: audit.title, rating: finding.rating, standardCode: item.standardCode, standardTitle: item.standardTitle,
-    targetDepartmentId: audit.targetDepartmentId, targetFacultyId: audit.targetFacultyId, createdAt: c.createdAt, updatedAt: c.updatedAt,
+    targetDepartmentId: audit.targetDepartmentId, createdAt: c.createdAt, updatedAt: c.updatedAt,
   }
 }
 
@@ -1753,8 +1617,7 @@ function toTemplateDto(t: MockQaTemplate): QaChecklistTemplate {
 
 const qaHandlers = [
   /** Bare id/name lookups so the "create audit" form can offer a name-based picker, the same reasoning the real backend's directory.controller.ts gives. */
-  http.get(`${API}/quality-assurance/departments`, () => requireQa() ?? ok(FACULTY_DEPARTMENTS_SEED.map((d): QaDirectoryEntry => ({ id: d.id, name: d.name })))),
-  http.get(`${API}/quality-assurance/faculties`, () => requireQa() ?? ok(adminFaculties.map((f): QaDirectoryEntry => ({ id: f.facultyId, name: f.name })))),
+  http.get(`${API}/quality-assurance/departments`, () => requireQa() ?? ok(DEPARTMENTS_SEED.map((d): QaDirectoryEntry => ({ id: d.id, name: d.name })))),
 
   http.get(`${API}/quality-assurance/standards`, () => requireQa() ?? ok(qaStandards)),
   http.post(`${API}/quality-assurance/standards`, async ({ request }) => {
@@ -1837,11 +1700,9 @@ const qaHandlers = [
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
     const targetDepartmentId = url.searchParams.get('targetDepartmentId')
-    const targetFacultyId = url.searchParams.get('targetFacultyId')
     const rows = qaAudits.filter((a) =>
       (!status || a.status === status) &&
-      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId) &&
-      (!targetFacultyId || a.targetFacultyId === targetFacultyId))
+      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId))
     return ok(rows.map(toAuditDto))
   }),
   http.get(`${API}/quality-assurance/audits/:id`, ({ params }) => {
@@ -1854,13 +1715,13 @@ const qaHandlers = [
   http.post(`${API}/quality-assurance/audits`, async ({ request }) => {
     const blocked = requireQa()
     if (blocked) return blocked
-    const input = (await request.json()) as { title: string; targetDepartmentId?: string; targetFacultyId?: string; checklistTemplateId: string; leadAuditorUserId: string; scheduledDate: string; notes?: string }
-    if (!input.title?.trim() || Boolean(input.targetDepartmentId) === Boolean(input.targetFacultyId) || !qaTemplates.some((t) => t.id === input.checklistTemplateId)) {
-      return fail(400, 'VALIDATION_FAILED', 'The target department/faculty, checklist template or lead auditor does not exist.')
+    const input = (await request.json()) as { title: string; targetDepartmentId?: string; checklistTemplateId: string; leadAuditorUserId: string; scheduledDate: string; notes?: string }
+    if (!input.title?.trim() || !DEPARTMENTS_SEED.some((d) => d.id === input.targetDepartmentId) || !qaTemplates.some((t) => t.id === input.checklistTemplateId)) {
+      return fail(400, 'VALIDATION_FAILED', 'The target department, checklist template or lead auditor does not exist.')
     }
     const audit: MockQaAudit = {
       id: `audit-${++qaIdCounter}`, title: input.title.trim(), auditType: 'INTERNAL',
-      targetDepartmentId: input.targetDepartmentId ?? null, targetFacultyId: input.targetFacultyId ?? null,
+      targetDepartmentId: input.targetDepartmentId!,
       checklistTemplateId: input.checklistTemplateId, leadAuditorUserId: input.leadAuditorUserId, scheduledDate: input.scheduledDate,
       status: 'PLANNED', startedAt: null, completedAt: null, notes: input.notes?.trim() || null,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
@@ -1940,12 +1801,10 @@ const qaHandlers = [
     const status = url.searchParams.get('status')
     const overdueParam = url.searchParams.get('overdue')
     const targetDepartmentId = url.searchParams.get('targetDepartmentId')
-    const targetFacultyId = url.searchParams.get('targetFacultyId')
     const rows = qaCapas.map(toCapaDto).filter((c) =>
       (!status || c.status === status) &&
       (overdueParam === null || c.isOverdue === (overdueParam === 'true')) &&
-      (!targetDepartmentId || c.targetDepartmentId === targetDepartmentId) &&
-      (!targetFacultyId || c.targetFacultyId === targetFacultyId))
+      (!targetDepartmentId || c.targetDepartmentId === targetDepartmentId))
     return ok(rows)
   }),
   http.post(`${API}/quality-assurance/corrective-actions`, async ({ request }) => {
@@ -1993,10 +1852,8 @@ const qaHandlers = [
     if (blocked) return blocked
     const url = new URL(request.url)
     const targetDepartmentId = url.searchParams.get('targetDepartmentId')
-    const targetFacultyId = url.searchParams.get('targetFacultyId')
     const audits = qaAudits.filter((a) =>
-      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId) &&
-      (!targetFacultyId || a.targetFacultyId === targetFacultyId))
+      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId))
     const auditIds = new Set(audits.map((a) => a.id))
     const findings = qaFindings.filter((f) => auditIds.has(f.auditId) && f.rating !== 'NOT_APPLICABLE')
     const withStandard = findings.map((f) => ({ finding: f, item: qaItems.find((i) => i.id === f.checklistItemId)! }))
@@ -2034,14 +1891,14 @@ const qaHandlers = [
 const smartttAdminHandlers = [
   http.get(`${API}/admin/directory`, () => requireAdmin() ?? ok({
     smartttConnected: true,
-    onlyHere: { faculties: adminFaculties.filter((f) => !f.inSmarttt).length, departments: 0 },
+    onlyHere: { departments: ADMIN_DEPARTMENTS.filter((d) => !d.inSmarttt).length },
   })),
   http.post(`${API}/admin/directory/sync`, () => {
     const blocked = requireAdmin()
     if (blocked) return blocked
-    const sent = adminFaculties.filter((f) => !f.inSmarttt)
-    sent.forEach((f) => { f.inSmarttt = true })
-    return ok({ fromSmarttt: { faculties: { linked: 0, created: 0 }, departments: { linked: 0, created: 0 }, skipped: [] }, toSmarttt: { faculties: sent.length, departments: 0, skipped: [] } })
+    const sent = ADMIN_DEPARTMENTS.filter((d) => !d.inSmarttt)
+    sent.forEach((d) => { d.inSmarttt = true })
+    return ok({ fromSmarttt: { departments: { linked: 0, created: 0 }, skipped: [] }, toSmarttt: { departments: sent.length, skipped: [] } })
   }),
   http.get(`${API}/admin/smarttt/terms`, () => requireAdmin() ?? ok({ count: smartttAdmin.terms.length, next: null, results: smartttAdmin.terms })),
   http.post(`${API}/admin/smarttt/terms/:termId/set-current`, ({ params }) => {
@@ -2119,15 +1976,21 @@ const smartttAdminHandlers = [
 ]
 
 const invitationHandlers = [
-  http.get(`${API}/admin/faculties`, () => requireAdmin() ?? ok(adminFaculties)),
-  http.post(`${API}/admin/faculties`, async ({ request }) => {
+  http.post(`${API}/admin/departments`, async ({ request }) => {
     const blocked = requireAdmin()
     if (blocked) return blocked
-    const { name } = (await request.json()) as { name: string }
-    if (adminFaculties.some((f) => f.name.toLowerCase() === name.trim().toLowerCase())) return fail(409, 'CONFLICT', `A faculty named "${name}" already exists.`)
-    const faculty = { facultyId: `fac-${adminFaculties.length + 1}`, name: name.trim(), departmentCount: 0, officerCount: 0, inSmarttt: true }
-    adminFaculties.push(faculty)
-    return ok({ facultyId: faculty.facultyId, name: faculty.name }, 201)
+    const { name, code } = (await request.json()) as { name?: string; code?: string }
+    const trimmed = name?.trim() ?? ''
+    const upper = code?.trim().toUpperCase() ?? ''
+    if (trimmed.length < 3 || !/^[A-Z0-9][A-Z0-9 ./&-]{0,31}$/.test(upper)) return fail(400, 'VALIDATION_FAILED', 'Enter the department name and a code, e.g. DCOMP.')
+    // Mirrors directory.service.ts createDepartment: another spelling of an existing department is a duplicate.
+    const same = departmentForName(trimmed)
+    if (same) return fail(409, 'CONFLICT', `"${trimmed}" is the same department as "${same.name}", which already exists.`)
+    const holder = ADMIN_DEPARTMENTS.find((d) => d.code?.toUpperCase() === upper)
+    if (holder) return fail(409, 'CONFLICT', `The code ${upper} is already used by ${holder.name}.`)
+    const department: AdminDepartment = { departmentId: `dept-${ADMIN_DEPARTMENTS.length + 1}-${upper.toLowerCase()}`, name: trimmed, code: upper, inSmarttt: true, lecturerCount: 0 }
+    ADMIN_DEPARTMENTS.push(department)
+    return ok({ departmentId: department.departmentId, name: department.name, code: department.code }, 201)
   }),
   http.get(`${API}/admin/officers`, () => requireAdmin() ?? ok(officers)),
   http.get(`${API}/admin/units/pending`, () => requireAdmin() ?? ok(pendingUnits)),
@@ -2142,31 +2005,14 @@ const invitationHandlers = [
   http.post(`${API}/admin/invitations`, async ({ request }) => {
     const blocked = requireAdmin()
     if (blocked) return blocked
-    const input = (await request.json()) as { role: 'admin' | 'qa' | 'faculty'; fullName: string; email: string; facultyId?: string }
-    if (input.role !== 'faculty') return inviteOfficer(input, { role: input.role, facultyId: null, facultyName: null, departmentId: null, departmentName: null })
-    const faculty = adminFaculties.find((f) => f.facultyId === input.facultyId)
-    if (!faculty) return fail(400, 'BAD_REQUEST', 'That faculty does not exist.')
-    const res = inviteOfficer(input, { role: 'faculty', facultyId: faculty.facultyId, facultyName: faculty.name, departmentId: null, departmentName: null })
-    if (res.status === 201) faculty.officerCount += 1
-    return res
+    const input = (await request.json()) as { role: 'admin' | 'qa' | 'management' | 'department'; fullName: string; email: string; departmentId?: string }
+    if (input.role !== 'department') return inviteOfficer(input, { role: input.role, departmentId: null, departmentName: null })
+    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === input.departmentId)
+    if (!department) return fail(400, 'BAD_REQUEST', 'That department does not exist.')
+    return inviteOfficer(input, { role: 'department', departmentId: department.departmentId, departmentName: department.name })
   }),
   http.post(`${API}/admin/officers/:userId/resend`, ({ params }) => requireAdmin() ?? resendOfficer(officers.find((o) => o.userId === params.userId))),
   http.post(`${API}/admin/officers/:userId/deactivate`, ({ params }) => requireAdmin() ?? deactivateOfficer(officers.find((o) => o.userId === params.userId))),
-
-  http.get(`${API}/faculties/officers`, () => requireFaculty() ?? ok(officers.filter((o) => o.role === 'department' && o.facultyId === 'fac-pet'))),
-  http.post(`${API}/faculties/departments/:departmentId/officers`, async ({ params, request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const department = FACULTY_DEPARTMENTS_SEED.find((d) => d.id === params.departmentId)
-    if (!department) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
-    return inviteOfficer((await request.json()) as { fullName: string; email: string }, {
-      role: 'department', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: department.id, departmentName: department.name,
-    })
-  }),
-  http.post(`${API}/faculties/officers/:userId/resend`, ({ params }) =>
-    requireFaculty() ?? resendOfficer(officers.find((o) => o.userId === params.userId && o.role === 'department'))),
-  http.post(`${API}/faculties/officers/:userId/deactivate`, ({ params }) =>
-    requireFaculty() ?? deactivateOfficer(officers.find((o) => o.userId === params.userId && o.role === 'department'))),
 
   http.post(`${API}/auth/invitations/lookup`, async ({ request }) => {
     const { token } = (await request.json()) as { token: string }
@@ -2174,7 +2020,7 @@ const invitationHandlers = [
     if (!officer) return fail(400, 'BAD_REQUEST', 'This invitation link is invalid, has expired or has already been used. Ask whoever invited you to send it again.')
     const details: InvitationDetails = {
       fullName: officer.fullName, email: officer.email, role: officer.role,
-      scopeName: officer.departmentName ?? officer.facultyName, expiresAt: officer.invitationExpiresAt!,
+      scopeName: officer.departmentName, expiresAt: officer.invitationExpiresAt!,
     }
     return ok(details)
   }),
@@ -2187,8 +2033,9 @@ const invitationHandlers = [
     officer.invitationExpiresAt = null
     const base = { id: officer.userId, fullName: officer.fullName, email: officer.email, status: 'ACTIVE' as const, avatarUrl: null }
     const user: Account = officer.role === 'admin' ? { ...base, role: 'admin' }
-      : officer.role === 'faculty' ? { ...base, role: 'faculty', facultyId: officer.facultyId!, facultyName: officer.facultyName! }
-      : { ...base, role: 'department', departmentId: officer.departmentId!, departmentName: officer.departmentName!, facultyName: officer.facultyName }
+      : officer.role === 'management' ? { ...base, role: 'management' }
+      : officer.role === 'qa' ? { ...base, role: 'qa', title: null }
+      : { ...base, role: 'department', departmentId: officer.departmentId!, departmentName: officer.departmentName! }
     accounts.set(officer.email, { user, password })
     return ok({ email: officer.email, message: 'Your account is ready. Sign in with your email and new password.' })
   }),
@@ -2357,8 +2204,6 @@ function eligibilityReport(filter: (r: (typeof STANDING_SEED)[number]) => boolea
   return { policy: attendancePolicy, summary, rows }
 }
 
-const FACULTY_DEPARTMENT_IDS = new Set(FACULTY_DEPARTMENTS_SEED.map((d) => d.id))
-
 /** Lecturers anywhere in the institution, for the allocation picker: the department's own, plus one from another department. */
 const LECTURER_DIRECTORY: LecturerDirectoryEntry[] = [
   ...DEPARTMENT_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, departmentId: 'dept-cs', departmentName: 'Computer Science' })),
@@ -2366,11 +2211,12 @@ const LECTURER_DIRECTORY: LecturerDirectoryEntry[] = [
 ]
 
 const ADMIN_DEPARTMENTS_SEED = (): AdminDepartment[] => [
-  ...FACULTY_DEPARTMENTS_SEED.map((d) => ({ departmentId: d.id, name: d.name, facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', lecturerCount: FACULTY_LECTURERS.filter((l) => l.departmentId === d.id).length })),
-  { departmentId: 'dept-math', name: 'Mathematics', facultyId: 'fac-sci', facultyName: 'Science', lecturerCount: 1 },
-  { departmentId: 'dept-acc', name: 'Accounting', facultyId: 'fac-bus', facultyName: 'Business and Economics', lecturerCount: 0 },
+  ...DEPARTMENTS_SEED.map((d) => ({ departmentId: d.id, name: d.name, code: d.code, inSmarttt: true, lecturerCount: SEED_LECTURERS.filter((l) => l.departmentId === d.id).length })),
+  { departmentId: 'dept-math', name: 'Mathematics', code: 'DMATH', inSmarttt: true, lecturerCount: 1 },
+  // Made here before SMARTTT owned departments: the console offers to send it there.
+  { departmentId: 'dept-acc', name: 'Accounting', code: 'DACC', inSmarttt: false, lecturerCount: 0 },
   // Created under a second spelling before names were unified — the duplicate the admin Departments page merges.
-  { departmentId: 'dept-cs-dup', name: 'Department of Computer Science', facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', lecturerCount: 1 },
+  { departmentId: 'dept-cs-dup', name: 'Department of Computer Science', code: null, inSmarttt: true, lecturerCount: 1 },
 ]
 let ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS_SEED()
 
@@ -2401,34 +2247,34 @@ const departmentForName = (name: string | null) => {
 }
 
 const PLACEMENT_SEED = (): PlacementLecturer[] => [
-  { userId: 'lec-9', fullName: 'Dr. Samuel Kiprono', staffNumber: 'STF/09001', title: 'Dr.', email: 's.kiprono@university.edu', departmentId: null, departmentName: null, facultyId: null, facultyName: null, reportedDepartment: 'Comp. Sci & IT', reportedFaculty: 'FPET', unitCount: 1 },
-  { userId: 'lec-10', fullName: 'Ms. Lucy Wanjiku', staffNumber: 'STF/09002', title: 'Ms.', email: 'l.wanjiku@university.edu', departmentId: null, departmentName: null, facultyId: null, facultyName: null, reportedDepartment: 'Maths', reportedFaculty: null, unitCount: 0 },
-  ...FACULTY_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, email: `${l.userId}@university.edu`, departmentId: l.departmentId, departmentName: l.departmentName, facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', reportedDepartment: l.departmentName, reportedFaculty: null, unitCount: l.unitsTaught })),
-  { userId: 'lec-4', fullName: 'Dr. Ruth Kamau', staffNumber: 'STF/04112', title: 'Dr.', email: 'r.kamau@university.edu', departmentId: 'dept-math', departmentName: 'Mathematics', facultyId: 'fac-sci', facultyName: 'Science', reportedDepartment: 'Mathematics', reportedFaculty: 'Science', unitCount: 2 },
+  { userId: 'lec-9', fullName: 'Dr. Samuel Kiprono', staffNumber: 'STF/09001', title: 'Dr.', email: 's.kiprono@university.edu', departmentId: null, departmentName: null, reportedDepartment: 'Comp. Sci & IT', unitCount: 1 },
+  { userId: 'lec-10', fullName: 'Ms. Lucy Wanjiku', staffNumber: 'STF/09002', title: 'Ms.', email: 'l.wanjiku@university.edu', departmentId: null, departmentName: null, reportedDepartment: 'Maths', unitCount: 0 },
+  ...SEED_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, email: `${l.userId}@university.edu`, departmentId: l.departmentId, departmentName: l.departmentName, reportedDepartment: l.departmentName, unitCount: l.unitsTaught })),
+  { userId: 'lec-4', fullName: 'Dr. Ruth Kamau', staffNumber: 'STF/04112', title: 'Dr.', email: 'r.kamau@university.edu', departmentId: 'dept-math', departmentName: 'Mathematics', reportedDepartment: 'Mathematics', unitCount: 2 },
 ]
 let placementLecturers = PLACEMENT_SEED()
 
-/** Mirrors lecturer.placement.ts listLecturers: unassigned first, then (optionally) one faculty's staff. */
-function listPlacement(request: Request, facultyId: string | null) {
+/** Mirrors lecturer.placement.ts listLecturers: unassigned first, then everyone else. */
+function listPlacement(request: Request) {
   const url = new URL(request.url)
   const q = url.searchParams.get('q')?.trim().toLowerCase() ?? ''
   const unassignedOnly = url.searchParams.get('unassigned') === 'true'
   return placementLecturers
-    .filter((l) => l.departmentId === null || (!unassignedOnly && (facultyId === null || l.facultyId === facultyId)))
+    .filter((l) => l.departmentId === null || !unassignedOnly)
     .filter((l) => !q || l.fullName.toLowerCase().includes(q) || l.staffNumber.toLowerCase().includes(q))
     .sort((a, b) => Number(a.departmentId !== null) - Number(b.departmentId !== null) || a.fullName.localeCompare(b.fullName))
 }
 
 /** Mirrors lecturer.placement.ts moveLecturer, including learning SMARTTT's spelling from an unassigned lecturer. */
 function placeLecturer(lecturer: PlacementLecturer, department: AdminDepartment) {
-  const assign = (l: PlacementLecturer) => Object.assign(l, { departmentId: department.departmentId, departmentName: department.name, facultyId: department.facultyId, facultyName: department.facultyName })
+  const assign = (l: PlacementLecturer) => Object.assign(l, { departmentId: department.departmentId, departmentName: department.name })
   let learnedSpelling: string | null = null
   let alsoPlaced = 0
   if (lecturer.departmentId === null && lecturer.reportedDepartment && departmentKey(lecturer.reportedDepartment) && !departmentForName(lecturer.reportedDepartment)) {
     learnedSpelling = lecturer.reportedDepartment
     departmentAliases.push({
       aliasId: `alias-${departmentAliases.length + 1}`, alias: learnedSpelling, departmentId: department.departmentId, departmentName: department.name,
-      facultyName: department.facultyName, source: 'PLACEMENT', createdByName: currentAccount.fullName, createdAt: new Date().toISOString(),
+      source: 'PLACEMENT', createdByName: currentAccount.fullName, createdAt: new Date().toISOString(),
     })
     for (const other of placementLecturers) {
       if (other !== lecturer && other.departmentId === null && departmentForName(other.reportedDepartment)?.departmentId === department.departmentId) { assign(other); alsoPlaced += 1 }
@@ -2545,21 +2391,12 @@ const oversightHandlers = [
     const officer = currentAccount as DepartmentOfficer
     return ok(eligibilityReport((r) => r.departmentId === officer.departmentId, new URL(request.url).searchParams.get('all') === 'true'))
   }),
-  http.get(`${API}/faculties/eligibility`, ({ request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const url = new URL(request.url)
-    const departmentId = url.searchParams.get('departmentId')
-    if (departmentId && !FACULTY_DEPARTMENT_IDS.has(departmentId)) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
-    return ok(eligibilityReport((r) => (departmentId ? r.departmentId === departmentId : FACULTY_DEPARTMENT_IDS.has(r.departmentId ?? '')), url.searchParams.get('all') === 'true'))
-  }),
   http.get(`${API}/quality-assurance/eligibility`, ({ request }) => {
     const blocked = requireQa()
     if (blocked) return blocked
     const url = new URL(request.url)
     const departmentId = url.searchParams.get('departmentId')
-    const facultyId = url.searchParams.get('facultyId')
-    return ok(eligibilityReport((r) => (!departmentId || r.departmentId === departmentId) && (!facultyId || (facultyId === 'fac-pet' && FACULTY_DEPARTMENT_IDS.has(r.departmentId ?? ''))), url.searchParams.get('all') === 'true'))
+    return ok(eligibilityReport((r) => !departmentId || r.departmentId === departmentId, url.searchParams.get('all') === 'true'))
   }),
 
   http.get(`${API}/departments/lecturer-directory`, ({ request }) => {
@@ -2569,17 +2406,6 @@ const oversightHandlers = [
     return ok(LECTURER_DIRECTORY.filter((l) => !q || l.fullName.toLowerCase().includes(q) || l.staffNumber.toLowerCase().includes(q)))
   }),
 
-  http.get(`${API}/faculties/lecturer-placement`, ({ request }) => requireFaculty() ?? ok(listPlacement(request, 'fac-pet'))),
-  http.patch(`${API}/faculties/lecturers/:lecturerUserId/department`, async ({ params, request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const lecturer = placementLecturers.find((l) => l.userId === params.lecturerUserId)
-    if (!lecturer || (lecturer.departmentId !== null && lecturer.facultyId !== 'fac-pet')) return fail(404, 'NOT_FOUND', 'No such lecturer in your faculty.')
-    const { departmentId } = (await request.json()) as { departmentId: string }
-    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === departmentId && d.facultyId === 'fac-pet')
-    if (!department) return fail(400, 'BAD_REQUEST', 'Choose one of your faculty’s departments.')
-    return placeLecturer(lecturer, department)
-  }),
   http.get(`${API}/admin/departments`, () => requireAdmin() ?? ok(ADMIN_DEPARTMENTS)),
   http.get(`${API}/admin/department-aliases`, () => requireAdmin() ?? ok(departmentAliases)),
   http.delete(`${API}/admin/department-aliases/:aliasId`, ({ params }) => {
@@ -2595,7 +2421,7 @@ const oversightHandlers = [
     const groups = new Map<string, DuplicateDepartment[]>()
     for (const d of ADMIN_DEPARTMENTS) {
       const key = departmentKey(d.name)!
-      groups.set(key, [...(groups.get(key) ?? []), { departmentId: d.departmentId, name: d.name, facultyId: d.facultyId, facultyName: d.facultyName, lecturerCount: d.lecturerCount, unitCount: 0 }])
+      groups.set(key, [...(groups.get(key) ?? []), { departmentId: d.departmentId, name: d.name, code: d.code, lecturerCount: d.lecturerCount, unitCount: 0 }])
     }
     return ok([...groups.values()].filter((g) => g.length > 1).map((g) => g.sort((a, b) => b.lecturerCount - a.lecturerCount)))
   }),
@@ -2610,11 +2436,11 @@ const oversightHandlers = [
     keep.lecturerCount += duplicate.lecturerCount
     ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS.filter((d) => d !== duplicate)
     if (departmentKey(duplicate.name) !== departmentKey(keep.name)) {
-      departmentAliases.push({ aliasId: `alias-${departmentAliases.length + 1}`, alias: duplicate.name, departmentId: keep.departmentId, departmentName: keep.name, facultyName: keep.facultyName, source: 'MERGE', createdByName: currentAccount.fullName, createdAt: new Date().toISOString() })
+      departmentAliases.push({ aliasId: `alias-${departmentAliases.length + 1}`, alias: duplicate.name, departmentId: keep.departmentId, departmentName: keep.name, source: 'MERGE', createdByName: currentAccount.fullName, createdAt: new Date().toISOString() })
     }
     return ok({ departmentId: keep.departmentId, name: keep.name })
   }),
-  http.get(`${API}/admin/lecturers`, ({ request }) => requireAdmin() ?? ok(listPlacement(request, null))),
+  http.get(`${API}/admin/lecturers`, ({ request }) => requireAdmin() ?? ok(listPlacement(request))),
   http.patch(`${API}/admin/lecturers/:lecturerUserId/department`, async ({ params, request }) => {
     const blocked = requireAdmin()
     if (blocked) return blocked
@@ -2690,11 +2516,10 @@ const oversightHandlers = [
     if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
     const url = new URL(request.url)
     const departmentId = url.searchParams.get('departmentId')
-    const facultyId = url.searchParams.get('facultyId')
-    return ok(evaluationResults(round, (r) => (!departmentId || r.departmentId === departmentId) && (!facultyId || (facultyId === 'fac-pet' && FACULTY_DEPARTMENT_IDS.has(r.departmentId)))))
+    return ok(evaluationResults(round, (r) => !departmentId || r.departmentId === departmentId))
   }),
 
-  // Department and faculty: started rounds and their own results
+  // Department: started rounds and their own results
   http.get(`${API}/departments/evaluations`, () => requireDepartment() ?? ok(evaluationRounds.filter((r) => roundStatus(r) !== 'UPCOMING').map(toRound))),
   http.get(`${API}/departments/evaluations/:id`, ({ params }) => {
     const blocked = requireDepartment()
@@ -2704,17 +2529,6 @@ const oversightHandlers = [
     const officer = currentAccount as DepartmentOfficer
     return ok(evaluationResults(round, (r) => r.departmentId === officer.departmentId))
   }),
-  http.get(`${API}/faculties/evaluations`, () => requireFaculty() ?? ok(evaluationRounds.filter((r) => roundStatus(r) !== 'UPCOMING').map(toRound))),
-  http.get(`${API}/faculties/evaluations/:id`, ({ params, request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const round = findRound(params.id)
-    if (!round || roundStatus(round) === 'UPCOMING') return fail(404, 'NOT_FOUND', 'No such evaluation round.')
-    const departmentId = new URL(request.url).searchParams.get('departmentId')
-    if (departmentId && !FACULTY_DEPARTMENT_IDS.has(departmentId)) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
-    return ok(evaluationResults(round, (r) => (departmentId ? r.departmentId === departmentId : FACULTY_DEPARTMENT_IDS.has(r.departmentId))))
-  }),
-
   // Students
   http.get(`${API}/students/me/evaluations`, () => {
     const blocked = requireStudent()
@@ -2747,4 +2561,4 @@ const oversightHandlers = [
   }),
 ]
 
-export const handlers = [...terminalHandlers, ...authHandlers, ...smartttAdminHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+export const handlers = [...terminalHandlers, ...authHandlers, ...smartttAdminHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...managementHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

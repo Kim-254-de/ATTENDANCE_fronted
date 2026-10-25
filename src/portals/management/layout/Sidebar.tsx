@@ -5,8 +5,9 @@ import { useLogout } from '@/auth/authApi'
 import { nav } from './nav'
 
 /**
- * Desktop-only (lg+) — small screens use BottomNav instead, so this never
- * needs a mobile open/close state or a hamburger trigger.
+ * Desktop-only (lg+). Small screens move by tapping the charts and the
+ * breadcrumbs, with the account menu for the profile and sign-out, so this
+ * never needs a mobile open/close state or a hamburger trigger.
  */
 export function Sidebar() {
   const logout = useLogout()
@@ -21,7 +22,7 @@ export function Sidebar() {
       <div className="pointer-events-none absolute -bottom-16 -left-24 size-56 rounded-full bg-white/5" aria-hidden />
       <div className="flex items-center gap-3 px-1 py-2">
         <div className="flex-1 leading-tight">
-          <p className="text-sm font-semibold text-brand-100">Faculty Portal</p>
+          <p className="text-sm font-semibold text-brand-100">Management Portal</p>
         </div>
       </div>
 

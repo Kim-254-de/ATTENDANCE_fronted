@@ -6,21 +6,21 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import { smartttAccounts } from '@/lib/env'
-import { ADMIN_OFFICERS_KEY, useAdminFaculties, useAdminInvite, useAdminOfficers } from './adminApi'
+import { ADMIN_OFFICERS_KEY, useAdminDepartments, useAdminInvite, useAdminOfficers } from './adminApi'
 
 /**
- * Who has access to the oversight portals. Administrators invite faculty
- * officers and QA officers here; department officers are invited by their own
- * faculty officer, but appear here too so access can be removed. With SMARTTT
+ * Who has access to the oversight portals. Administrators invite management
+ * (university-wide), each department's officer and
+ * QA officers here, and remove their access when they leave. With SMARTTT
  * accounts on, administrators are SMARTTT administrators and are not invited here.
  */
 export function OfficersPage() {
   const { data: me } = useMe()
   const officers = useAdminOfficers()
-  const faculties = useAdminFaculties()
+  const departments = useAdminDepartments()
   const invite = useAdminInvite()
-  const [role, setRole] = useState<'faculty' | 'qa' | 'admin'>('faculty')
-  const [facultyId, setFacultyId] = useState('')
+  const [role, setRole] = useState<'management' | 'department' | 'qa' | 'admin'>('management')
+  const [departmentId, setDepartmentId] = useState('')
   const [notice, setNotice] = useState<{ text: string; warn: boolean } | null>(null)
   const adminsInSmarttt = smartttAccounts()
 
@@ -31,9 +31,9 @@ export function OfficersPage() {
         description="They get an email with a link to choose their own password, valid for 72 hours. Use their own work email, not a shared mailbox."
         pending={invite.isPending}
         error={invite.error}
-        canSubmit={role !== 'faculty' || !!facultyId}
+        canSubmit={role !== 'department' || !!departmentId}
         onInvite={(invitee, done) =>
-          invite.mutate(role === 'faculty' ? { role, facultyId, ...invitee } : { role, ...invitee }, {
+          invite.mutate(role === 'department' ? { role, departmentId, ...invitee } : { role, ...invitee }, {
             onSuccess: (result) => {
               done()
               setNotice(result.emailSent
@@ -44,18 +44,21 @@ export function OfficersPage() {
       >
         <label className="block space-y-1.5 text-sm font-semibold text-ink">
           Role
-          <select value={role} onChange={(e) => setRole(e.target.value as 'faculty' | 'qa' | 'admin')} className="input">
-            <option value="faculty">Faculty officer</option>
+          <select value={role} onChange={(e) => setRole(e.target.value as 'management' | 'department' | 'qa' | 'admin')} className="input">
+            <option value="management">Management</option>
+            <option value="department">Department officer</option>
             <option value="qa">QA officer</option>
             {!adminsInSmarttt && <option value="admin">Administrator</option>}
           </select>
         </label>
-        {role === 'faculty' && (
+        {role === 'department' && (
           <label className="block space-y-1.5 text-sm font-semibold text-ink">
-            Faculty
-            <select value={facultyId} onChange={(e) => setFacultyId(e.target.value)} className="input">
-              <option value="">Choose a faculty…</option>
-              {(faculties.data ?? []).map((f) => <option key={f.facultyId} value={f.facultyId}>{f.name}</option>)}
+            Department
+            <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input">
+              <option value="">Choose a department…</option>
+              {(departments.data ?? []).map((d) => (
+                <option key={d.departmentId} value={d.departmentId}>{d.code ? `${d.name} (${d.code})` : d.name}</option>
+              ))}
             </select>
           </label>
         )}

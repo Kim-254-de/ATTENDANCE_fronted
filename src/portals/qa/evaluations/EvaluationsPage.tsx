@@ -11,8 +11,8 @@ import { DEFAULT_QUESTIONS, toInput, toLocalInput } from './roundFormValues'
 import { useCreateRound, useEvaluationRounds } from './evaluationsApi'
 
 /**
- * Student course evaluations: QA opens a round, students rate each unit they are on, and QA,
- * faculties and departments read the results. Responses are anonymous by design.
+ * Student course evaluations: QA opens a round, students rate each unit they are on, and QA
+ * and departments read the results. Responses are anonymous by design.
  */
 export function EvaluationsPage() {
   const { data: rounds, isPending, error, refetch } = useEvaluationRounds()

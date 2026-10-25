@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { AdminDepartment, AdminFaculty, DepartmentAlias, DirectoryStatus, DirectorySyncResult, DuplicateDepartment, InvitationResult, Officer, PlacementLecturer, PlacementResult, PendingUnit } from '@/types'
+import type { AdminDepartment, CreatedDepartment, DepartmentAlias, DirectoryStatus, DirectorySyncResult, DuplicateDepartment, InvitationResult, Officer, PlacementLecturer, PlacementResult, PendingUnit } from '@/types'
 
 export const ADMIN_OFFICERS_KEY = ['admin', 'officers'] as const
-const FACULTIES_KEY = ['admin', 'faculties'] as const
+const DEPARTMENTS_KEY = ['admin', 'departments'] as const
 const PENDING_UNITS_KEY = ['admin', 'units', 'pending'] as const
 
-/** Every administrator, faculty officer and department officer, with invitation status. */
+/** Every administrator, member of management, department and QA officer, with invitation status. */
 export const useAdminOfficers = () =>
   useQuery({
     queryKey: ADMIN_OFFICERS_KEY,
@@ -14,59 +14,58 @@ export const useAdminOfficers = () =>
     staleTime: 30_000,
   })
 
-export const useAdminFaculties = () =>
-  useQuery({
-    queryKey: FACULTIES_KEY,
-    queryFn: async () => (await api.get<AdminFaculty[]>('/admin/faculties')).data,
-    staleTime: 60_000,
-  })
-
-export const useCreateFaculty = () => {
+/**
+ * Creates a department with its code: in SMARTTT first, then here. The
+ * Timetable Allocator and Generator import it from here.
+ */
+export const useCreateDepartment = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (name: string) => (await api.post<{ facultyId: string; name: string }>('/admin/faculties', { name })).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: FACULTIES_KEY }),
+    mutationFn: async (input: { name: string; code: string }) => (await api.post<CreatedDepartment>('/admin/departments', input)).data,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: DEPARTMENTS_KEY })
+      await qc.invalidateQueries({ queryKey: DIRECTORY_KEY })
+    },
   })
 }
 
 const DIRECTORY_KEY = ['admin', 'directory'] as const
 
-/** Faculties and departments belong to SMARTTT: whether it is connected, and what only exists here. */
+/** Departments belong to SMARTTT: whether it is connected, and what only exists here. */
 export const useDirectoryStatus = () =>
   useQuery({ queryKey: DIRECTORY_KEY, queryFn: async () => (await api.get<DirectoryStatus>('/admin/directory')).data })
 
-/** Reads SMARTTT's faculties and departments now and sends the ones only here to SMARTTT. */
+/** Reads SMARTTT's departments now and sends the ones only here to SMARTTT. */
 export const useSyncDirectory = () => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async () => (await api.post<DirectorySyncResult>('/admin/directory/sync', undefined, { timeout: 60_000 })).data,
     onSettled: async () => {
       await qc.invalidateQueries({ queryKey: DIRECTORY_KEY })
-      await qc.invalidateQueries({ queryKey: FACULTIES_KEY })
+      await qc.invalidateQueries({ queryKey: DEPARTMENTS_KEY })
     },
   })
 }
 
 export type AdminInvitation =
-  | { role: 'admin' | 'qa'; fullName: string; email: string }
-  | { role: 'faculty'; fullName: string; email: string; facultyId: string }
+  | { role: 'admin' | 'qa' | 'management'; fullName: string; email: string }
+  | { role: 'department'; fullName: string; email: string; departmentId: string }
 
-/** Invites an administrator, or a faculty officer for one faculty. */
+/** Invites an administrator, a QA officer, a member of management, or one department's officer. */
 export const useAdminInvite = () => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: AdminInvitation) => (await api.post<InvitationResult>('/admin/invitations', input)).data,
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ADMIN_OFFICERS_KEY })
-      await qc.invalidateQueries({ queryKey: FACULTIES_KEY })
     },
   })
 }
 
-/** Every department with its faculty, for placing a lecturer. */
+/** Every department with its code: the admin's list, and the picker for placing lecturers and inviting officers. */
 export const useAdminDepartments = () =>
   useQuery({
-    queryKey: ['admin', 'departments'],
+    queryKey: DEPARTMENTS_KEY,
     queryFn: async () => (await api.get<AdminDepartment[]>('/admin/departments')).data,
     staleTime: 60_000,
   })
@@ -83,7 +82,7 @@ export const useAdminLecturers = (filters: { search: string; unassignedOnly: boo
     placeholderData: (previous) => previous,
   })
 
-/** Places or moves a lecturer in any department, across faculties too. */
+/** Places or moves a lecturer in any department. */
 export const useAdminMoveLecturer = () => {
   const qc = useQueryClient()
   return useMutation({

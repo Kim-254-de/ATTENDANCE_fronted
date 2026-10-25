@@ -28,7 +28,7 @@ export function DepartmentLayout() {
               {title ?? (user ? `${getGreeting()}, ${firstName(user.fullName)}` : 'Department')}
             </h1>
             <p className="mt-0.5 text-sm text-muted">
-              {user ? `${user.departmentName}${user.facultyName ? ` · ${user.facultyName}` : ''} · ${formatLongDate()}` : formatLongDate()}
+              {user ? `${user.departmentName} · ${formatLongDate()}` : formatLongDate()}
             </p>
           </div>
           {user && <AccountMenu user={user} subtitle={officerSubtitle(user)} profileTo="/department-profile" signOutTo="/oversight" />}

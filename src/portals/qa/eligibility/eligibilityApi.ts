@@ -6,10 +6,9 @@ import type { AttendancePolicy, EligibilityReport } from '@/types'
 export interface QaEligibilityFilters {
   all: boolean
   departmentId?: string
-  facultyId?: string
 }
 
-/** Exam eligibility institution-wide, or narrowed to a department or faculty. */
+/** Exam eligibility institution-wide, or narrowed to a department. */
 export const useQaEligibility = (filters: QaEligibilityFilters) =>
   useQuery({
     queryKey: ['qa', 'eligibility', filters],
@@ -18,7 +17,6 @@ export const useQaEligibility = (filters: QaEligibilityFilters) =>
         params: {
           ...(filters.all ? { all: 'true' } : {}),
           ...(filters.departmentId ? { departmentId: filters.departmentId } : {}),
-          ...(filters.facultyId ? { facultyId: filters.facultyId } : {}),
         },
       })).data,
     staleTime: 60_000,
