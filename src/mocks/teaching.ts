@@ -34,14 +34,14 @@ interface State {
 }
 
 function seed(): State {
-  const y1 = { id: 'course-1', departmentCode: 'DCOMP', programme: 'BSC.COMP SCI', year: 1, semester: 1, subClass: '', label: 'BSC.COMP SCI Y1S1', students: 120 }
+  const y1 = { id: 'course-1', departmentCode: 'DCOMP', programme: 'BSC.COMP SCI', year: 1, semester: 1, subClass: '', label: 'BSC.COMP SCI Y1S1', students: 120, mode: 'regular' as const }
   return {
     courses: [y1],
     units: [{
       id: 'unit-1', code: 'COSC 103', title: 'Computer Applications', weeklyHours: 3, classLength: 2, roomType: 'lecture_hall', courseIds: [y1.id],
       groups: [{ id: 'group-1', label: '', lecturerId: null, lectureHours: null, practicalHours: null, cfHours: null, members: [{ courseId: y1.id, students: null }] }],
     }],
-    lecturers: [{ id: 'tl-1', title: 'Dr.', fullName: 'Mary Wambui', staffNumber: 'STF/02291', employmentType: 'full_time', phone: '0700 000 001', email: '', maxWeeklyHours: 18, active: true }],
+    lecturers: [{ id: 'tl-1', title: 'Dr.', fullName: 'Mary Wambui', staffNumber: 'STF/02291', employmentType: 'full_time', phone: '0700 000 001', email: '', maxWeeklyHours: 18, maxExamDuties: null, active: true }],
     published: null,
   }
 }
@@ -119,7 +119,7 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
 
     http.post(`${base}/courses`, edit(async ({ request }) => {
       const body = (await request.json()) as Omit<TeachingCourse, 'id' | 'label' | 'departmentCode'>
-      const course = { ...body, programme: body.programme.toUpperCase(), subClass: body.subClass ?? '', id: id('course'), departmentCode: 'DCOMP', label: '' }
+      const course = { ...body, programme: body.programme.toUpperCase(), subClass: body.subClass ?? '', mode: body.mode ?? 'regular', id: id('course'), departmentCode: 'DCOMP', label: '' }
       course.label = label(course)
       if (state.courses.some((c) => c.label === course.label)) return fail(409, 'TEACHING_TAKEN', `${course.label} is already entered by your department.`)
       state.courses.push(course)
@@ -175,7 +175,7 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
 
     http.post(`${base}/lecturers`, read(async ({ request }) => {
       const body = (await request.json()) as Partial<State['lecturers'][number]>
-      const lecturer = { title: '', staffNumber: null, employmentType: 'full_time' as const, phone: '', email: '', maxWeeklyHours: null, active: true, fullName: '', ...body, id: id('tl') }
+      const lecturer = { title: '', staffNumber: null, employmentType: 'full_time' as const, phone: '', email: '', maxWeeklyHours: null, maxExamDuties: null, active: true, fullName: '', ...body, id: id('tl') }
       state.lecturers.push(lecturer)
       return ok({ ...lecturer, display: lecturer.fullName }, 201)
     })),
@@ -190,6 +190,21 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
       state.lecturers = state.lecturers.filter((l) => l.id !== params.id)
       return ok(null)
     })),
+    // Exams: the papers board, empty until a paper is added; no shared draft yet, so no invigilators.
+    http.get(`${base}/exams`, read(() => {
+      const b = board()
+      return ok({
+        term: TERM, department: DEPARTMENT, canEdit: true, published: false, publication: null, papers: [],
+        units: b.units.map((u) => ({ id: u.id, code: u.code, title: u.title, noWrittenExam: false, paperId: null, paperCodes: null, paperDepartment: null, defaultExaminerId: null })),
+        otherUnits: [], practicals: [],
+        lecturers: state.lecturers.map((l) => ({ id: l.id, display: `${l.title ? `${l.title} ` : ''}${l.fullName}`, staffNumber: l.staffNumber, active: l.active })),
+        problems: b.units.map((u) => ({ code: 'unit_not_examined', message: `${u.code} is on no paper; add it to one, or mark it 'no written exam'.` })),
+        summary: { papers: 0, students: 0, changed: 0, problems: b.units.length },
+      })
+    })),
+    http.get(`${base}/invigilators`, read(() =>
+      ok({ term: TERM, department: DEPARTMENT, draft: null, canEdit: false, published: false, publication: null, papers: [], lecturers: [], problems: [] }),
+    )),
     http.post(`${base}/:kind/bulk`, read(() => fail(501, 'NOT_IMPLEMENTED', 'Pasting from Excel needs the real backend.'))),
     http.post(`${base}/spreadsheet`, read(() => fail(501, 'NOT_IMPLEMENTED', 'Reading a workbook needs the real backend.'))),
 

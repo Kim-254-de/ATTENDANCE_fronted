@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
 import { BulkPaste, type BulkColumn } from './BulkPaste'
-import { useBulk, useDeleteCourse, useSaveCourse, type Board, type CourseInput } from './teachingApi'
+import { COURSE_MODES, useBulk, useDeleteCourse, useSaveCourse, type Board, type CourseInput, type CourseMode } from './teachingApi'
 import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const COURSE_COLUMNS: BulkColumn[] = [
@@ -12,6 +12,7 @@ const COURSE_COLUMNS: BulkColumn[] = [
   { key: 'semester', label: 'Semester', example: '1', required: true },
   { key: 'sub_class', label: 'Sub-class', example: '', hint: 'Only when a year is taught as separate classes (A, B…).' },
   { key: 'students', label: 'Students', example: '120', required: true },
+  { key: 'mode', label: 'Mode', example: 'Regular', hint: 'Regular, ODEL, Weekend, Evening, School-based or Part-time. ODEL students sit exams in a room of their own.' },
 ]
 
 type OwnCourse = Board['courses'][number]
@@ -41,13 +42,14 @@ export function CoursesTab({ term, board }: { term: string | undefined; board: B
       {remove.isError && <p role="alert" className="text-sm text-danger">{errorMessage(remove.error)}</p>}
       <TableCard>
         <thead className="bg-surface">
-          <tr><th className={th}>Course</th><th className={th}>Students</th><th className={th}>Units taking it</th><th className={th}><span className="sr-only">Actions</span></th></tr>
+          <tr><th className={th}>Course</th><th className={th}>Students</th><th className={th}>Mode</th><th className={th}>Units taking it</th><th className={th}><span className="sr-only">Actions</span></th></tr>
         </thead>
         <tbody>
           {board.courses.map((c) => (
             <tr key={c.id} className="border-t border-line">
               <td className={`${td} font-medium text-ink`}>{c.label}</td>
               <td className={td}>{c.students}</td>
+              <td className={td}>{COURSE_MODES[c.mode]}</td>
               <td className={`${td} text-xs text-muted`}>{c.usedBy.join(', ') || 'None yet'}</td>
               <td className={`${td} space-x-3 text-right whitespace-nowrap`}>
                 {editable && <button onClick={() => setEditing(c)} className={linkButton}>Edit</button>}
@@ -56,7 +58,7 @@ export function CoursesTab({ term, board }: { term: string | undefined; board: B
             </tr>
           ))}
           {board.courses.length === 0 && (
-            <tr><td colSpan={4} className="px-3 py-8 text-center text-muted">No courses yet. Add each programme, year and semester you teach this term, with its number of students.</td></tr>
+            <tr><td colSpan={5} className="px-3 py-8 text-center text-muted">No courses yet. Add each programme, year and semester you teach this term, with its number of students.</td></tr>
           )}
         </tbody>
       </TableCard>
@@ -95,6 +97,7 @@ function CourseForm({ term, course, onClose }: { term: string | undefined; cours
     semester: course?.semester ?? 1,
     subClass: course?.subClass ?? '',
     students: course?.students ?? 0,
+    mode: course?.mode ?? 'regular',
   })
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -120,6 +123,11 @@ function CourseForm({ term, course, onClose }: { term: string | undefined; cours
             <input required type="number" min={1} max={5000} value={form.students || ''} onChange={(e) => setForm({ ...form, students: Number(e.target.value) })} className="input" />
           </Field>
         </div>
+        <Field label="Mode" hint="ODEL students sit their exams in a room of their own.">
+          <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value as CourseMode })} className="input">
+            {Object.entries(COURSE_MODES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </Field>
         {save.isError && <p role="alert" className="text-sm text-danger">{errorMessage(save.error)}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>

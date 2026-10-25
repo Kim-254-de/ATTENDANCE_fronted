@@ -6,14 +6,16 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import { CoursesTab } from './CoursesTab'
+import { ExamsTab } from './ExamsTab'
+import { InvigilatorsTab } from './InvigilatorsTab'
 import { LecturersTab } from './LecturersTab'
 import { exportUrl, meetingText, useBoard, usePublish, type Board } from './teachingApi'
 import { TableCard, td, th } from './ui'
 import { UnitsTab } from './UnitsTab'
 
-const TABS = ['units', 'courses', 'lecturers', 'times'] as const
+const TABS = ['units', 'courses', 'lecturers', 'times', 'exams', 'invigilators'] as const
 type Tab = (typeof TABS)[number]
-const LABELS: Record<Tab, string> = { units: 'Units & groups', courses: 'Courses', lecturers: 'Lecturers', times: 'Times' }
+const LABELS: Record<Tab, string> = { units: 'Units & groups', courses: 'Courses', lecturers: 'Lecturers', times: 'Times', exams: 'Exams', invigilators: 'Invigilators' }
 
 /**
  * What the department teaches in a term of the Timetable Generator: its
@@ -47,7 +49,10 @@ export function TeachingPage() {
     )
   }
   const data = board.data
-  const counts: Record<Tab, number> = { units: data.units.length, courses: data.courses.length, lecturers: data.lecturers.length, times: data.summary.groups }
+  // Exam papers and invigilators publish on their own tabs; the header acts on the teaching.
+  const teachingTab = tab !== 'exams' && tab !== 'invigilators'
+  // Exams and invigilators load on their own tab; no count until then.
+  const counts: Partial<Record<Tab, number>> = { units: data.units.length, courses: data.courses.length, lecturers: data.lecturers.length, times: data.summary.groups }
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -64,13 +69,13 @@ export function TeachingPage() {
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {([['pdf', 'PDF'], ['docx', 'Word'], ['xlsx', 'Excel']] as const).map(([format, label]) => (
+          {teachingTab && ([['pdf', 'PDF'], ['docx', 'Word'], ['xlsx', 'Excel']] as const).map(([format, label]) => (
             <a key={format} href={exportUrl(format, term)}
               className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-line bg-card px-4 text-sm font-semibold text-ink hover:bg-surface">
               <Download className="size-4" aria-hidden /> {label}
             </a>
           ))}
-          {data.published ? (
+          {!teachingTab ? null : data.published ? (
             <Button variant="secondary" onClick={() => publish.mutate('reopen')} loading={publish.isPending}>
               <Unlock className="size-4" aria-hidden /> Reopen
             </Button>
@@ -83,9 +88,9 @@ export function TeachingPage() {
         </div>
       </div>
 
-      <Status board={data} />
-      {publish.isError && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{errorMessage(publish.error)}</p>}
-      {!data.published && data.problems.length > 0 && (
+      {teachingTab && <Status board={data} />}
+      {teachingTab && publish.isError && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{errorMessage(publish.error)}</p>}
+      {teachingTab && !data.published && data.problems.length > 0 && (
         <details className="rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning" open={data.problems.length <= 5}>
           <summary className="cursor-pointer font-semibold">
             {data.problems.length} {data.problems.length === 1 ? 'thing' : 'things'} to finish before publishing
@@ -100,7 +105,7 @@ export function TeachingPage() {
         {TABS.map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setParam('tab', t === 'units' ? null : t)}
             className={clsx('cursor-pointer rounded-full px-4 py-1.5 text-sm font-semibold transition', tab === t ? 'bg-brand text-white' : 'bg-card text-ink ring-1 ring-line hover:bg-surface')}>
-            {LABELS[t]} ({counts[t]})
+            {LABELS[t]}{counts[t] === undefined ? '' : ` (${counts[t]})`}
           </button>
         ))}
       </div>
@@ -109,6 +114,8 @@ export function TeachingPage() {
       {tab === 'courses' && <CoursesTab term={term} board={data} />}
       {tab === 'lecturers' && <LecturersTab term={term} board={data} />}
       {tab === 'times' && <TimesTab board={data} />}
+      {tab === 'exams' && <ExamsTab term={term} />}
+      {tab === 'invigilators' && <InvigilatorsTab term={term} />}
     </div>
   )
 }

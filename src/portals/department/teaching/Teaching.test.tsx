@@ -64,7 +64,7 @@ describe('department teaching', () => {
     await user.type(within(dialog).getByLabelText(/programme/i), 'bsc.comp sci')
     await user.clear(within(dialog).getByLabelText(/^year$/i))
     await user.type(within(dialog).getByLabelText(/^year$/i), '2')
-    await user.type(within(dialog).getByLabelText(/students/i), '60')
+    await user.type(within(dialog).getByLabelText(/^students$/i), '60')
     await user.click(within(dialog).getByRole('button', { name: /^save$/i }))
     expect(await screen.findByText('BSC.COMP SCI Y2S1')).toBeInTheDocument()
 
@@ -84,5 +84,17 @@ describe('department teaching', () => {
     expect(screen.getByRole('link', { name: /pdf/i })).toHaveAttribute('href', `${env.apiUrl}/departments/teaching/export/pdf`)
     expect(screen.getByRole('link', { name: /word/i })).toHaveAttribute('href', `${env.apiUrl}/departments/teaching/export/docx`)
     expect(screen.getByRole('link', { name: /excel/i })).toHaveAttribute('href', `${env.apiUrl}/departments/teaching/export/xlsx`)
+  })
+
+  it('has exam papers and invigilators on their own tabs, without the teaching publish button', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    expect(await screen.findByText("COSC 103 is on no paper; add it to one, or mark it 'no written exam'.")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /publish papers/i })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /publish to the director/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /no written exam/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /invigilators/i }))
+    expect(await screen.findByText(/the director hasn't shared an exam draft yet/i)).toBeInTheDocument()
   })
 })

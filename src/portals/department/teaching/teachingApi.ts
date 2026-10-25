@@ -11,8 +11,14 @@ import { env } from '@/lib/env'
 
 export type RoomType = 'lecture_hall' | 'lab' | 'seminar'
 export type EmploymentType = 'full_time' | 'part_time'
+export type CourseMode = 'regular' | 'odel' | 'weekend' | 'evening' | 'school_based' | 'part_time'
 
 export const ROOM_TYPES: Record<RoomType, string> = { lecture_hall: 'Lecture hall', lab: 'Lab', seminar: 'Seminar room' }
+
+/** How a cohort studies; ODEL students sit their exams in a room of their own. */
+export const COURSE_MODES: Record<CourseMode, string> = {
+  regular: 'Regular', odel: 'ODEL', weekend: 'Weekend', evening: 'Evening', school_based: 'School-based', part_time: 'Part-time',
+}
 
 export interface Term {
   id: string
@@ -38,6 +44,7 @@ export interface TeachingCourse {
   subClass: string
   label: string
   students: number
+  mode: CourseMode
 }
 
 export interface UnitGroup {
@@ -76,6 +83,7 @@ export interface TeachingLecturer {
   phone: string
   email: string
   maxWeeklyHours: number | null
+  maxExamDuties: number | null
   active: boolean
   display: string
 }
@@ -123,6 +131,7 @@ export interface CourseInput {
   semester: number
   subClass: string
   students: number
+  mode: CourseMode
 }
 
 export interface UnitInput {
@@ -154,6 +163,7 @@ export interface LecturerInput {
   phone: string
   email: string
   maxWeeklyHours: number | null
+  maxExamDuties: number | null
   active: boolean
 }
 
