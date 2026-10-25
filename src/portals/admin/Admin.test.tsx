@@ -180,6 +180,36 @@ describe('admin console', () => {
     expect(await screen.findByText(/same department as/i)).toBeInTheDocument()
   })
 
+  it("corrects a department's name and code in place", async () => {
+    const user = userEvent.setup()
+    await signInAtOversight(user, 'admin@university.edu')
+    await screen.findByRole('table')
+    await user.click(navLink(/^departments$/i))
+    await user.type(await screen.findByLabelText('Department name'), 'Geografy')
+    await user.type(screen.getByLabelText('Code'), 'DGEO')
+    await user.click(screen.getByRole('button', { name: /add department/i }))
+    await screen.findByRole('cell', { name: 'Geografy' })
+
+    await user.click(screen.getByRole('button', { name: 'Edit Geografy' }))
+    const row = screen.getByRole('button', { name: /save/i }).closest('tr')!
+    const name = within(row).getByLabelText('Department name')
+    await user.clear(name)
+    await user.type(name, 'Geography')
+    await user.clear(within(row).getByLabelText('Code'))
+    await user.type(within(row).getByLabelText('Code'), 'dgeog')
+    await user.click(within(row).getByRole('button', { name: /save/i }))
+    expect(await screen.findByText('Geografy is now Geography (DGEOG).')).toBeInTheDocument()
+    expect(within(screen.getByRole('cell', { name: 'Geography' }).closest('tr')!).getByText('DGEOG')).toBeInTheDocument()
+
+    // Another department's code is refused, and the row stays open to fix it.
+    await user.click(screen.getByRole('button', { name: 'Edit Geography' }))
+    const again = screen.getByRole('button', { name: /save/i }).closest('tr')!
+    await user.clear(within(again).getByLabelText('Code'))
+    await user.type(within(again).getByLabelText('Code'), 'DMATH')
+    await user.click(within(again).getByRole('button', { name: /save/i }))
+    expect(await within(again).findByRole('alert')).toHaveTextContent('The code DMATH is already used by Mathematics.')
+  })
+
   it('verifies a unit the timetable does not list its lecturer for', async () => {
     const user = userEvent.setup()
     await signInAtOversight(user, 'admin@university.edu')
