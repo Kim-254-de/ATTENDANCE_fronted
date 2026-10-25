@@ -6,7 +6,7 @@ import { errorMessage } from '@/lib/api'
 import type { EvaluationRound } from '@/types'
 import { RoundStatusBadge } from './EvaluationResultsView'
 
-/** Evaluation rounds as a list of links, for the department and faculty portals (QA has its own page with create and edit). */
+/** Evaluation rounds as a list of links, for the department portal (QA has its own page with create and edit). */
 export function EvaluationRoundList({ rounds, isPending, error, refetch, linkTo }: {
   rounds: EvaluationRound[] | undefined
   isPending: boolean

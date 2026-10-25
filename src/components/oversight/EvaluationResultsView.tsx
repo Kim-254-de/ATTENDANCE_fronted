@@ -20,7 +20,7 @@ const formatWindow = (opensAt: string, closesAt: string) => {
 }
 
 /**
- * One evaluation round's results, shared by the QA, faculty and department portals. Each
+ * One evaluation round's results, shared by the QA and department portals. Each
  * reader's scope is decided by the backend. A unit below the round's minimum responses shows
  * only its counts: its ratings and comments are withheld so a small class cannot be identified.
  */

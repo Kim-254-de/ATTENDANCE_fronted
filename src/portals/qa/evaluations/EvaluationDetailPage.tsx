@@ -17,7 +17,7 @@ export function EvaluationDetailPage() {
   const { roundId } = useParams()
   const { data: round, isPending, error, refetch } = useEvaluationRound(roundId)
   const [filters, setFilters] = useState<TargetFilterValues>({})
-  const results = useEvaluationResults(roundId, { departmentId: filters.targetDepartmentId, facultyId: filters.targetFacultyId })
+  const results = useEvaluationResults(roundId, { departmentId: filters.targetDepartmentId })
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

@@ -5,7 +5,7 @@ import { formatDateTime, initials } from '@/lib/format'
 import type { Officer } from '@/types'
 import { useOfficerActions } from './useOfficerActions'
 
-const ROLE_LABEL: Record<Officer['role'], string> = { admin: 'Administrator', faculty: 'Faculty officer', department: 'Department officer', qa: 'QA officer' }
+const ROLE_LABEL: Record<Officer['role'], string> = { admin: 'Administrator', management: 'Management', department: 'Department officer', qa: 'QA officer' }
 
 function StatusBadge({ officer }: { officer: Officer }) {
   if (officer.status === 'ACTIVE') return <span className="rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success">Active</span>
@@ -31,7 +31,7 @@ export function OfficersTable({
   emptyText,
 }: {
   officers: Officer[]
-  base: '/admin/officers' | '/faculties/officers'
+  base: '/admin/officers'
   listKey: readonly unknown[]
   currentUserId?: string
   emptyText: string
@@ -78,7 +78,7 @@ export function OfficersTable({
               </td>
               <td className="px-5 py-3">
                 <p className="text-ink">{ROLE_LABEL[o.role]}</p>
-                <p className="text-xs text-muted">{o.departmentName ?? o.facultyName ?? '—'}</p>
+                <p className="text-xs text-muted">{o.departmentName ?? (o.role === 'management' ? 'Whole university' : '—')}</p>
               </td>
               <td className="px-5 py-3"><StatusBadge officer={o} /></td>
               <td className="px-5 py-3 text-muted">{o.lastLoginAt ? formatDateTime(o.lastLoginAt) : 'Never'}</td>

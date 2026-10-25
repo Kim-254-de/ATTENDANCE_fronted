@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { initials } from '@/lib/format'
 import type { Account } from '@/types'
 
-type OfficerRole = 'admin' | 'department' | 'faculty' | 'qa'
+type OfficerRole = 'admin' | 'department' | 'management' | 'qa'
 type Officer = Extract<Account, { role: OfficerRole }>
 
 /** "Department officer · Computer Science": what this account is, and over what. */
@@ -15,13 +15,13 @@ export function officerSubtitle(user: Officer): string {
   switch (user.role) {
     case 'admin': return 'Administrator'
     case 'department': return `Department officer · ${user.departmentName}`
-    case 'faculty': return `Faculty officer · ${user.facultyName}`
+    case 'management': return 'Management'
     case 'qa': return user.title ? `Quality assurance · ${user.title}` : 'Quality assurance officer'
   }
 }
 
 /**
- * "My profile" for every invited officer (admin, faculty, department, QA). These accounts are
+ * "My profile" for every invited officer (admin, management, department, QA). These accounts are
  * provisioned, so there is nothing to edit and no Delete account. Same order as the lecturer and
  * student pages: identity, details, the password, then Sign out.
  */

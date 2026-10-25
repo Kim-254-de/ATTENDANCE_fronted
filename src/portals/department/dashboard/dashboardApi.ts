@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { DepartmentOverview, DepartmentProfile } from '@/types'
 
-/** The department the signed-in officer oversees — name and faculty for the page chrome. */
+/** The department the signed-in officer oversees — name and code for the page chrome. */
 export const useDepartmentProfile = () =>
   useQuery({
     queryKey: ['department', 'me'],

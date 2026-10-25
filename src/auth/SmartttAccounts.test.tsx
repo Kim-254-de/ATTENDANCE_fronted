@@ -23,10 +23,11 @@ describe('signing in with a SMARTTT account', () => {
     expect(screen.queryByText(/no account yet\?/i)).not.toBeInTheDocument()
   })
 
-  it('leaves officers on their attendance password', async () => {
+  it('leaves officers on their attendance password, and sends administrators to their SMARTTT login', async () => {
     renderApp('/oversight')
     expect(await screen.findByLabelText('Email')).toBeInTheDocument()
-    expect(screen.queryByText(/smarttt/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/management and department officers: the email your invitation was sent to/i)).toBeInTheDocument()
+    expect(screen.getByText(/administrators: your smarttt login and password/i)).toBeInTheDocument()
   })
 
   it('sends anyone opening sign-up back to sign in, saying why', async () => {

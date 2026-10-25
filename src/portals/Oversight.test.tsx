@@ -4,8 +4,8 @@ import { afterEach, vi } from 'vitest'
 import { renderApp } from '@/test/renderApp'
 
 /**
- * The oversight backlog across portals: exam eligibility, borrowing a lecturer from another
- * department, placing lecturers in departments, and student course evaluations.
+ * The oversight backlog across portals: exam eligibility, placing lecturers in departments,
+ * and student course evaluations.
  */
 
 afterEach(() => { vi.restoreAllMocks() })
@@ -24,7 +24,7 @@ async function signInAtOversight(email: string) {
 }
 
 const DEPARTMENT = 'g.mutiso@university.edu'
-const FACULTY = 'd.rotich@university.edu'
+const MANAGEMENT = 'd.rotich@university.edu'
 const QA = 's.achieng@university.edu'
 const ADMIN = 'admin@university.edu'
 
@@ -70,63 +70,31 @@ describe('exam eligibility', () => {
   })
 })
 
-describe('allocating a lecturer from another department', () => {
-  it('offers other departments’ lecturers, grouped apart, and allocates one', async () => {
-    const user = await signInAtOversight(DEPARTMENT)
-    await screen.findAllByRole('link', { name: /^courses$/i })
-    await user.click(navLink(/^courses$/i))
-
-    const select = await screen.findByLabelText(/lecturer for the next section/i)
-    const others = await within(select).findByRole('group', { name: /other departments/i })
-    expect(within(others).getByRole('option', { name: /dr\. ruth kamau — mathematics/i })).toBeInTheDocument()
-
-    await user.selectOptions(select, within(others).getByRole('option', { name: /ruth kamau/i }))
-    await user.click(screen.getByRole('button', { name: /assign to next open section/i }))
-    expect(await screen.findByText(/every section has a lecturer/i)).toBeInTheDocument()
-  })
-})
-
 describe('placing lecturers in departments', () => {
-  it('lets a faculty officer place an unassigned lecturer in one of its departments', async () => {
-    const user = await signInAtOversight(FACULTY)
-    await user.click(await screen.findByText('Placement', { selector: 'span' }))
-
-    expect(await screen.findByText(/smarttt says “comp\. sci & it”/i)).toBeInTheDocument()
-    const place = screen.getByLabelText(/place dr\. samuel kiprono/i)
-    await within(place).findByRole('option', { name: 'Computer Science' })
-    await user.selectOptions(place, 'Computer Science')
-    const card = screen.getByText('Dr. Samuel Kiprono').closest('li')!
-    await user.click(within(card).getByRole('button', { name: /^place$/i }))
-
-    await waitFor(() => expect(within(card).getByText('Computer Science')).toBeInTheDocument())
-    expect(within(card).getByRole('button', { name: /^move$/i })).toBeInTheDocument()
-  })
-
-  it('lets an administrator move a lecturer to another faculty', async () => {
+  it('lets an administrator move a lecturer to any department, each shown with its code', async () => {
     const user = await signInAtOversight(ADMIN)
     await screen.findAllByRole('link', { name: /^lecturers$/i })
     await user.click(navLink(/^lecturers$/i))
 
     const select = await screen.findByLabelText(/move mr\. peter njuguna/i)
-    await within(select).findByRole('option', { name: 'Accounting' })
-    // Departments are grouped by faculty, so a cross-faculty move is explicit.
-    expect(within(select).getByRole('group', { name: 'Business and Economics' })).toBeInTheDocument()
-    await user.selectOptions(select, 'Accounting')
+    const accounting = await within(select).findByRole('option', { name: 'Accounting (DACC)' })
+    expect(within(select).queryByRole('group')).not.toBeInTheDocument()
+    await user.selectOptions(select, accounting)
     const card = screen.getByText('Mr. Peter Njuguna').closest('li')!
     await user.click(within(card).getByRole('button', { name: /^move$/i }))
-    await waitFor(() => expect(within(card).getByText(/business and economics/i)).toBeInTheDocument())
+    await waitFor(() => expect(within(card).getByText('Accounting')).toBeInTheDocument())
   })
 })
 
 describe('unifying department spellings', () => {
-  it('remembers SMARTTT’s spelling when a lecturer is placed, and shows it to the administrator', async () => {
-    const user = await signInAtOversight(FACULTY)
-    await user.click(await screen.findByText('Placement', { selector: 'span' }))
+  it('remembers SMARTTT’s spelling when an administrator places a lecturer', async () => {
+    const user = await signInAtOversight(ADMIN)
+    await screen.findAllByRole('link', { name: /^lecturers$/i })
+    await user.click(navLink(/^lecturers$/i))
 
     // "Comp. Sci & IT" matches no department here, so placing him teaches the system that spelling.
     const place = await screen.findByLabelText(/place dr\. samuel kiprono/i)
-    await within(place).findByRole('option', { name: 'Computer Science' })
-    await user.selectOptions(place, 'Computer Science')
+    await user.selectOptions(place, await within(place).findByRole('option', { name: 'Computer Science (DCOMP)' }))
     const card = screen.getByText('Dr. Samuel Kiprono').closest('li')!
     await user.click(within(card).getByRole('button', { name: /^place$/i }))
     expect(await within(card).findByRole('status')).toHaveTextContent(/smarttt’s “comp\. sci & it” now means computer science/i)
@@ -209,7 +177,7 @@ describe('course evaluations', () => {
 describe('the account menu', () => {
   it.each([
     ['department', DEPARTMENT, 'Department officer · Computer Science'],
-    ['faculty', FACULTY, /^Faculty officer · /],
+    ['management', MANAGEMENT, 'Management'],
     ['QA', QA, /^Quality assurance/],
   ])('lets a %s officer reach their profile and sign out without the desktop sidebar', async (_, email, subtitle) => {
     const user = await signInAtOversight(email)

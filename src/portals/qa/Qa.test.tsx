@@ -96,7 +96,7 @@ describe('quality assurance portal', () => {
     // still-loading query, so it needs an awaited find, not a synchronous get.
     await screen.findByRole('heading', { name: /new audit/i })
     expect(await screen.findByText('CS Department Q3 Internal Audit')).toBeInTheDocument()
-    expect(screen.getByText('PET Faculty Annual Review')).toBeInTheDocument()
+    expect(screen.getByText('Software Engineering Annual Review')).toBeInTheDocument()
 
     await user.click(screen.getByText('CS Department Q3 Internal Audit'))
 
@@ -113,7 +113,7 @@ describe('quality assurance portal', () => {
     await signInAsQa(user)
     await user.click(navLink(/^audits$/i))
     await screen.findByRole('heading', { name: /new audit/i })
-    await user.click(await screen.findByText('PET Faculty Annual Review'))
+    await user.click(await screen.findByText('Software Engineering Annual Review'))
 
     // Unique to a PLANNED audit's own detail page.
     await user.click(await screen.findByRole('button', { name: /start audit/i }))
@@ -183,7 +183,7 @@ describe('quality assurance portal', () => {
     await user.selectOptions(filters.getByLabelText(/^status$/i), 'Planned')
 
     await waitFor(() => expect(screen.queryByText('CS Department Q3 Internal Audit')).not.toBeInTheDocument())
-    expect(screen.getByText('PET Faculty Annual Review')).toBeInTheDocument()
+    expect(screen.getByText('Software Engineering Annual Review')).toBeInTheDocument()
     const exports = within(screen.getByRole('group', { name: /export audit register/i }))
     expect(exports.getByRole('link', { name: /csv/i })).toHaveAttribute('href', expect.stringMatching(/\/audits\/export\.csv\?status=PLANNED$/))
   })

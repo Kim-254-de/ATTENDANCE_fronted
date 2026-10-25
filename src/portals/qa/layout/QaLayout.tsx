@@ -8,7 +8,7 @@ import { BottomNav } from './BottomNav'
 import { Sidebar } from './Sidebar'
 
 /**
- * Shell for the QA portal. Desktop-first, like department/faculty — an
+ * Shell for the QA portal. Desktop-first, like the department portal — an
  * officer reads these tables and fills checklists on a laptop. The avatar's menu holds
  * the profile and sign-out, since phones have no sidebar.
  */

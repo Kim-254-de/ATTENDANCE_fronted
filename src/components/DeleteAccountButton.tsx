@@ -3,14 +3,14 @@ import { Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { api, errorMessage } from '@/lib/api'
 
-type Scope = 'department' | 'faculty'
+type Scope = 'department'
 type Kind = 'lecturer' | 'student'
 
-const BASE: Record<Scope, string> = { department: '/departments', faculty: '/faculties' }
+const BASE: Record<Scope, string> = { department: '/departments' }
 
 /**
- * Lets a department or faculty officer delete a lecturer's or student's
- * account in their scope (DELETE /departments|faculties/{lecturers|students}/:id).
+ * Lets a department officer delete a lecturer's or student's account in
+ * their department (DELETE /departments/{lecturers|students}/:id).
  * The backend anonymises it: the attendance figures stay, the name goes. On
  * success every query of the portal is refetched, so lists and counts drop the
  * account.

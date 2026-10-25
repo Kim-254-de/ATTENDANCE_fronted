@@ -1,6 +1,7 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { EnrolmentStudent, Terminal, TerminalCapability } from '@/portals/department/terminals/terminalsApi'
-import type { Account, Admin, AdminDepartment, AdminFaculty, Allocation, AttendanceMark, AttendancePolicy, CheckInResult, CourseOffering, CreateSessionInput, CreateUnitInput, CurrentQr, DepartmentAlias, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, DuplicateDepartment, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, FaceCheckInResult, FaceIdentifyResult, FaceStatus, FacultyDepartment, FacultyLecturer, FacultyOfficer, FacultyOverview, FacultyProfile, FacultyStudent, FacultyTimekeepingEntry, FacultyUnit, GeofenceStatus, InvitationDetails, Lecturer, LecturerDirectoryEntry, LecturerStudent, Officer, Overview, PlacementLecturer, PlacementResult, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaCapaStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentEvaluationRound, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod } from '@/types'
+import { resetTeaching, teachingHandlers } from './teaching'
+import type { Account, Admin, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, InvitationDetails, Officer, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, PlacementLecturer, StudentEvaluationRound, PendingUnit, ManagementAccount, ManagementDepartment, ManagementDepartmentYears, ManagementStudent, ManagementUnit, ManagementUniversity, ManagementYearDetail } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -39,7 +40,6 @@ const departmentOfficer: DepartmentOfficer = {
   email: 'g.mutiso@university.edu',
   departmentId: 'dept-cs',
   departmentName: 'Computer Science',
-  facultyName: 'Physical Engineering and Technologies',
   status: 'ACTIVE',
   avatarUrl: null,
 }
@@ -54,19 +54,17 @@ const adminUser: Admin = {
   avatarUrl: null,
 }
 
-/** Faculty accounts are provisioned the same way department ones are. */
-const facultyOfficer: FacultyOfficer = {
-  id: 'fac-1',
-  role: 'faculty',
+/** Management accounts are invited the same way department ones are; university-wide, so no scope. */
+const managementAccount: ManagementAccount = {
+  id: 'mgmt-1',
+  role: 'management',
   fullName: 'Prof. Daniel K. Rotich',
   email: 'd.rotich@university.edu',
-  facultyId: 'fac-pet',
-  facultyName: 'Physical Engineering and Technologies',
   status: 'ACTIVE',
   avatarUrl: null,
 }
 
-/** QA accounts are provisioned too: no department/faculty of its own, so nothing org-unit-scoped to resolve here. */
+/** QA accounts are provisioned too: no department of its own, so nothing org-unit-scoped to resolve here. */
 const qaOfficer: QaOfficer = {
   id: 'qa-1',
   role: 'qa',
@@ -83,7 +81,7 @@ const accounts = new Map<string, { user: Account; password: string }>([
   [lecturer.email.toLowerCase(), { user: lecturer, password: 'password' }],
   [student.email.toLowerCase(), { user: student, password: 'password' }],
   [departmentOfficer.email.toLowerCase(), { user: departmentOfficer, password: 'password' }],
-  [facultyOfficer.email.toLowerCase(), { user: facultyOfficer, password: 'password' }],
+  [managementAccount.email.toLowerCase(), { user: managementAccount, password: 'password' }],
   [adminUser.email.toLowerCase(), { user: adminUser, password: 'password' }],
   [qaOfficer.email.toLowerCase(), { user: qaOfficer, password: 'password' }],
 ])
@@ -182,8 +180,9 @@ export const resetMocks = () => {
   resetFaceMocks()
   resetOfficerMocks()
   resetQaMocks()
-  resetOversightMocks()
   resetTerminalMocks()
+  resetOversightMocks()
+  resetTeaching()
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -414,9 +413,8 @@ const recentSessionsHandler = http.get(`${API}/reports/sessions`, async ({ reque
   return ok(recent.slice(0, limit))
 })
 
-export const dataHandlers = [
-  http.get(`${API}/lecturer/units`, () => (store.get() ? ok(units) : unauthorized())),
-]
+/** What VITE_USE_MOCKS=data still mocks: nothing, now that the backend serves every endpoint the portals call. */
+export const dataHandlers = []
 
 /**
  * `/lecturers/students` is real now (see lecturer.routes.ts on the backend) — deliberately NOT
@@ -990,7 +988,7 @@ const departmentHandlers = [
     const profile: DepartmentProfile = {
       departmentId: officer.departmentId,
       departmentName: officer.departmentName,
-      facultyName: officer.facultyName,
+      departmentCode: 'DCOMP',
     }
     return ok(profile)
   }),
@@ -1136,87 +1134,31 @@ const departmentHandlers = [
     return ok(rows)
   }),
 
-  /** Courses faculty has provided to the signed-in officer's own department. */
-  http.get(`${API}/departments/courses`, async () => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    await delay(150)
-    const officer = currentAccount as DepartmentOfficer
-    const rows: CourseOffering[] = COURSE_OFFERINGS
-      .filter((o) => o.departmentId === officer.departmentId)
-      .map(({ departmentId: _departmentId, ...offering }) => offering)
-    return ok(rows)
-  }),
-
-  http.patch(`${API}/departments/courses/:offeringId`, async ({ params, request }) => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    await delay(150)
-    const officer = currentAccount as DepartmentOfficer
-    const offering = COURSE_OFFERINGS.find((o) => o.id === params.offeringId)
-    if (!offering || offering.departmentId !== officer.departmentId) {
-      return fail(404, 'NOT_FOUND', 'No such course in your department.')
-    }
-    const { segmentsPlanned } = (await request.json()) as { segmentsPlanned?: number }
-    if (!segmentsPlanned || segmentsPlanned < 1 || segmentsPlanned > 26) {
-      return fail(400, 'VALIDATION_FAILED', 'Sections must be between 1 and 26.')
-    }
-    if (segmentsPlanned < offering.segmentsFilled) {
-      return fail(400, 'VALIDATION_FAILED', `This course already has ${offering.segmentsFilled} section(s) assigned; it cannot be reduced below that.`)
-    }
-    offering.segmentsPlanned = segmentsPlanned
-    return ok({ offeringId: offering.id, segmentsPlanned })
-  }),
-
-  /** Allocates a lecturer (own or borrowed) to the next open segment — mirrors department.repository.ts allocateLecturerToSegment. */
-  http.post(`${API}/departments/courses/:offeringId/segments`, async ({ params, request }) => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    await delay(150)
-    const officer = currentAccount as DepartmentOfficer
-    const offering = COURSE_OFFERINGS.find((o) => o.id === params.offeringId)
-    if (!offering || offering.departmentId !== officer.departmentId) {
-      return fail(404, 'NOT_FOUND', 'No such course in your department.')
-    }
-    const { lecturerUserId } = (await request.json()) as { lecturerUserId?: string }
-    if (!LECTURER_DIRECTORY.some((l) => l.userId === lecturerUserId)) return fail(400, 'VALIDATION_FAILED', 'No such lecturer.')
-    if (offering.segmentsFilled >= offering.segmentsPlanned) {
-      return fail(409, 'CONFLICT', 'This course already has a lecturer assigned to every planned section.')
-    }
-    const multiSegment = offering.segmentsPlanned > 1
-    const letter = String.fromCharCode('A'.charCodeAt(0) + offering.segmentsFilled)
-    offering.segmentsFilled += 1
-    const code = multiSegment ? `${offering.code} GR ${letter}` : offering.code
-    return ok({ unitId: `unit-${++courseOfferingSeq}`, code }, 201)
-  }),
+  ...teachingHandlers(API, requireDepartment),
 ]
 
 /* ------------------------------------------------------------------ *
- * Faculty portal (GET /faculties/*)
- *
- * One officer oversees a whole faculty, so these rows are wider again than
- * the department portal's: three departments (one with no lecturers yet,
- * matching how a freshly created department looks for real), the same three
- * lecturers the department mock uses so the two portals never disagree about
- * them, and a punctuality log spanning two departments. Types mirror the
- * real backend's response shapes field-for-field, so — unlike the department
- * mocks — nothing here needs a raw/mapped split.
+ * Departments, lecturers and units: seed data shared by the department,
+ * management and admin mocks below, so the portals never disagree about them.
  * ------------------------------------------------------------------ */
 
-const FACULTY_DEPARTMENTS_SEED = [
-  { id: 'dept-cs', name: 'Computer Science' },
-  { id: 'dept-se', name: 'Software Engineering' },
+const DEPARTMENTS_SEED = [
+  { id: 'dept-cs', name: 'Computer Science', code: 'DCOMP' },
+  { id: 'dept-se', name: 'Software Engineering', code: 'DSE' },
   // Exists but nobody has been assigned to it yet — the real seeded data has departments like this.
-  { id: 'dept-as', name: 'Actuarial Science' },
+  { id: 'dept-as', name: 'Actuarial Science', code: 'DAS' },
 ]
 
-const FACULTY_LECTURERS: FacultyLecturer[] = [
+interface SeedLecturer { userId: string; fullName: string; staffNumber: string; departmentId: string; departmentName: string; isOwnStaff: boolean; unitsTaught: number; unitsElsewhere: number; studentsTaught: number; avgAttendanceRate: number; sessionsHeld: number; avgLateMinutes: number; onTimeRate: number }
+interface SeedUnit { unitId: string; unitCode: string; unitName: string | null; lecturerUserId: string; lecturerName: string; departmentId: string; departmentName: string; activeStudents: number; sessionsHeld: number; avgAttendanceRate: number }
+
+const SEED_LECTURERS: SeedLecturer[] = [
   { userId: lecturer.id, fullName: lecturer.fullName, staffNumber: lecturer.staffNumber, departmentId: 'dept-cs', departmentName: 'Computer Science', isOwnStaff: true, unitsTaught: 2, unitsElsewhere: 0, studentsTaught: 151, avgAttendanceRate: 92.5, sessionsHeld: 38, avgLateMinutes: 1.2, onTimeRate: 94.7 },
   { userId: 'lec-2', fullName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', departmentId: 'dept-cs', departmentName: 'Computer Science', isOwnStaff: true, unitsTaught: 2, unitsElsewhere: 1, studentsTaught: 93, avgAttendanceRate: 76, sessionsHeld: 22, avgLateMinutes: 8.4, onTimeRate: 63.6 },
   { userId: 'lec-3', fullName: 'Mr. Peter Njuguna', staffNumber: 'STF/03480', departmentId: 'dept-se', departmentName: 'Software Engineering', isOwnStaff: true, unitsTaught: 1, unitsElsewhere: 0, studentsTaught: 110, avgAttendanceRate: 68, sessionsHeld: 14, avgLateMinutes: 17.9, onTimeRate: 42.9 },
 ]
 
-const FACULTY_UNITS: FacultyUnit[] = [
+const SEED_UNITS: SeedUnit[] = [
   { unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', lecturerUserId: lecturer.id, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', activeStudents: 87, sessionsHeld: 20, avgAttendanceRate: 90 },
   { unitId: 'u2', unitCode: 'CS405', unitName: 'Database Management Systems', lecturerUserId: lecturer.id, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', activeStudents: 64, sessionsHeld: 18, avgAttendanceRate: 95 },
   { unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', lecturerUserId: 'lec-2', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', activeStudents: 52, sessionsHeld: 14, avgAttendanceRate: 76 },
@@ -1225,271 +1167,131 @@ const FACULTY_UNITS: FacultyUnit[] = [
   { unitId: 'u5', unitCode: 'CS410', unitName: 'Distributed Systems', lecturerUserId: 'lec-2', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', activeStudents: 41, sessionsHeld: 0, avgAttendanceRate: 0 },
 ]
 
-/**
- * The timekeeping log: scheduled start against when the class was actually
- * opened, spanning both staffed departments.
- */
-const FACULTY_TIMEKEEPING: FacultyTimekeepingEntry[] = [
-  { sessionId: 'fts-1', unitId: 'u1', unitCode: 'CS301', lecturerUserId: lecturer.id, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', title: null, scheduledStartAt: hoursAgo(4).toISOString(), opensAt: hoursAgo(4).toISOString(), lateMinutes: 0, onTime: true },
-  { sessionId: 'fts-2', unitId: 'u2', unitCode: 'CS405', lecturerUserId: lecturer.id, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', title: null, scheduledStartAt: hoursAgo(28).toISOString(), opensAt: new Date(hoursAgo(28).getTime() - 3 * 60_000).toISOString(), lateMinutes: -3, onTime: true },
-  { sessionId: 'fts-3', unitId: 'u3', unitCode: 'CS502', lecturerUserId: 'lec-2', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', title: null, scheduledStartAt: hoursAgo(7).toISOString(), opensAt: new Date(hoursAgo(7).getTime() + 9 * 60_000).toISOString(), lateMinutes: 9, onTime: false },
-  { sessionId: 'fts-4', unitId: 'u4', unitCode: 'CS210', lecturerUserId: 'lec-3', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', title: null, scheduledStartAt: hoursAgo(9).toISOString(), opensAt: new Date(hoursAgo(9).getTime() + 23 * 60_000).toISOString(), lateMinutes: 23, onTime: false },
-  { sessionId: 'fts-5', unitId: 'u4', unitCode: 'CS210', lecturerUserId: 'lec-3', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', title: null, scheduledStartAt: hoursAgo(33).toISOString(), opensAt: new Date(hoursAgo(33).getTime() + 16 * 60_000).toISOString(), lateMinutes: 16, onTime: false },
+/* ------------------------------------------------------------------ *
+ * Management portal (GET /management/*): university-wide.
+ *
+ * The seeded departments plus Business Administration, each with its code.
+ * A unit's year is the
+ * first digit of its code, as on the backend (CS502 is postgraduate and in
+ * no year). Each unit's roster is generated from a few names, attended
+ * classes spread around the unit's rate, so every figure is derived from
+ * the same rows and the levels always agree with each other.
+ * ------------------------------------------------------------------ */
+
+const MANAGEMENT_DEPARTMENTS = [
+  ...DEPARTMENTS_SEED.map((d) => ({ departmentId: d.id, departmentName: d.name, departmentCode: d.code })),
+  { departmentId: 'dept-ba', departmentName: 'Business Administration', departmentCode: 'DBA' },
 ]
 
-/** Faculty pages are for faculty accounts only — mirrors the backend's role guard. */
-const requireFaculty = () => {
+const MANAGEMENT_UNITS_SEED: { unitId: string; unitCode: string; unitName: string | null; departmentId: string; lecturerUserId: string; lecturerName: string; staffNumber: string | null; sessionsHeld: number; rate: number }[] = [
+  { unitId: 'u6', unitCode: 'CS110', unitName: 'Introduction to Programming', departmentId: 'dept-cs', lecturerUserId: 'lec-2', lecturerName: 'Dr. Mary Wambui', staffNumber: 'STF/02291', sessionsHeld: 16, rate: 82 },
+  ...SEED_UNITS.map((u) => {
+    const teacher = SEED_LECTURERS.find((l) => l.userId === u.lecturerUserId)!
+    return { unitId: u.unitId, unitCode: u.unitCode, unitName: u.unitName, departmentId: u.departmentId, lecturerUserId: u.lecturerUserId, lecturerName: u.lecturerName, staffNumber: teacher.staffNumber, sessionsHeld: u.sessionsHeld, rate: u.avgAttendanceRate }
+  }),
+  { unitId: 'u7', unitCode: 'BBA101', unitName: 'Principles of Management', departmentId: 'dept-ba', lecturerUserId: 'lec-4', lecturerName: 'Dr. Ruth Kendi', staffNumber: 'STF/04102', sessionsHeld: 12, rate: 61 },
+]
+
+const ROSTER = ['Ama Mensah', 'Brian Kiprono', 'Cynthia Atieno', 'David Mwangi', 'Esther Chebet', 'Felix Omondi']
+/** How far each roster position sits from the unit's rate, in points: one student well under, the rest around it. */
+const ROSTER_SPREAD = [-30, -8, 0, 4, 8, 12]
+
+/** Every unit with its roster; `departmentId` is the mock's own, for filtering, and is not sent. */
+const managementUnits = (): (ManagementUnit & { departmentId: string })[] =>
+  MANAGEMENT_UNITS_SEED.map(({ rate, ...u }) => {
+    const students: ManagementStudent[] = ROSTER.map((fullName, i) => {
+      const attended = Math.max(0, Math.min(u.sessionsHeld, Math.round((u.sessionsHeld * (rate + ROSTER_SPREAD[i]!)) / 100)))
+      return {
+        studentUserId: `mstu-${i + 1}`,
+        registrationNumber: `EBT1/${String(1000 + i)}/23`,
+        fullName,
+        yearOfStudy: unitYear(u.unitCode),
+        sessionsHeld: u.sessionsHeld,
+        sessionsAttended: attended,
+        attendanceRate: u.sessionsHeld > 0 ? (attended / u.sessionsHeld) * 100 : null,
+      }
+    })
+    return { ...u, avgAttendanceRate: u.sessionsHeld > 0 ? rate : null, students }
+  })
+
+/** The first digit of the code, when it is 1–4 (management.repository.ts UNIT_YEAR). */
+const unitYear = (code: string): number | null => {
+  const digit = Number(code.match(/[0-9]/)?.[0])
+  return digit >= 1 && digit <= 4 ? digit : null
+}
+
+const mean = (rates: (number | null)[]) => {
+  const measured = rates.filter((r): r is number => r !== null)
+  return measured.length ? measured.reduce((n, r) => n + r, 0) / measured.length : null
+}
+
+const summarise = (list: ManagementUnit[]) => ({
+  unitCount: list.length,
+  studentCount: new Set(list.flatMap((u) => u.students.map((s) => s.registrationNumber))).size,
+  sessionsHeld: list.reduce((n, u) => n + u.sessionsHeld, 0),
+  checkIns: list.reduce((n, u) => n + u.students.reduce((m, s) => m + s.sessionsAttended, 0), 0),
+  avgAttendanceRate: mean(list.map((u) => u.avgAttendanceRate)),
+})
+
+/** Management pages are for the management role only. */
+const requireManagement = () => {
   if (!store.get()) return unauthorized()
-  if (currentAccount.role !== 'faculty') return fail(403, 'FORBIDDEN', 'Forbidden')
+  if (currentAccount.role !== 'management') return fail(403, 'FORBIDDEN', 'Forbidden')
   return null
 }
 
-/**
- * Course provisioning's shared state: faculty creates these, departments read
- * and write them. One array, like the real course_offerings table, so both
- * mock sections below agree with each other.
- */
-interface MockCourseOffering {
-  id: string
-  code: string
-  name: string | null
-  departmentId: string
-  segmentsPlanned: number
-  segmentsFilled: number
-}
-const COURSE_OFFERINGS: MockCourseOffering[] = [
-  // Provided but not yet fully staffed, in the seeded department officer's own department —
-  // so both the department and faculty Courses pages have something real to show by default.
-  { id: 'offering-seed-1', code: 'CS610', name: 'Distributed Databases', departmentId: 'dept-cs', segmentsPlanned: 2, segmentsFilled: 1 },
-]
-let courseOfferingSeq = 0
-
-const facultyHandlers = [
-  http.post(`${API}/faculties/departments`, async ({ request }) => {
-    const blocked = requireFaculty()
+const managementHandlers = [
+  http.get(`${API}/management/departments`, async () => {
+    const blocked = requireManagement()
     if (blocked) return blocked
     await delay(150)
-    const { name } = (await request.json()) as { name?: string }
-    const trimmed = name?.trim()
-    if (!trimmed) return fail(400, 'VALIDATION_FAILED', 'Enter the department name.')
-    // Mirrors faculty.service.ts createDepartment: another spelling of an existing department is a duplicate.
-    const existing = FACULTY_DEPARTMENTS_SEED.find((d) => departmentKey(d.name) === departmentKey(trimmed))
-    if (existing) return fail(409, 'CONFLICT', `"${trimmed}" is the same department as "${existing.name}", which already exists.`)
-    const id = `dept-${++courseOfferingSeq}`
-    FACULTY_DEPARTMENTS_SEED.push({ id, name: trimmed })
-    return ok({ departmentId: id, departmentName: trimmed }, 201)
-  }),
-
-  http.post(`${API}/faculties/departments/:departmentId/courses`, async ({ params, request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(150)
-    const dept = FACULTY_DEPARTMENTS_SEED.find((d) => d.id === params.departmentId)
-    if (!dept) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
-    const { code, name } = (await request.json()) as { code?: string; name?: string }
-    const normalised = code?.trim().toUpperCase().replace(/\s+/g, ' ') ?? ''
-    if (!normalised) return fail(400, 'VALIDATION_FAILED', 'Enter the course code, e.g. COSC 100.')
-    if (COURSE_OFFERINGS.some((o) => o.code === normalised)) {
-      return fail(409, 'CONFLICT', `${normalised} already exists as a course or unit.`)
-    }
-    const offering: MockCourseOffering = {
-      id: `offering-${++courseOfferingSeq}`,
-      code: normalised,
-      name: name?.trim() || null,
-      departmentId: dept.id,
-      segmentsPlanned: 1,
-      segmentsFilled: 0,
-    }
-    COURSE_OFFERINGS.push(offering)
-    const { segmentsFilled: _segmentsFilled, ...created } = offering
-    return ok(created, 201)
-  }),
-
-  /** Every course offering across every department in the faculty, department named. */
-  http.get(`${API}/faculties/courses`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(150)
-    const rows = COURSE_OFFERINGS.map((o) => ({
-      ...o,
-      departmentName: FACULTY_DEPARTMENTS_SEED.find((d) => d.id === o.departmentId)?.name ?? 'Unknown',
-    }))
-    return ok(rows)
-  }),
-
-  http.get(`${API}/faculties/me`, () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const officer = currentAccount as FacultyOfficer
-    const profile: FacultyProfile = { facultyId: officer.facultyId, facultyName: officer.facultyName }
-    return ok(profile)
-  }),
-
-  http.get(`${API}/faculties/overview`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const overview: FacultyOverview = {
-      facultyId: facultyOfficer.facultyId,
-      facultyName: facultyOfficer.facultyName,
-      departmentCount: FACULTY_DEPARTMENTS_SEED.length,
-      lecturerCount: FACULTY_LECTURERS.length,
-      studentCount: 260,
-      unitCount: FACULTY_UNITS.length,
-      avgAttendanceRate: Math.round((FACULTY_UNITS.reduce((n, u) => n + u.avgAttendanceRate, 0) / FACULTY_UNITS.length) * 10) / 10,
-      sessionsHeld: FACULTY_LECTURERS.reduce((n, l) => n + l.sessionsHeld, 0),
-      onTimeRate: 71.4,
-      graceMinutes: 5,
-      periodLabel: 'All time',
-    }
-    return ok(overview)
-  }),
-
-  http.get(`${API}/faculties/departments`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const rows: FacultyDepartment[] = FACULTY_DEPARTMENTS_SEED.map((d) => {
-      const lecturers = FACULTY_LECTURERS.filter((l) => l.departmentId === d.id)
-      const units = FACULTY_UNITS.filter((u) => u.departmentId === d.id)
-      return {
-        departmentId: d.id,
-        departmentName: d.name,
-        lecturerCount: lecturers.length,
-        studentCount: lecturers.reduce((n, l) => n + l.studentsTaught, 0),
-        unitCount: units.length,
-        avgAttendanceRate: units.length ? Math.round((units.reduce((n, u) => n + u.avgAttendanceRate, 0) / units.length) * 10) / 10 : 0,
-        sessionsHeld: lecturers.reduce((n, l) => n + l.sessionsHeld, 0),
-        onTimeRate: lecturers.length ? Math.round((lecturers.reduce((n, l) => n + (l.onTimeRate ?? 0), 0) / lecturers.length) * 10) / 10 : null,
-      }
-    })
-    return ok(rows)
-  }),
-
-  http.get(`${API}/faculties/departments/:departmentId`, async ({ params }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const dept = FACULTY_DEPARTMENTS_SEED.find((d) => d.id === params.departmentId)
-    if (!dept) return fail(404, 'NOT_FOUND', 'Department not found in this faculty.')
-    return ok({
-      departmentId: dept.id,
-      departmentName: dept.name,
-      lecturers: FACULTY_LECTURERS.filter((l) => l.departmentId === dept.id),
-      units: FACULTY_UNITS.filter((u) => u.departmentId === dept.id),
-      courses: COURSE_OFFERINGS.filter((o) => o.departmentId === dept.id),
-    })
-  }),
-
-  http.get(`${API}/faculties/lecturers`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    return ok(FACULTY_LECTURERS.filter((l) => !isDeleted(l.userId)))
-  }),
-
-  http.get(`${API}/faculties/lecturers/:lecturerUserId`, async ({ params }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const row = FACULTY_LECTURERS.find((l) => l.userId === params.lecturerUserId && !isDeleted(l.userId))
-    if (!row) return fail(404, 'NOT_FOUND', 'Lecturer not found in this faculty.')
-    const sessions = FACULTY_TIMEKEEPING.filter((t) => t.lecturerUserId === row.userId)
-      .map((t) => ({
-        sessionId: t.sessionId, unitId: t.unitId, unitCode: t.unitCode, title: null, status: 'CLOSED',
-        opensAt: t.opensAt, closesAt: t.opensAt, scheduledStartAt: t.scheduledStartAt,
-        lateMinutes: t.lateMinutes, present: 0, total: 0, attendanceRate: null,
-      }))
-      .sort((a, b) => b.opensAt.localeCompare(a.opensAt))
-    return ok({
-      lecturer: {
-        userId: row.userId, fullName: row.fullName, staffNumber: row.staffNumber, title: 'Dr.',
-        email: `${row.userId}@university.edu`, departmentId: row.departmentId, departmentName: row.departmentName,
+    const all = managementUnits()
+    const departments: ManagementDepartment[] = MANAGEMENT_DEPARTMENTS
+      .map((d) => ({ ...d, ...summarise(all.filter((u) => u.departmentId === d.departmentId)) }))
+      .sort((a, b) => b.checkIns - a.checkIns || a.departmentName.localeCompare(b.departmentName))
+    const university: ManagementUniversity = {
+      totals: {
+        departmentCount: departments.length,
+        checkIns: departments.reduce((n, d) => n + d.checkIns, 0),
+        sessionsHeld: departments.reduce((n, d) => n + d.sessionsHeld, 0),
       },
-      units: FACULTY_UNITS.filter((u) => u.lecturerUserId === row.userId),
-      sessions,
-    })
-  }),
-
-  http.delete(`${API}/faculties/lecturers/:lecturerUserId`, async ({ params }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const row = FACULTY_LECTURERS.find((l) => l.userId === params.lecturerUserId && !isDeleted(l.userId))
-    if (!row) return fail(404, 'NOT_FOUND', 'No such lecturer in your faculty.')
-    deletedUserIds.add(row.userId)
-    return new HttpResponse(null, { status: 204 })
-  }),
-
-  http.delete(`${API}/faculties/students/:studentUserId`, async ({ params }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    const studentUserId = params.studentUserId as string
-    const found = !isDeleted(studentUserId) && [...allocations.values()].some((roster) => roster.some((a) => a.studentUserId === studentUserId))
-    if (found) deletedUserIds.add(studentUserId)
-    return found ? new HttpResponse(null, { status: 204 }) : fail(404, 'NOT_FOUND', 'No such student in your faculty.')
-  }),
-
-  /** One row per (student, unit) across the faculty — department's students mock, widened and department-tagged. */
-  http.get(`${API}/faculties/students`, async () => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    await delay(200)
-    let i = 0
-    const rows: FacultyStudent[] = [...allocations.entries()].flatMap(([unitId, roster]) => {
-      const unit = FACULTY_UNITS.find((u) => u.unitId === unitId)
-      if (!unit) return []
-      return roster.filter((a) => !isDeleted(a.studentUserId)).map((a): FacultyStudent => {
-        const rate = DEMO_DEPARTMENT_STUDENT_RATES[i++ % DEMO_DEPARTMENT_STUDENT_RATES.length]!
-        return {
-          id: a.id, registrationNumber: a.registrationNumber, studentUserId: a.studentUserId, fullName: a.fullName,
-          unitId, unitCode: unit.unitCode, unitName: unit.unitName,
-          lecturerUserId: unit.lecturerUserId, lecturerName: unit.lecturerName,
-          departmentId: unit.departmentId, departmentName: unit.departmentName,
-          sessionsHeld: 20, sessionsAttended: Math.round((rate / 100) * 20), attendanceRate: rate,
-        }
-      })
-    })
-    for (const extra of DEPARTMENT_EXTRA_STUDENTS) {
-      const unit = FACULTY_UNITS.find((u) => u.unitId === extra.unitId)
-      if (!unit) continue
-      const rate = DEMO_DEPARTMENT_STUDENT_RATES[i++ % DEMO_DEPARTMENT_STUDENT_RATES.length]!
-      rows.push({
-        id: `fac-alloc-${extra.registrationNumber}`, registrationNumber: extra.registrationNumber, studentUserId: null, fullName: extra.fullName,
-        unitId: unit.unitId, unitCode: unit.unitCode, unitName: unit.unitName,
-        lecturerUserId: unit.lecturerUserId, lecturerName: unit.lecturerName,
-        departmentId: unit.departmentId, departmentName: unit.departmentName,
-        sessionsHeld: 18, sessionsAttended: Math.round((rate / 100) * 18), attendanceRate: rate,
-      })
+      departments,
     }
-    return ok(rows)
+    return ok(university)
   }),
 
-  http.get(`${API}/faculties/units`, async () => {
-    const blocked = requireFaculty()
+  http.get(`${API}/management/departments/:departmentId`, async ({ params }) => {
+    const blocked = requireManagement()
     if (blocked) return blocked
-    await delay(200)
-    return ok(FACULTY_UNITS)
+    await delay(150)
+    const department = MANAGEMENT_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
+    if (!department) return fail(404, 'NOT_FOUND', 'Department not found.')
+    const own = managementUnits().filter((u) => u.departmentId === department.departmentId)
+    const detail: ManagementDepartmentYears = {
+      ...department,
+      years: [1, 2, 3, 4].map((year) => ({ year, ...summarise(own.filter((u) => unitYear(u.unitCode) === year)) })),
+      unitsWithoutYear: own.filter((u) => unitYear(u.unitCode) === null).length,
+    }
+    return ok(detail)
   }),
 
-  http.get(`${API}/faculties/timekeeping`, async ({ request }) => {
-    const blocked = requireFaculty()
+  http.get(`${API}/management/departments/:departmentId/years/:year`, async ({ params }) => {
+    const blocked = requireManagement()
     if (blocked) return blocked
-    await delay(200)
-    const query = new URL(request.url).searchParams
-    const lecturerUserId = query.get('lecturerUserId')
-    const unitId = query.get('unitId')
-    const departmentId = query.get('departmentId')
-    const limit = Number(query.get('limit') ?? 20)
-    const rows = FACULTY_TIMEKEEPING
-      .filter((t) =>
-        (!lecturerUserId || t.lecturerUserId === lecturerUserId)
-        && (!unitId || t.unitId === unitId)
-        && (!departmentId || t.departmentId === departmentId))
-      .sort((a, b) => b.opensAt.localeCompare(a.opensAt))
-      .slice(0, Number.isFinite(limit) && limit > 0 ? limit : 20)
-    return ok(rows)
+    await delay(150)
+    const year = Number(params.year)
+    if (!Number.isInteger(year) || year < 1 || year > 4) return fail(400, 'VALIDATION_FAILED', 'Year 1 to 4.')
+    const department = MANAGEMENT_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
+    if (!department) return fail(404, 'NOT_FOUND', 'Department not found.')
+    const detail: ManagementYearDetail = {
+      ...department,
+      year,
+      units: managementUnits()
+        .filter((u) => u.departmentId === department.departmentId && unitYear(u.unitCode) === year)
+        .sort((a, b) => a.unitCode.localeCompare(b.unitCode))
+        .map(({ departmentId: _departmentId, ...unit }) => unit),
+    }
+    return ok(detail)
   }),
 ]
 
@@ -1498,23 +1300,58 @@ const facultyHandlers = [
  * Invitation links are `invite-<n>`; tests read the newest with lastMockInvitationToken().
  */
 const OFFICERS_SEED = (): Officer[] => [
-  { userId: adminUser.id, role: 'admin', fullName: adminUser.fullName, email: adminUser.email, status: 'ACTIVE', facultyId: null, facultyName: null, departmentId: null, departmentName: null, invitedAt: '2026-09-01T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-10T07:30:00Z' },
-  { userId: facultyOfficer.id, role: 'faculty', fullName: facultyOfficer.fullName, email: facultyOfficer.email, status: 'ACTIVE', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: null, departmentName: null, invitedAt: '2026-09-02T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-09T09:00:00Z' },
-  { userId: departmentOfficer.id, role: 'department', fullName: departmentOfficer.fullName, email: departmentOfficer.email, status: 'ACTIVE', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: 'dept-cs', departmentName: 'Computer Science', invitedAt: '2026-09-03T08:00:00Z', invitationExpiresAt: null, lastLoginAt: null },
+  { userId: adminUser.id, role: 'admin', fullName: adminUser.fullName, email: adminUser.email, status: 'ACTIVE', departmentId: null, departmentName: null, invitedAt: '2026-09-01T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-10T07:30:00Z' },
+  { userId: managementAccount.id, role: 'management', fullName: managementAccount.fullName, email: managementAccount.email, status: 'ACTIVE', departmentId: null, departmentName: null, invitedAt: '2026-09-02T08:00:00Z', invitationExpiresAt: null, lastLoginAt: '2026-10-09T09:00:00Z' },
+  { userId: departmentOfficer.id, role: 'department', fullName: departmentOfficer.fullName, email: departmentOfficer.email, status: 'ACTIVE', departmentId: 'dept-cs', departmentName: 'Computer Science', invitedAt: '2026-09-03T08:00:00Z', invitationExpiresAt: null, lastLoginAt: null },
 ]
-const FACULTIES_SEED = (): AdminFaculty[] => [
-  { facultyId: 'fac-pet', name: 'Physical Engineering and Technologies', departmentCount: FACULTY_DEPARTMENTS_SEED.length, officerCount: 1 },
-  { facultyId: 'fac-bus', name: 'Business and Economics', departmentCount: 0, officerCount: 0 },
+const PENDING_UNITS_SEED = (): PendingUnit[] => [
+  {
+    unitId: 'pending-1', code: 'COSC 340', name: 'Distributed Systems', lecturerName: 'Dr. Brian Otieno', staffNumber: 'STF/0007',
+    departmentName: 'Computer Science', createdAt: '2026-10-14T09:12:00Z',
+    slots: [{ dayOfWeek: 2, startTime: '10:00', endTime: '12:00', roomCode: 'LH3' }],
+  },
+  {
+    unitId: 'pending-2', code: 'MATH 210', name: 'Linear Algebra II', lecturerName: 'Ms. Faith Wanjiru', staffNumber: 'STF/0019',
+    departmentName: null, createdAt: '2026-10-16T13:40:00Z', slots: [],
+  },
 ]
+/** SMARTTT's admin functions (/admin/smarttt/...), which the real backend passes on to SMARTTT. */
+const SMARTTT_ADMIN_SEED = () => ({
+  terms: [
+    { id: 'term-2026-1', academic_year: '2026/2027', semester: 1, start_date: '2026-09-07', end_date: '2026-12-18', is_current: true },
+    { id: 'term-2025-3', academic_year: '2025/2026', semester: 3, start_date: '2026-05-04', end_date: '2026-08-21', is_current: false },
+  ],
+  uploads: [
+    { id: 'upload-1', source_file: 'timetable_uploads/2026/09/TUN_SEP_DEC_2026_TT_V2.pdf', status: 'processed', rows_received: 1663, rows_saved: 1663, rows_failed: 0, created_at: '2026-09-19T10:00:00Z', uploaded_by_name: 'Ms. Aisha Njeri' },
+  ],
+  allocations: [
+    { source: 'Computer Science and ICT', file_name: 'VETTED_SEP-DEC ALLOCATION 2026.docx', rows: 240, slots_assigned: 212, uploaded_by: 'Ms. Aisha Njeri', uploaded_at: '2026-09-21T08:30:00Z' },
+  ],
+  notifications: [
+    { id: 'notif-1', title: 'Timetable V2 is out', notification_type: 'timetable_change', target: 'all', recipients_count: 5120, sent_at: '2026-09-19T11:00:00Z' },
+  ],
+  programs: [{ id: 1, name: 'BSc Computer Science' }, { id: 2, name: 'Bachelor of Education (Arts)' }],
+  staffIds: [
+    { id: 'staff-1', staff_id: 'STF/0001', name_hint: 'Peter Kamami', is_claimed: true, uploaded_at: '2026-08-01T08:00:00Z', file_name: 'staff_ids.csv' },
+    { id: 'staff-2', staff_id: 'STF/0002', name_hint: null, is_claimed: false, uploaded_at: '2026-08-01T08:00:00Z', file_name: 'staff_ids.csv' },
+  ],
+  staffIdUploads: [
+    { id: 'staff-upload-1', file_name: 'staff_ids.csv', ids_created: 2, ids_skipped: 0, ids_remaining: 2, ids_claimed: 1, uploaded_by: 'Ms. Aisha Njeri', uploaded_at: '2026-08-01T08:00:00Z' },
+  ],
+  venues: { total: 102, confirmed: 99, unconfirmed: 3, unconfirmed_codes: ['G 12', 'UTC-AA 3', 'STB 4'] },
+})
+let smartttAdmin = SMARTTT_ADMIN_SEED()
+
 let officers = OFFICERS_SEED()
-let adminFaculties = FACULTIES_SEED()
+let pendingUnits = PENDING_UNITS_SEED()
 /** token -> invited user id */
 const invitations = new Map<string, string>()
 let invitationCounter = 0
 
 function resetOfficerMocks() {
   officers = OFFICERS_SEED()
-  adminFaculties = FACULTIES_SEED()
+  pendingUnits = PENDING_UNITS_SEED()
+  smartttAdmin = SMARTTT_ADMIN_SEED()
   invitations.clear()
 }
 
@@ -1537,7 +1374,7 @@ const issueInvitation = (userId: string) => {
   return ok({ userId, emailSent: true }, 201)
 }
 
-const inviteOfficer = (invitee: { fullName?: string; email?: string }, scope: Pick<Officer, 'role' | 'facultyId' | 'facultyName' | 'departmentId' | 'departmentName'>) => {
+const inviteOfficer = (invitee: { fullName?: string; email?: string }, scope: Pick<Officer, 'role' | 'departmentId' | 'departmentName'>) => {
   const email = invitee.email?.trim().toLowerCase() ?? ''
   if (!invitee.fullName?.trim() || !email.includes('@')) return fail(400, 'VALIDATION_FAILED', 'Enter a full name and a valid email.')
   if (accounts.has(email) || officers.some((o) => o.email === email)) return fail(409, 'ACCOUNT_ALREADY_EXISTS', 'Someone already has an account with this email address.')
@@ -1566,7 +1403,7 @@ const deactivateOfficer = (officer: Officer | undefined) => {
  *
  * Not auto-scoped to the officer — a QA officer's remit is the whole
  * institution — so every list handler below takes explicit filters
- * instead of resolving a department/faculty from the signed-in account.
+ * instead of resolving a department from the signed-in account.
  * One completed audit (with a non-compliant finding and its corrective
  * action already raised) and one planned audit with nothing filled in yet,
  * so both the dashboard and the "fill checklist" flow have something real
@@ -1598,22 +1435,22 @@ const QA_ITEMS_SEED = (): MockQaItem[] => [
 
 interface MockQaTemplate { id: string; name: string; description: string | null; isActive: boolean; createdAt: string; updatedAt: string }
 const QA_TEMPLATES_SEED = (): MockQaTemplate[] => [
-  { id: 'tmpl-1', name: 'General Internal Audit Checklist', description: 'One checklist item per standard, for a routine department/faculty audit.', isActive: true, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
+  { id: 'tmpl-1', name: 'General Internal Audit Checklist', description: 'One checklist item per standard, for a routine department audit.', isActive: true, createdAt: '2026-09-01T08:00:00Z', updatedAt: '2026-09-01T08:00:00Z' },
 ]
 
 interface MockQaAudit {
-  id: string; title: string; auditType: 'INTERNAL'; targetDepartmentId: string | null; targetFacultyId: string | null;
+  id: string; title: string; auditType: 'INTERNAL'; targetDepartmentId: string;
   checklistTemplateId: string; leadAuditorUserId: string; scheduledDate: string; status: QaAuditStatus;
   startedAt: string | null; completedAt: string | null; notes: string | null; createdAt: string; updatedAt: string;
 }
 const QA_AUDITS_SEED = (): MockQaAudit[] => [
   {
-    id: 'audit-1', title: 'CS Department Q3 Internal Audit', auditType: 'INTERNAL', targetDepartmentId: 'dept-cs', targetFacultyId: null,
+    id: 'audit-1', title: 'CS Department Q3 Internal Audit', auditType: 'INTERNAL', targetDepartmentId: 'dept-cs',
     checklistTemplateId: 'tmpl-1', leadAuditorUserId: qaOfficer.id, scheduledDate: '2026-09-15', status: 'COMPLETED',
     startedAt: '2026-09-15T08:00:00Z', completedAt: '2026-09-16T10:00:00Z', notes: null, createdAt: '2026-09-10T08:00:00Z', updatedAt: '2026-09-16T10:00:00Z',
   },
   {
-    id: 'audit-2', title: 'PET Faculty Annual Review', auditType: 'INTERNAL', targetDepartmentId: null, targetFacultyId: 'fac-pet',
+    id: 'audit-2', title: 'Software Engineering Annual Review', auditType: 'INTERNAL', targetDepartmentId: 'dept-se',
     checklistTemplateId: 'tmpl-1', leadAuditorUserId: qaOfficer.id, scheduledDate: '2026-12-01', status: 'PLANNED',
     startedAt: null, completedAt: null, notes: null, createdAt: '2026-10-01T08:00:00Z', updatedAt: '2026-10-01T08:00:00Z',
   },
@@ -1684,9 +1521,7 @@ function toAuditDto(a: MockQaAudit): QaAudit {
   return {
     id: a.id, title: a.title, auditType: a.auditType,
     targetDepartmentId: a.targetDepartmentId,
-    targetDepartmentName: a.targetDepartmentId ? FACULTY_DEPARTMENTS_SEED.find((d) => d.id === a.targetDepartmentId)?.name ?? null : null,
-    targetFacultyId: a.targetFacultyId,
-    targetFacultyName: a.targetFacultyId ? adminFaculties.find((f) => f.facultyId === a.targetFacultyId)?.name ?? null : null,
+    targetDepartmentName: DEPARTMENTS_SEED.find((d) => d.id === a.targetDepartmentId)?.name ?? 'Unknown',
     checklistTemplateId: a.checklistTemplateId, checklistTemplateName: template?.name ?? 'Unknown',
     leadAuditorUserId: a.leadAuditorUserId, leadAuditorName: a.leadAuditorUserId === qaOfficer.id ? qaOfficer.fullName : 'Unknown',
     scheduledDate: a.scheduledDate, status: a.status, startedAt: a.startedAt, completedAt: a.completedAt, notes: a.notes,
@@ -1703,7 +1538,7 @@ function toCapaDto(c: MockQaCapa): QaCorrectiveAction {
     id: c.id, findingId: c.findingId, description: c.description, ownerUserId: c.ownerUserId, ownerName: c.ownerName,
     dueDate: c.dueDate, status: c.status, verifiedByUserId: c.verifiedByUserId, verifiedByName: c.verifiedByName, verifiedAt: c.verifiedAt,
     isOverdue: overdue, auditId: audit.id, auditTitle: audit.title, rating: finding.rating, standardCode: item.standardCode, standardTitle: item.standardTitle,
-    targetDepartmentId: audit.targetDepartmentId, targetFacultyId: audit.targetFacultyId, createdAt: c.createdAt, updatedAt: c.updatedAt,
+    targetDepartmentId: audit.targetDepartmentId, createdAt: c.createdAt, updatedAt: c.updatedAt,
   }
 }
 
@@ -1713,8 +1548,7 @@ function toTemplateDto(t: MockQaTemplate): QaChecklistTemplate {
 
 const qaHandlers = [
   /** Bare id/name lookups so the "create audit" form can offer a name-based picker, the same reasoning the real backend's directory.controller.ts gives. */
-  http.get(`${API}/quality-assurance/departments`, () => requireQa() ?? ok(FACULTY_DEPARTMENTS_SEED.map((d): QaDirectoryEntry => ({ id: d.id, name: d.name })))),
-  http.get(`${API}/quality-assurance/faculties`, () => requireQa() ?? ok(adminFaculties.map((f): QaDirectoryEntry => ({ id: f.facultyId, name: f.name })))),
+  http.get(`${API}/quality-assurance/departments`, () => requireQa() ?? ok(DEPARTMENTS_SEED.map((d): QaDirectoryEntry => ({ id: d.id, name: d.name })))),
 
   http.get(`${API}/quality-assurance/standards`, () => requireQa() ?? ok(qaStandards)),
   http.post(`${API}/quality-assurance/standards`, async ({ request }) => {
@@ -1797,11 +1631,9 @@ const qaHandlers = [
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
     const targetDepartmentId = url.searchParams.get('targetDepartmentId')
-    const targetFacultyId = url.searchParams.get('targetFacultyId')
     const rows = qaAudits.filter((a) =>
       (!status || a.status === status) &&
-      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId) &&
-      (!targetFacultyId || a.targetFacultyId === targetFacultyId))
+      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId))
     return ok(rows.map(toAuditDto))
   }),
   http.get(`${API}/quality-assurance/audits/:id`, ({ params }) => {
@@ -1814,13 +1646,13 @@ const qaHandlers = [
   http.post(`${API}/quality-assurance/audits`, async ({ request }) => {
     const blocked = requireQa()
     if (blocked) return blocked
-    const input = (await request.json()) as { title: string; targetDepartmentId?: string; targetFacultyId?: string; checklistTemplateId: string; leadAuditorUserId: string; scheduledDate: string; notes?: string }
-    if (!input.title?.trim() || Boolean(input.targetDepartmentId) === Boolean(input.targetFacultyId) || !qaTemplates.some((t) => t.id === input.checklistTemplateId)) {
-      return fail(400, 'VALIDATION_FAILED', 'The target department/faculty, checklist template or lead auditor does not exist.')
+    const input = (await request.json()) as { title: string; targetDepartmentId?: string; checklistTemplateId: string; leadAuditorUserId: string; scheduledDate: string; notes?: string }
+    if (!input.title?.trim() || !DEPARTMENTS_SEED.some((d) => d.id === input.targetDepartmentId) || !qaTemplates.some((t) => t.id === input.checklistTemplateId)) {
+      return fail(400, 'VALIDATION_FAILED', 'The target department, checklist template or lead auditor does not exist.')
     }
     const audit: MockQaAudit = {
       id: `audit-${++qaIdCounter}`, title: input.title.trim(), auditType: 'INTERNAL',
-      targetDepartmentId: input.targetDepartmentId ?? null, targetFacultyId: input.targetFacultyId ?? null,
+      targetDepartmentId: input.targetDepartmentId!,
       checklistTemplateId: input.checklistTemplateId, leadAuditorUserId: input.leadAuditorUserId, scheduledDate: input.scheduledDate,
       status: 'PLANNED', startedAt: null, completedAt: null, notes: input.notes?.trim() || null,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
@@ -1900,12 +1732,10 @@ const qaHandlers = [
     const status = url.searchParams.get('status')
     const overdueParam = url.searchParams.get('overdue')
     const targetDepartmentId = url.searchParams.get('targetDepartmentId')
-    const targetFacultyId = url.searchParams.get('targetFacultyId')
     const rows = qaCapas.map(toCapaDto).filter((c) =>
       (!status || c.status === status) &&
       (overdueParam === null || c.isOverdue === (overdueParam === 'true')) &&
-      (!targetDepartmentId || c.targetDepartmentId === targetDepartmentId) &&
-      (!targetFacultyId || c.targetFacultyId === targetFacultyId))
+      (!targetDepartmentId || c.targetDepartmentId === targetDepartmentId))
     return ok(rows)
   }),
   http.post(`${API}/quality-assurance/corrective-actions`, async ({ request }) => {
@@ -1953,10 +1783,8 @@ const qaHandlers = [
     if (blocked) return blocked
     const url = new URL(request.url)
     const targetDepartmentId = url.searchParams.get('targetDepartmentId')
-    const targetFacultyId = url.searchParams.get('targetFacultyId')
     const audits = qaAudits.filter((a) =>
-      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId) &&
-      (!targetFacultyId || a.targetFacultyId === targetFacultyId))
+      (!targetDepartmentId || a.targetDepartmentId === targetDepartmentId))
     const auditIds = new Set(audits.map((a) => a.id))
     const findings = qaFindings.filter((f) => auditIds.has(f.auditId) && f.rating !== 'NOT_APPLICABLE')
     const withStandard = findings.map((f) => ({ finding: f, item: qaItems.find((i) => i.id === f.checklistItemId)! }))
@@ -1991,46 +1819,131 @@ const qaHandlers = [
   }),
 ]
 
-const invitationHandlers = [
-  http.get(`${API}/admin/faculties`, () => requireAdmin() ?? ok(adminFaculties)),
-  http.post(`${API}/admin/faculties`, async ({ request }) => {
+const smartttAdminHandlers = [
+  http.get(`${API}/admin/directory`, () => requireAdmin() ?? ok({
+    smartttConnected: true,
+    onlyHere: { departments: ADMIN_DEPARTMENTS.filter((d) => !d.inSmarttt).length },
+  })),
+  http.post(`${API}/admin/directory/sync`, () => {
     const blocked = requireAdmin()
     if (blocked) return blocked
-    const { name } = (await request.json()) as { name: string }
-    if (adminFaculties.some((f) => f.name.toLowerCase() === name.trim().toLowerCase())) return fail(409, 'CONFLICT', `A faculty named "${name}" already exists.`)
-    const faculty = { facultyId: `fac-${adminFaculties.length + 1}`, name: name.trim(), departmentCount: 0, officerCount: 0 }
-    adminFaculties.push(faculty)
-    return ok({ facultyId: faculty.facultyId, name: faculty.name }, 201)
+    const sent = ADMIN_DEPARTMENTS.filter((d) => !d.inSmarttt)
+    sent.forEach((d) => { d.inSmarttt = true })
+    return ok({ fromSmarttt: { departments: { linked: 0, created: 0 }, skipped: [] }, toSmarttt: { departments: sent.length, skipped: [] } })
+  }),
+  http.get(`${API}/admin/smarttt/terms`, () => requireAdmin() ?? ok({ count: smartttAdmin.terms.length, next: null, results: smartttAdmin.terms })),
+  http.post(`${API}/admin/smarttt/terms/:termId/set-current`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.terms.forEach((t) => { t.is_current = t.id === params.termId })
+    return ok({ detail: 'Current term updated.' })
+  }),
+  http.delete(`${API}/admin/smarttt/terms/:termId/slots`, () => requireAdmin() ?? ok({ detail: 'Deleted 1663 slot(s) for this term.' })),
+  http.get(`${API}/admin/smarttt/timetable/uploads`, () => requireAdmin() ?? ok({ count: smartttAdmin.uploads.length, next: null, results: smartttAdmin.uploads })),
+  http.post(`${API}/admin/smarttt/timetable/uploads`, () => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.uploads.unshift({ id: `upload-${smartttAdmin.uploads.length + 1}`, source_file: 'timetable_uploads/new.pdf', status: 'processed', rows_received: 902, rows_saved: 900, rows_failed: 2, created_at: new Date().toISOString(), uploaded_by_name: adminUser.fullName })
+    return ok({ batch_id: smartttAdmin.uploads[0]!.id, status: 'processing' })
+  }),
+  http.get(`${API}/admin/smarttt/timetable/uploads/:id/status`, ({ params }) =>
+    requireAdmin() ?? ok({ upload_batch_id: params.id, status: 'processed', rows_received: 902, rows_saved: 900, rows_failed: 2 })),
+  http.delete(`${API}/admin/smarttt/timetable/uploads/:id`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.uploads = smartttAdmin.uploads.filter((u) => u.id !== params.id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get(`${API}/admin/smarttt/lecturer-allocation`, () => requireAdmin() ?? ok({ academic_year: '2026/2027', documents: smartttAdmin.allocations })),
+  http.post(`${API}/admin/smarttt/lecturer-allocation`, () => requireAdmin() ?? ok({
+    detail: 'Saved 3 allocation row(s) from Mathematics.', source: 'Mathematics', academic_year: '2026/2027', awaiting_timetable: false,
+    matched: 2, unmatched: 1, slots_updated: 4, conflict_slots: 0,
+    results: [
+      { unit_code: 'MATH 110', lecturer: 'Dr. Jane Otieno', group: null, programme: 'BSc Mathematics', year_semester: 'Y1S1', slots_assigned: 2, account_linked: true },
+      { unit_code: 'MATH 210', lecturer: 'Mr. Collins Mwangi', group: 'GR A', programme: 'BSc Mathematics', year_semester: 'Y2S1', slots_assigned: 2, account_linked: false },
+    ],
+    not_found: [{ unit_code: 'MATH 999', lecturer: 'Dr. Unknown', reason: 'no such unit in the timetable' }],
+    conflicts: [],
+  })),
+  http.delete(`${API}/admin/smarttt/lecturer-allocation`, ({ request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const source = new URL(request.url).searchParams.get('source')
+    smartttAdmin.allocations = smartttAdmin.allocations.filter((d) => d.source !== source)
+    return ok({ detail: `Removed the allocation from ${source}.`, slots_updated: 212 })
+  }),
+  http.get(`${API}/admin/smarttt/notifications`, () => requireAdmin() ?? ok({ count: smartttAdmin.notifications.length, next: null, results: smartttAdmin.notifications })),
+  http.post(`${API}/admin/smarttt/notifications`, async ({ request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const input = (await request.json()) as { title: string; notification_type: string; target: string }
+    smartttAdmin.notifications.unshift({ id: `notif-${smartttAdmin.notifications.length + 1}`, title: input.title, notification_type: input.notification_type, target: input.target, recipients_count: 340, sent_at: new Date().toISOString() })
+    return ok({ recipients: 340, push_sent: 290, push_attempted: 300 })
+  }),
+  http.get(`${API}/admin/smarttt/programs`, () => requireAdmin() ?? ok({ count: smartttAdmin.programs.length, next: null, results: smartttAdmin.programs })),
+  http.get(`${API}/admin/smarttt/staff-ids`, () => requireAdmin() ?? ok(smartttAdmin.staffIds)),
+  http.post(`${API}/admin/smarttt/staff-ids`, () => requireAdmin() ?? ok({ detail: 'Added 5 staff ID(s); 1 already listed.' })),
+  http.delete(`${API}/admin/smarttt/staff-ids/:id`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.staffIds = smartttAdmin.staffIds.filter((x) => x.id !== params.id)
+    return ok({ detail: 'Staff ID removed.', accounts_disabled: 0 })
+  }),
+  http.get(`${API}/admin/smarttt/staff-id-uploads`, () => requireAdmin() ?? ok({ uploads: smartttAdmin.staffIdUploads, untracked_ids: 0 })),
+  http.delete(`${API}/admin/smarttt/staff-id-uploads/:id`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.staffIdUploads = smartttAdmin.staffIdUploads.filter((u) => u.id !== params.id)
+    smartttAdmin.staffIds = []
+    return ok({ detail: 'Removed 2 staff ID(s) from staff_ids.csv.', removed: 2, accounts_disabled: 1 })
+  }),
+  http.get(`${API}/admin/smarttt/rooms/capacities`, () => requireAdmin() ?? ok(smartttAdmin.venues)),
+  http.post(`${API}/admin/smarttt/rooms/capacities`, () => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    smartttAdmin.venues = { total: 102, confirmed: 101, unconfirmed: 1, unconfirmed_codes: ['STB 4'] }
+    return ok({ detail: 'Updated 2 venue(s).', errors: [{ row: 4, code: 'XX 1', error: 'capacity must be a whole number' }], summary: smartttAdmin.venues })
+  }),
+]
+
+const invitationHandlers = [
+  http.post(`${API}/admin/departments`, async ({ request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const { name, code } = (await request.json()) as { name?: string; code?: string }
+    const trimmed = name?.trim() ?? ''
+    const upper = code?.trim().toUpperCase() ?? ''
+    if (trimmed.length < 3 || !/^[A-Z0-9][A-Z0-9 ./&-]{0,31}$/.test(upper)) return fail(400, 'VALIDATION_FAILED', 'Enter the department name and a code, e.g. DCOMP.')
+    // Mirrors directory.service.ts createDepartment: another spelling of an existing department is a duplicate.
+    const same = departmentForName(trimmed)
+    if (same) return fail(409, 'CONFLICT', `"${trimmed}" is the same department as "${same.name}", which already exists.`)
+    const holder = ADMIN_DEPARTMENTS.find((d) => d.code?.toUpperCase() === upper)
+    if (holder) return fail(409, 'CONFLICT', `The code ${upper} is already used by ${holder.name}.`)
+    const department: AdminDepartment = { departmentId: `dept-${ADMIN_DEPARTMENTS.length + 1}-${upper.toLowerCase()}`, name: trimmed, code: upper, inSmarttt: true, lecturerCount: 0 }
+    ADMIN_DEPARTMENTS.push(department)
+    return ok({ departmentId: department.departmentId, name: department.name, code: department.code }, 201)
   }),
   http.get(`${API}/admin/officers`, () => requireAdmin() ?? ok(officers)),
+  http.get(`${API}/admin/units/pending`, () => requireAdmin() ?? ok(pendingUnits)),
+  http.post(`${API}/admin/units/:unitId/verify`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const unit = pendingUnits.find((u) => u.unitId === params.unitId)
+    if (!unit) return fail(404, 'NOT_FOUND', 'No such unit.')
+    pendingUnits = pendingUnits.filter((u) => u !== unit)
+    return ok({ unitId: unit.unitId, code: unit.code, status: 'VERIFIED' })
+  }),
   http.post(`${API}/admin/invitations`, async ({ request }) => {
     const blocked = requireAdmin()
     if (blocked) return blocked
-    const input = (await request.json()) as { role: 'admin' | 'qa' | 'faculty'; fullName: string; email: string; facultyId?: string }
-    if (input.role !== 'faculty') return inviteOfficer(input, { role: input.role, facultyId: null, facultyName: null, departmentId: null, departmentName: null })
-    const faculty = adminFaculties.find((f) => f.facultyId === input.facultyId)
-    if (!faculty) return fail(400, 'BAD_REQUEST', 'That faculty does not exist.')
-    const res = inviteOfficer(input, { role: 'faculty', facultyId: faculty.facultyId, facultyName: faculty.name, departmentId: null, departmentName: null })
-    if (res.status === 201) faculty.officerCount += 1
-    return res
+    const input = (await request.json()) as { role: 'admin' | 'qa' | 'management' | 'department'; fullName: string; email: string; departmentId?: string }
+    if (input.role !== 'department') return inviteOfficer(input, { role: input.role, departmentId: null, departmentName: null })
+    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === input.departmentId)
+    if (!department) return fail(400, 'BAD_REQUEST', 'That department does not exist.')
+    return inviteOfficer(input, { role: 'department', departmentId: department.departmentId, departmentName: department.name })
   }),
   http.post(`${API}/admin/officers/:userId/resend`, ({ params }) => requireAdmin() ?? resendOfficer(officers.find((o) => o.userId === params.userId))),
   http.post(`${API}/admin/officers/:userId/deactivate`, ({ params }) => requireAdmin() ?? deactivateOfficer(officers.find((o) => o.userId === params.userId))),
-
-  http.get(`${API}/faculties/officers`, () => requireFaculty() ?? ok(officers.filter((o) => o.role === 'department' && o.facultyId === 'fac-pet'))),
-  http.post(`${API}/faculties/departments/:departmentId/officers`, async ({ params, request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const department = FACULTY_DEPARTMENTS_SEED.find((d) => d.id === params.departmentId)
-    if (!department) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
-    return inviteOfficer((await request.json()) as { fullName: string; email: string }, {
-      role: 'department', facultyId: 'fac-pet', facultyName: facultyOfficer.facultyName, departmentId: department.id, departmentName: department.name,
-    })
-  }),
-  http.post(`${API}/faculties/officers/:userId/resend`, ({ params }) =>
-    requireFaculty() ?? resendOfficer(officers.find((o) => o.userId === params.userId && o.role === 'department'))),
-  http.post(`${API}/faculties/officers/:userId/deactivate`, ({ params }) =>
-    requireFaculty() ?? deactivateOfficer(officers.find((o) => o.userId === params.userId && o.role === 'department'))),
 
   http.post(`${API}/auth/invitations/lookup`, async ({ request }) => {
     const { token } = (await request.json()) as { token: string }
@@ -2038,7 +1951,7 @@ const invitationHandlers = [
     if (!officer) return fail(400, 'BAD_REQUEST', 'This invitation link is invalid, has expired or has already been used. Ask whoever invited you to send it again.')
     const details: InvitationDetails = {
       fullName: officer.fullName, email: officer.email, role: officer.role,
-      scopeName: officer.departmentName ?? officer.facultyName, expiresAt: officer.invitationExpiresAt!,
+      scopeName: officer.departmentName, expiresAt: officer.invitationExpiresAt!,
     }
     return ok(details)
   }),
@@ -2051,8 +1964,9 @@ const invitationHandlers = [
     officer.invitationExpiresAt = null
     const base = { id: officer.userId, fullName: officer.fullName, email: officer.email, status: 'ACTIVE' as const, avatarUrl: null }
     const user: Account = officer.role === 'admin' ? { ...base, role: 'admin' }
-      : officer.role === 'faculty' ? { ...base, role: 'faculty', facultyId: officer.facultyId!, facultyName: officer.facultyName! }
-      : { ...base, role: 'department', departmentId: officer.departmentId!, departmentName: officer.departmentName!, facultyName: officer.facultyName }
+      : officer.role === 'management' ? { ...base, role: 'management' }
+      : officer.role === 'qa' ? { ...base, role: 'qa', title: null }
+      : { ...base, role: 'department', departmentId: officer.departmentId!, departmentName: officer.departmentName! }
     accounts.set(officer.email, { user, password })
     return ok({ email: officer.email, message: 'Your account is ready. Sign in with your email and new password.' })
   }),
@@ -2060,440 +1974,6 @@ const invitationHandlers = [
     const { token } = (await request.json()) as { token: string }
     if (token !== 'valid-reset-token') return fail(400, 'BAD_REQUEST', 'This password reset link is invalid or has expired. Please request a new one.')
     return ok({ message: 'Your password has been changed. You have been signed out everywhere. Please sign in with your new password.' })
-  }),
-]
-
-
-/* ------------------------------------------------------------------ *
- * Oversight backlog: the attendance policy and exam eligibility,
- * placing lecturers in departments, cross-department allocation, and
- * student course evaluations. Shapes mirror the backend field for field.
- * ------------------------------------------------------------------ */
-
-const POLICY_SEED = (): AttendancePolicy => ({ minAttendancePercent: 75, atRiskMarginPercent: 10, updatedAt: new Date('2026-09-01T08:00:00Z').toISOString(), updatedByName: null })
-let attendancePolicy = POLICY_SEED()
-
-/** Every active (student, unit) pair the eligibility reports judge, with classes held and attended. */
-const STANDING_SEED: Omit<EligibilityRow, 'attendanceRate' | 'status'>[] = [
-  { allocationId: 'al-1', studentUserId: 'stu-1', registrationNumber: 'STU00042', fullName: 'Ama Mensah', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 20, sessionsAttended: 19 },
-  { allocationId: 'al-2', studentUserId: 'stu-2', registrationNumber: 'SC211/0002/2022', fullName: 'Brian Otieno', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 20, sessionsAttended: 14 },
-  { allocationId: 'al-3', studentUserId: 'stu-7', registrationNumber: 'SC211/0007/2022', fullName: 'Grace Nyambura Maina', unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 14, sessionsAttended: 11 },
-  { allocationId: 'al-4', studentUserId: 'stu-8', registrationNumber: 'SC211/0008/2022', fullName: 'Hassan Ali Noor', unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 14, sessionsAttended: 8 },
-  { allocationId: 'al-5', studentUserId: 'stu-9', registrationNumber: 'SC211/0009/2023', fullName: 'Irene Chepkoech Lagat', unitId: 'u4', unitCode: 'CS210', unitName: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', sessionsHeld: 14, sessionsAttended: 12 },
-  { allocationId: 'al-6', studentUserId: 'stu-10', registrationNumber: 'SC211/0010/2023', fullName: 'John Mutua Kilonzo', unitId: 'u4', unitCode: 'CS210', unitName: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', sessionsHeld: 14, sessionsAttended: 10 },
-  { allocationId: 'al-7', studentUserId: 'stu-11', registrationNumber: 'SC211/0011/2023', fullName: 'Faith Atieno', unitId: 'u5', unitCode: 'CS410', unitName: 'Distributed Systems', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 0, sessionsAttended: 0 },
-]
-
-const SEVERITY: Record<EligibilityStatus, number> = { NOT_ELIGIBLE: 0, AT_RISK: 1, NOT_YET_MEASURED: 2, ELIGIBLE: 3 }
-
-/** Mirrors eligibility.service.ts buildReport. */
-function eligibilityReport(filter: (r: (typeof STANDING_SEED)[number]) => boolean, all: boolean): EligibilityReport {
-  const summary = { total: 0, eligible: 0, atRisk: 0, notEligible: 0, notYetMeasured: 0 }
-  const rows: EligibilityRow[] = []
-  for (const r of STANDING_SEED.filter(filter)) {
-    const percent = r.sessionsHeld > 0 ? (r.sessionsAttended / r.sessionsHeld) * 100 : null
-    const status: EligibilityStatus = percent === null ? 'NOT_YET_MEASURED'
-      : percent < attendancePolicy.minAttendancePercent ? 'NOT_ELIGIBLE'
-        : percent < attendancePolicy.minAttendancePercent + attendancePolicy.atRiskMarginPercent ? 'AT_RISK' : 'ELIGIBLE'
-    summary.total += 1
-    if (status === 'ELIGIBLE') summary.eligible += 1
-    else if (status === 'AT_RISK') summary.atRisk += 1
-    else if (status === 'NOT_ELIGIBLE') summary.notEligible += 1
-    else summary.notYetMeasured += 1
-    if (!all && status !== 'AT_RISK' && status !== 'NOT_ELIGIBLE') continue
-    rows.push({ ...r, attendanceRate: percent === null ? null : Math.round(percent * 10) / 10, status })
-  }
-  rows.sort((a, b) => SEVERITY[a.status] - SEVERITY[b.status] || (a.attendanceRate ?? 101) - (b.attendanceRate ?? 101))
-  return { policy: attendancePolicy, summary, rows }
-}
-
-const FACULTY_DEPARTMENT_IDS = new Set(FACULTY_DEPARTMENTS_SEED.map((d) => d.id))
-
-/** Lecturers anywhere in the institution, for the allocation picker: the department's own, plus one from another department. */
-const LECTURER_DIRECTORY: LecturerDirectoryEntry[] = [
-  ...DEPARTMENT_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, departmentId: 'dept-cs', departmentName: 'Computer Science' })),
-  { userId: 'lec-4', fullName: 'Dr. Ruth Kamau', staffNumber: 'STF/04112', title: 'Dr.', departmentId: 'dept-math', departmentName: 'Mathematics' },
-]
-
-const ADMIN_DEPARTMENTS_SEED = (): AdminDepartment[] => [
-  ...FACULTY_DEPARTMENTS_SEED.map((d) => ({ departmentId: d.id, name: d.name, facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', lecturerCount: FACULTY_LECTURERS.filter((l) => l.departmentId === d.id).length })),
-  { departmentId: 'dept-math', name: 'Mathematics', facultyId: 'fac-sci', facultyName: 'Science', lecturerCount: 1 },
-  { departmentId: 'dept-acc', name: 'Accounting', facultyId: 'fac-bus', facultyName: 'Business and Economics', lecturerCount: 0 },
-  // Created under a second spelling before names were unified — the duplicate the admin Departments page merges.
-  { departmentId: 'dept-cs-dup', name: 'Department of Computer Science', facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', lecturerCount: 1 },
-]
-let ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS_SEED()
-
-const ABBREVIATIONS: Record<string, string> = {
-  comp: 'computer', cs: 'computer science', sci: 'science', it: 'information technology', info: 'information', tech: 'technology',
-  eng: 'engineering', mgt: 'management', mgmt: 'management', admin: 'administration', bus: 'business', econ: 'economics',
-  math: 'mathematics', maths: 'mathematics', stats: 'statistics', phys: 'physics', chem: 'chemistry', bio: 'biology', educ: 'education',
-}
-
-/** Mirrors department_key() in db/migrations/036_department_spelling.sql. */
-const departmentKey = (name: string | null) => {
-  const words = (name ?? '').toLowerCase().replace(/&/g, ' and ').replace(/\b([a-z])\.(?=[a-z](\.|\b))/g, '$1')
-    .replace(/[^a-z0-9 ]+/g, ' ').replace(/^\s*(the\s+)?(department|dept|dpt)\s+(of\s+)?/, '')
-    .split(/\s+/).filter(Boolean).map((w) => ABBREVIATIONS[w] ?? w)
-  return words.length ? words.join(' ') : null
-}
-
-const ALIASES_SEED = (): DepartmentAlias[] => []
-let departmentAliases = ALIASES_SEED()
-
-/** Mirrors department_for_name(): canonical name first, then a learned alias. */
-const departmentForName = (name: string | null) => {
-  const key = departmentKey(name)
-  if (!key) return null
-  return ADMIN_DEPARTMENTS.find((d) => departmentKey(d.name) === key)
-    ?? ADMIN_DEPARTMENTS.find((d) => departmentAliases.some((a) => a.departmentId === d.departmentId && departmentKey(a.alias) === key))
-    ?? null
-}
-
-const PLACEMENT_SEED = (): PlacementLecturer[] => [
-  { userId: 'lec-9', fullName: 'Dr. Samuel Kiprono', staffNumber: 'STF/09001', title: 'Dr.', email: 's.kiprono@university.edu', departmentId: null, departmentName: null, facultyId: null, facultyName: null, reportedDepartment: 'Comp. Sci & IT', reportedFaculty: 'FPET', unitCount: 1 },
-  { userId: 'lec-10', fullName: 'Ms. Lucy Wanjiku', staffNumber: 'STF/09002', title: 'Ms.', email: 'l.wanjiku@university.edu', departmentId: null, departmentName: null, facultyId: null, facultyName: null, reportedDepartment: 'Maths', reportedFaculty: null, unitCount: 0 },
-  ...FACULTY_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, email: `${l.userId}@university.edu`, departmentId: l.departmentId, departmentName: l.departmentName, facultyId: 'fac-pet', facultyName: 'Physical Engineering and Technologies', reportedDepartment: l.departmentName, reportedFaculty: null, unitCount: l.unitsTaught })),
-  { userId: 'lec-4', fullName: 'Dr. Ruth Kamau', staffNumber: 'STF/04112', title: 'Dr.', email: 'r.kamau@university.edu', departmentId: 'dept-math', departmentName: 'Mathematics', facultyId: 'fac-sci', facultyName: 'Science', reportedDepartment: 'Mathematics', reportedFaculty: 'Science', unitCount: 2 },
-]
-let placementLecturers = PLACEMENT_SEED()
-
-/** Mirrors lecturer.placement.ts listLecturers: unassigned first, then (optionally) one faculty's staff. */
-function listPlacement(request: Request, facultyId: string | null) {
-  const url = new URL(request.url)
-  const q = url.searchParams.get('q')?.trim().toLowerCase() ?? ''
-  const unassignedOnly = url.searchParams.get('unassigned') === 'true'
-  return placementLecturers
-    .filter((l) => l.departmentId === null || (!unassignedOnly && (facultyId === null || l.facultyId === facultyId)))
-    .filter((l) => !q || l.fullName.toLowerCase().includes(q) || l.staffNumber.toLowerCase().includes(q))
-    .sort((a, b) => Number(a.departmentId !== null) - Number(b.departmentId !== null) || a.fullName.localeCompare(b.fullName))
-}
-
-/** Mirrors lecturer.placement.ts moveLecturer, including learning SMARTTT's spelling from an unassigned lecturer. */
-function placeLecturer(lecturer: PlacementLecturer, department: AdminDepartment) {
-  const assign = (l: PlacementLecturer) => Object.assign(l, { departmentId: department.departmentId, departmentName: department.name, facultyId: department.facultyId, facultyName: department.facultyName })
-  let learnedSpelling: string | null = null
-  let alsoPlaced = 0
-  if (lecturer.departmentId === null && lecturer.reportedDepartment && departmentKey(lecturer.reportedDepartment) && !departmentForName(lecturer.reportedDepartment)) {
-    learnedSpelling = lecturer.reportedDepartment
-    departmentAliases.push({
-      aliasId: `alias-${departmentAliases.length + 1}`, alias: learnedSpelling, departmentId: department.departmentId, departmentName: department.name,
-      facultyName: department.facultyName, source: 'PLACEMENT', createdByName: currentAccount.fullName, createdAt: new Date().toISOString(),
-    })
-    for (const other of placementLecturers) {
-      if (other !== lecturer && other.departmentId === null && departmentForName(other.reportedDepartment)?.departmentId === department.departmentId) { assign(other); alsoPlaced += 1 }
-    }
-  }
-  assign(lecturer)
-  const result: PlacementResult = { ...lecturer, learnedSpelling, alsoPlaced }
-  return ok(result)
-}
-
-// --- Course evaluations ----------------------------------------------------
-
-interface MockRound { id: string; title: string; instructions: string | null; opensAt: string; closesAt: string; minResponses: number; createdAt: string; questions: EvaluationQuestion[] }
-interface MockResponse { roundId: string; unitId: string; lecturerName: string; departmentId: string; departmentName: string; answers: { questionId: string; rating?: number; text?: string }[] }
-
-const daysFromNow = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString()
-const questionsFor = (roundId: string): EvaluationQuestion[] => [
-  { id: `${roundId}-q1`, position: 1, prompt: 'The lecturer explained the material clearly.', kind: 'RATING', required: true },
-  { id: `${roundId}-q2`, position: 2, prompt: 'The unit was well organised and followed its outline.', kind: 'RATING', required: true },
-  { id: `${roundId}-q3`, position: 3, prompt: 'What should the lecturer keep doing, or change?', kind: 'TEXT', required: false },
-]
-const ROUNDS_SEED = (): MockRound[] => [
-  { id: 'round-open', title: 'Semester 1 2026/27 evaluation', instructions: 'Your answers are anonymous.', opensAt: daysFromNow(-3), closesAt: daysFromNow(11), minResponses: 3, createdAt: daysFromNow(-4), questions: questionsFor('round-open') },
-  { id: 'round-old', title: 'Semester 2 2025/26 evaluation', instructions: null, opensAt: daysFromNow(-200), closesAt: daysFromNow(-186), minResponses: 3, createdAt: daysFromNow(-201), questions: questionsFor('round-old') },
-]
-const cs301 = { unitId: 'u1', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science' }
-const RESPONSES_SEED = (): MockResponse[] => [
-  ...[[5, 4, 'Clear examples every week.'], [4, 4, undefined], [3, 2, 'Notes came out late.'], [5, 5, undefined]].map(([a, b, text]) => ({
-    roundId: 'round-open', ...cs301, answers: [{ questionId: 'round-open-q1', rating: a as number }, { questionId: 'round-open-q2', rating: b as number }, ...(text ? [{ questionId: 'round-open-q3', text: text as string }] : [])],
-  })),
-  // One response only: below the minimum, so its ratings are withheld.
-  { roundId: 'round-open', unitId: 'u3', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', answers: [{ questionId: 'round-open-q1', rating: 2 }, { questionId: 'round-open-q2', rating: 3 }] },
-  ...[4, 5, 4].map((a) => ({ roundId: 'round-old', unitId: 'u4', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', answers: [{ questionId: 'round-old-q1', rating: a }, { questionId: 'round-old-q2', rating: a }] })),
-]
-let evaluationRounds = ROUNDS_SEED()
-let evaluationResponses = RESPONSES_SEED()
-/** `${roundId}:${unitId}:${studentId}` — who has evaluated what, never joined to the responses. */
-const evaluationSubmissions = new Set<string>()
-let roundSeq = 0
-
-const roundStatus = (r: MockRound): EvaluationRoundStatus => (Date.now() < Date.parse(r.opensAt) ? 'UPCOMING' : Date.now() < Date.parse(r.closesAt) ? 'OPEN' : 'CLOSED')
-const toRound = (r: MockRound): EvaluationRound => ({
-  id: r.id, title: r.title, instructions: r.instructions, opensAt: r.opensAt, closesAt: r.closesAt, status: roundStatus(r),
-  minResponses: r.minResponses, questionCount: r.questions.length, responseCount: evaluationResponses.filter((x) => x.roundId === r.id).length, createdAt: r.createdAt,
-})
-const hasAnswers = (roundId: string) => evaluationResponses.some((x) => x.roundId === roundId)
-const toRoundDetail = (r: MockRound): EvaluationRoundDetail => ({ ...toRound(r), questions: r.questions, questionsEditable: !hasAnswers(r.id) })
-
-function aggregate(responses: MockResponse[], questions: EvaluationQuestion[]): EvaluationQuestionResult[] {
-  return questions.filter((q) => q.kind === 'RATING').flatMap((q) => {
-    const ratings = responses.flatMap((r) => r.answers.filter((a) => a.questionId === q.id && a.rating).map((a) => a.rating!))
-    if (ratings.length === 0) return []
-    const distribution = [1, 2, 3, 4, 5].map((n) => ratings.filter((x) => x === n).length) as [number, number, number, number, number]
-    return [{ questionId: q.id, answered: ratings.length, average: Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 100) / 100, distribution }]
-  })
-}
-
-/** Mirrors evaluation.service.ts getResults. */
-function evaluationResults(round: MockRound, inScope: (r: MockResponse) => boolean): EvaluationResults {
-  const responses = evaluationResponses.filter((r) => r.roundId === round.id && inScope(r))
-  const groups = new Map<string, MockResponse[]>()
-  for (const r of responses) groups.set(`${r.unitId}:${r.lecturerName}`, [...(groups.get(`${r.unitId}:${r.lecturerName}`) ?? []), r])
-  const unitResults: EvaluationUnitResult[] = [...groups.values()].map((list) => {
-    const first = list[0]!
-    const unit = DEPARTMENT_UNITS.find((u) => u.id === first.unitId)
-    const enrolled = unit?.studentCount ?? 0
-    const reportable = list.length >= round.minResponses
-    return {
-      unitId: first.unitId, unitCode: unit?.code ?? first.unitId, unitName: unit?.name ?? null, lecturerName: first.lecturerName,
-      departmentId: first.departmentId, departmentName: first.departmentName, responses: list.length, enrolled,
-      responseRate: enrolled ? Math.round((list.length / enrolled) * 1000) / 10 : null, reportable,
-      ratings: reportable ? aggregate(list, round.questions) : [],
-      comments: reportable ? list.flatMap((r) => r.answers.filter((a) => a.text).map((a) => ({ questionId: a.questionId, text: a.text! }))).sort((a, b) => a.text.localeCompare(b.text)) : [],
-    }
-  })
-  return { round: toRoundDetail(round), totalResponses: responses.length, overall: responses.length >= round.minResponses ? aggregate(responses, round.questions) : [], units: unitResults }
-}
-
-function resetOversightMocks() {
-  attendancePolicy = POLICY_SEED()
-  placementLecturers = PLACEMENT_SEED()
-  ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS_SEED()
-  departmentAliases = ALIASES_SEED()
-  evaluationRounds = ROUNDS_SEED()
-  evaluationResponses = RESPONSES_SEED()
-  evaluationSubmissions.clear()
-}
-
-const requireStudent = () => {
-  if (!store.get()) return unauthorized()
-  if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
-  return null
-}
-
-const findRound = (id: unknown) => evaluationRounds.find((r) => r.id === id)
-
-const oversightHandlers = [
-  http.get(`${API}/attendance-policy`, () => (store.get() ? ok(attendancePolicy) : unauthorized())),
-  http.get(`${API}/quality-assurance/attendance-policy`, () => requireQa() ?? ok(attendancePolicy)),
-  http.put(`${API}/quality-assurance/attendance-policy`, async ({ request }) => {
-    const blocked = requireQa()
-    if (blocked) return blocked
-    const input = (await request.json()) as { minAttendancePercent?: number; atRiskMarginPercent?: number }
-    const min = input.minAttendancePercent ?? attendancePolicy.minAttendancePercent
-    const margin = input.atRiskMarginPercent ?? attendancePolicy.atRiskMarginPercent
-    if (min < 1 || min > 100 || margin < 0 || margin > 50) return fail(400, 'VALIDATION_FAILED', 'Out of range.')
-    attendancePolicy = { minAttendancePercent: min, atRiskMarginPercent: margin, updatedAt: new Date().toISOString(), updatedByName: currentAccount.fullName }
-    return ok(attendancePolicy)
-  }),
-
-  http.get(`${API}/departments/eligibility`, ({ request }) => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    const officer = currentAccount as DepartmentOfficer
-    return ok(eligibilityReport((r) => r.departmentId === officer.departmentId, new URL(request.url).searchParams.get('all') === 'true'))
-  }),
-  http.get(`${API}/faculties/eligibility`, ({ request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const url = new URL(request.url)
-    const departmentId = url.searchParams.get('departmentId')
-    if (departmentId && !FACULTY_DEPARTMENT_IDS.has(departmentId)) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
-    return ok(eligibilityReport((r) => (departmentId ? r.departmentId === departmentId : FACULTY_DEPARTMENT_IDS.has(r.departmentId ?? '')), url.searchParams.get('all') === 'true'))
-  }),
-  http.get(`${API}/quality-assurance/eligibility`, ({ request }) => {
-    const blocked = requireQa()
-    if (blocked) return blocked
-    const url = new URL(request.url)
-    const departmentId = url.searchParams.get('departmentId')
-    const facultyId = url.searchParams.get('facultyId')
-    return ok(eligibilityReport((r) => (!departmentId || r.departmentId === departmentId) && (!facultyId || (facultyId === 'fac-pet' && FACULTY_DEPARTMENT_IDS.has(r.departmentId ?? ''))), url.searchParams.get('all') === 'true'))
-  }),
-
-  http.get(`${API}/departments/lecturer-directory`, ({ request }) => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    const q = new URL(request.url).searchParams.get('q')?.trim().toLowerCase() ?? ''
-    return ok(LECTURER_DIRECTORY.filter((l) => !q || l.fullName.toLowerCase().includes(q) || l.staffNumber.toLowerCase().includes(q)))
-  }),
-
-  http.get(`${API}/faculties/lecturer-placement`, ({ request }) => requireFaculty() ?? ok(listPlacement(request, 'fac-pet'))),
-  http.patch(`${API}/faculties/lecturers/:lecturerUserId/department`, async ({ params, request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const lecturer = placementLecturers.find((l) => l.userId === params.lecturerUserId)
-    if (!lecturer || (lecturer.departmentId !== null && lecturer.facultyId !== 'fac-pet')) return fail(404, 'NOT_FOUND', 'No such lecturer in your faculty.')
-    const { departmentId } = (await request.json()) as { departmentId: string }
-    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === departmentId && d.facultyId === 'fac-pet')
-    if (!department) return fail(400, 'BAD_REQUEST', 'Choose one of your faculty’s departments.')
-    return placeLecturer(lecturer, department)
-  }),
-  http.get(`${API}/admin/departments`, () => requireAdmin() ?? ok(ADMIN_DEPARTMENTS)),
-  http.get(`${API}/admin/department-aliases`, () => requireAdmin() ?? ok(departmentAliases)),
-  http.delete(`${API}/admin/department-aliases/:aliasId`, ({ params }) => {
-    const blocked = requireAdmin()
-    if (blocked) return blocked
-    if (!departmentAliases.some((a) => a.aliasId === params.aliasId)) return fail(404, 'NOT_FOUND', 'No such spelling.')
-    departmentAliases = departmentAliases.filter((a) => a.aliasId !== params.aliasId)
-    return new HttpResponse(null, { status: 204 })
-  }),
-  http.get(`${API}/admin/department-duplicates`, () => {
-    const blocked = requireAdmin()
-    if (blocked) return blocked
-    const groups = new Map<string, DuplicateDepartment[]>()
-    for (const d of ADMIN_DEPARTMENTS) {
-      const key = departmentKey(d.name)!
-      groups.set(key, [...(groups.get(key) ?? []), { departmentId: d.departmentId, name: d.name, facultyId: d.facultyId, facultyName: d.facultyName, lecturerCount: d.lecturerCount, unitCount: 0 }])
-    }
-    return ok([...groups.values()].filter((g) => g.length > 1).map((g) => g.sort((a, b) => b.lecturerCount - a.lecturerCount)))
-  }),
-  http.post(`${API}/admin/departments/:departmentId/merge`, async ({ params, request }) => {
-    const blocked = requireAdmin()
-    if (blocked) return blocked
-    const { intoDepartmentId } = (await request.json()) as { intoDepartmentId: string }
-    const duplicate = ADMIN_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
-    const keep = ADMIN_DEPARTMENTS.find((d) => d.departmentId === intoDepartmentId)
-    if (!duplicate) return fail(404, 'NOT_FOUND', 'No such department.')
-    if (!keep || keep === duplicate) return fail(400, 'BAD_REQUEST', 'Choose a different department to keep.')
-    keep.lecturerCount += duplicate.lecturerCount
-    ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS.filter((d) => d !== duplicate)
-    if (departmentKey(duplicate.name) !== departmentKey(keep.name)) {
-      departmentAliases.push({ aliasId: `alias-${departmentAliases.length + 1}`, alias: duplicate.name, departmentId: keep.departmentId, departmentName: keep.name, facultyName: keep.facultyName, source: 'MERGE', createdByName: currentAccount.fullName, createdAt: new Date().toISOString() })
-    }
-    return ok({ departmentId: keep.departmentId, name: keep.name })
-  }),
-  http.get(`${API}/admin/lecturers`, ({ request }) => requireAdmin() ?? ok(listPlacement(request, null))),
-  http.patch(`${API}/admin/lecturers/:lecturerUserId/department`, async ({ params, request }) => {
-    const blocked = requireAdmin()
-    if (blocked) return blocked
-    const lecturer = placementLecturers.find((l) => l.userId === params.lecturerUserId)
-    if (!lecturer) return fail(404, 'NOT_FOUND', 'No such lecturer.')
-    const { departmentId } = (await request.json()) as { departmentId: string }
-    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === departmentId)
-    if (!department) return fail(400, 'BAD_REQUEST', 'That department does not exist.')
-    return placeLecturer(lecturer, department)
-  }),
-
-  // QA: evaluation rounds
-  http.get(`${API}/quality-assurance/evaluations`, () => requireQa() ?? ok([...evaluationRounds].sort((a, b) => b.opensAt.localeCompare(a.opensAt)).map(toRound))),
-  http.post(`${API}/quality-assurance/evaluations`, async ({ request }) => {
-    const blocked = requireQa()
-    if (blocked) return blocked
-    const input = (await request.json()) as EvaluationRoundInput
-    if (Date.parse(input.closesAt) <= Date.parse(input.opensAt)) return fail(400, 'VALIDATION_FAILED', 'The round must close after it opens.')
-    const id = `round-${++roundSeq}`
-    const round: MockRound = {
-      id, title: input.title, instructions: input.instructions ?? null, opensAt: input.opensAt, closesAt: input.closesAt,
-      minResponses: input.minResponses ?? 3, createdAt: new Date().toISOString(),
-      questions: input.questions.map((q, i) => ({ ...q, id: `${id}-q${i + 1}`, position: i + 1 })),
-    }
-    evaluationRounds.push(round)
-    return ok(toRoundDetail(round), 201)
-  }),
-  http.get(`${API}/quality-assurance/evaluations/:id`, ({ params }) => {
-    const blocked = requireQa()
-    if (blocked) return blocked
-    const round = findRound(params.id)
-    return round ? ok(toRoundDetail(round)) : fail(404, 'NOT_FOUND', 'No such evaluation round.')
-  }),
-  http.patch(`${API}/quality-assurance/evaluations/:id`, async ({ params, request }) => {
-    const blocked = requireQa()
-    if (blocked) return blocked
-    const round = findRound(params.id)
-    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
-    const input = (await request.json()) as Partial<EvaluationRoundInput>
-    if (input.questions && hasAnswers(round.id)) return fail(409, 'CONFLICT', 'Students have already answered this round, so its questions can no longer change.')
-    if (input.title) round.title = input.title
-    if (input.instructions !== undefined) round.instructions = input.instructions || null
-    if (input.opensAt) round.opensAt = input.opensAt
-    if (input.closesAt) round.closesAt = input.closesAt
-    if (input.minResponses) round.minResponses = input.minResponses
-    if (input.questions) round.questions = input.questions.map((q, i) => ({ ...q, id: `${round.id}-e${roundSeq}-${i + 1}`, position: i + 1 }))
-    return ok(toRoundDetail(round))
-  }),
-  http.post(`${API}/quality-assurance/evaluations/:id/close`, ({ params }) => {
-    const blocked = requireQa()
-    if (blocked) return blocked
-    const round = findRound(params.id)
-    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
-    if (roundStatus(round) !== 'CLOSED') {
-      round.closesAt = new Date().toISOString()
-      if (Date.parse(round.opensAt) >= Date.now()) round.opensAt = new Date(Date.now() - 1000).toISOString()
-    }
-    return ok(toRoundDetail(round))
-  }),
-  http.delete(`${API}/quality-assurance/evaluations/:id`, ({ params }) => {
-    const blocked = requireQa()
-    if (blocked) return blocked
-    const round = findRound(params.id)
-    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
-    if (hasAnswers(round.id)) return fail(409, 'CONFLICT', 'Students have already answered this round. Close it instead of deleting it.')
-    evaluationRounds = evaluationRounds.filter((r) => r.id !== round.id)
-    return new HttpResponse(null, { status: 204 })
-  }),
-  http.get(`${API}/quality-assurance/evaluations/:id/results`, ({ params, request }) => {
-    const blocked = requireQa()
-    if (blocked) return blocked
-    const round = findRound(params.id)
-    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
-    const url = new URL(request.url)
-    const departmentId = url.searchParams.get('departmentId')
-    const facultyId = url.searchParams.get('facultyId')
-    return ok(evaluationResults(round, (r) => (!departmentId || r.departmentId === departmentId) && (!facultyId || (facultyId === 'fac-pet' && FACULTY_DEPARTMENT_IDS.has(r.departmentId)))))
-  }),
-
-  // Department and faculty: started rounds and their own results
-  http.get(`${API}/departments/evaluations`, () => requireDepartment() ?? ok(evaluationRounds.filter((r) => roundStatus(r) !== 'UPCOMING').map(toRound))),
-  http.get(`${API}/departments/evaluations/:id`, ({ params }) => {
-    const blocked = requireDepartment()
-    if (blocked) return blocked
-    const round = findRound(params.id)
-    if (!round || roundStatus(round) === 'UPCOMING') return fail(404, 'NOT_FOUND', 'No such evaluation round.')
-    const officer = currentAccount as DepartmentOfficer
-    return ok(evaluationResults(round, (r) => r.departmentId === officer.departmentId))
-  }),
-  http.get(`${API}/faculties/evaluations`, () => requireFaculty() ?? ok(evaluationRounds.filter((r) => roundStatus(r) !== 'UPCOMING').map(toRound))),
-  http.get(`${API}/faculties/evaluations/:id`, ({ params, request }) => {
-    const blocked = requireFaculty()
-    if (blocked) return blocked
-    const round = findRound(params.id)
-    if (!round || roundStatus(round) === 'UPCOMING') return fail(404, 'NOT_FOUND', 'No such evaluation round.')
-    const departmentId = new URL(request.url).searchParams.get('departmentId')
-    if (departmentId && !FACULTY_DEPARTMENT_IDS.has(departmentId)) return fail(404, 'NOT_FOUND', 'No such department in your faculty.')
-    return ok(evaluationResults(round, (r) => (departmentId ? r.departmentId === departmentId : FACULTY_DEPARTMENT_IDS.has(r.departmentId))))
-  }),
-
-  // Students
-  http.get(`${API}/students/me/evaluations`, () => {
-    const blocked = requireStudent()
-    if (blocked) return blocked
-    const studentId = currentAccount.id
-    const rounds: StudentEvaluationRound[] = evaluationRounds.filter((r) => roundStatus(r) === 'OPEN').map((r) => ({
-      id: r.id, title: r.title, instructions: r.instructions, closesAt: r.closesAt, questions: r.questions,
-      units: STUDENT_UNIT_IDS.map((unitId) => {
-        const unit = units.find((u) => u.id === unitId)!
-        return { unitId, unitCode: unit.code, unitName: unit.name, lecturerName: lecturer.fullName, submitted: evaluationSubmissions.has(`${r.id}:${unitId}:${studentId}`) }
-      }),
-    }))
-    return ok(rounds)
-  }),
-  http.post(`${API}/students/me/evaluations/:roundId/units/:unitId`, async ({ params, request }) => {
-    const blocked = requireStudent()
-    if (blocked) return blocked
-    const round = findRound(params.roundId)
-    if (!round || roundStatus(round) !== 'OPEN') return fail(404, 'NOT_FOUND', 'This evaluation is not open.')
-    const unitId = String(params.unitId)
-    if (!STUDENT_UNIT_IDS.includes(unitId)) return fail(404, 'NOT_FOUND', 'You are not on that unit.')
-    const key = `${round.id}:${unitId}:${currentAccount.id}`
-    if (evaluationSubmissions.has(key)) return fail(409, 'CONFLICT', 'You have already evaluated this unit in this round.')
-    const { answers } = (await request.json()) as { answers: { questionId: string; rating?: number; text?: string }[] }
-    const missing = round.questions.find((q) => q.required && !answers.some((a) => a.questionId === q.id))
-    if (missing) return fail(400, 'BAD_REQUEST', `Please answer "${missing.prompt}".`)
-    evaluationSubmissions.add(key)
-    evaluationResponses.push({ roundId: round.id, unitId, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', answers })
-    return new HttpResponse(null, { status: 204 })
   }),
 ]
 
@@ -2612,4 +2092,391 @@ const terminalHandlers = [
   }),
 ]
 
-export const handlers = [...terminalHandlers, ...authHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...facultyHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+/* ------------------------------------------------------------------ *
+ * Oversight backlog: the attendance policy and exam eligibility,
+ * placing lecturers in departments, cross-department allocation, and
+ * student course evaluations. Shapes mirror the backend field for field.
+ * ------------------------------------------------------------------ */
+
+const POLICY_SEED = (): AttendancePolicy => ({ minAttendancePercent: 75, atRiskMarginPercent: 10, updatedAt: new Date('2026-09-01T08:00:00Z').toISOString(), updatedByName: null })
+let attendancePolicy = POLICY_SEED()
+
+/** Every active (student, unit) pair the eligibility reports judge, with classes held and attended. */
+const STANDING_SEED: Omit<EligibilityRow, 'attendanceRate' | 'status'>[] = [
+  { allocationId: 'al-1', studentUserId: 'stu-1', registrationNumber: 'STU00042', fullName: 'Ama Mensah', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 20, sessionsAttended: 19 },
+  { allocationId: 'al-2', studentUserId: 'stu-2', registrationNumber: 'SC211/0002/2022', fullName: 'Brian Otieno', unitId: 'u1', unitCode: 'CS301', unitName: 'Data Structures & Algorithms', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 20, sessionsAttended: 14 },
+  { allocationId: 'al-3', studentUserId: 'stu-7', registrationNumber: 'SC211/0007/2022', fullName: 'Grace Nyambura Maina', unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 14, sessionsAttended: 11 },
+  { allocationId: 'al-4', studentUserId: 'stu-8', registrationNumber: 'SC211/0008/2022', fullName: 'Hassan Ali Noor', unitId: 'u3', unitCode: 'CS502', unitName: 'Software Engineering Principles', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 14, sessionsAttended: 8 },
+  { allocationId: 'al-5', studentUserId: 'stu-9', registrationNumber: 'SC211/0009/2023', fullName: 'Irene Chepkoech Lagat', unitId: 'u4', unitCode: 'CS210', unitName: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', sessionsHeld: 14, sessionsAttended: 12 },
+  { allocationId: 'al-6', studentUserId: 'stu-10', registrationNumber: 'SC211/0010/2023', fullName: 'John Mutua Kilonzo', unitId: 'u4', unitCode: 'CS210', unitName: 'Object-Oriented Programming', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', sessionsHeld: 14, sessionsAttended: 10 },
+  { allocationId: 'al-7', studentUserId: 'stu-11', registrationNumber: 'SC211/0011/2023', fullName: 'Faith Atieno', unitId: 'u5', unitCode: 'CS410', unitName: 'Distributed Systems', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', sessionsHeld: 0, sessionsAttended: 0 },
+]
+
+const SEVERITY: Record<EligibilityStatus, number> = { NOT_ELIGIBLE: 0, AT_RISK: 1, NOT_YET_MEASURED: 2, ELIGIBLE: 3 }
+
+/** Mirrors eligibility.service.ts buildReport. */
+function eligibilityReport(filter: (r: (typeof STANDING_SEED)[number]) => boolean, all: boolean): EligibilityReport {
+  const summary = { total: 0, eligible: 0, atRisk: 0, notEligible: 0, notYetMeasured: 0 }
+  const rows: EligibilityRow[] = []
+  for (const r of STANDING_SEED.filter(filter)) {
+    const percent = r.sessionsHeld > 0 ? (r.sessionsAttended / r.sessionsHeld) * 100 : null
+    const status: EligibilityStatus = percent === null ? 'NOT_YET_MEASURED'
+      : percent < attendancePolicy.minAttendancePercent ? 'NOT_ELIGIBLE'
+        : percent < attendancePolicy.minAttendancePercent + attendancePolicy.atRiskMarginPercent ? 'AT_RISK' : 'ELIGIBLE'
+    summary.total += 1
+    if (status === 'ELIGIBLE') summary.eligible += 1
+    else if (status === 'AT_RISK') summary.atRisk += 1
+    else if (status === 'NOT_ELIGIBLE') summary.notEligible += 1
+    else summary.notYetMeasured += 1
+    if (!all && status !== 'AT_RISK' && status !== 'NOT_ELIGIBLE') continue
+    rows.push({ ...r, attendanceRate: percent === null ? null : Math.round(percent * 10) / 10, status })
+  }
+  rows.sort((a, b) => SEVERITY[a.status] - SEVERITY[b.status] || (a.attendanceRate ?? 101) - (b.attendanceRate ?? 101))
+  return { policy: attendancePolicy, summary, rows }
+}
+
+const ADMIN_DEPARTMENTS_SEED = (): AdminDepartment[] => [
+  ...DEPARTMENTS_SEED.map((d) => ({ departmentId: d.id, name: d.name, code: d.code, inSmarttt: true, lecturerCount: SEED_LECTURERS.filter((l) => l.departmentId === d.id).length })),
+  { departmentId: 'dept-math', name: 'Mathematics', code: 'DMATH', inSmarttt: true, lecturerCount: 1 },
+  // Made here before SMARTTT owned departments: the console offers to send it there.
+  { departmentId: 'dept-acc', name: 'Accounting', code: 'DACC', inSmarttt: false, lecturerCount: 0 },
+  // Created under a second spelling before names were unified — the duplicate the admin Departments page merges.
+  { departmentId: 'dept-cs-dup', name: 'Department of Computer Science', code: null, inSmarttt: true, lecturerCount: 1 },
+]
+let ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS_SEED()
+
+const ABBREVIATIONS: Record<string, string> = {
+  comp: 'computer', cs: 'computer science', sci: 'science', it: 'information technology', info: 'information', tech: 'technology',
+  eng: 'engineering', mgt: 'management', mgmt: 'management', admin: 'administration', bus: 'business', econ: 'economics',
+  math: 'mathematics', maths: 'mathematics', stats: 'statistics', phys: 'physics', chem: 'chemistry', bio: 'biology', educ: 'education',
+}
+
+/** Mirrors department_key() in db/migrations/036_department_spelling.sql. */
+const departmentKey = (name: string | null) => {
+  const words = (name ?? '').toLowerCase().replace(/&/g, ' and ').replace(/\b([a-z])\.(?=[a-z](\.|\b))/g, '$1')
+    .replace(/[^a-z0-9 ]+/g, ' ').replace(/^\s*(the\s+)?(department|dept|dpt)\s+(of\s+)?/, '')
+    .split(/\s+/).filter(Boolean).map((w) => ABBREVIATIONS[w] ?? w)
+  return words.length ? words.join(' ') : null
+}
+
+const ALIASES_SEED = (): DepartmentAlias[] => []
+let departmentAliases = ALIASES_SEED()
+
+/** Mirrors department_for_name(): canonical name first, then a learned alias. */
+const departmentForName = (name: string | null) => {
+  const key = departmentKey(name)
+  if (!key) return null
+  return ADMIN_DEPARTMENTS.find((d) => departmentKey(d.name) === key)
+    ?? ADMIN_DEPARTMENTS.find((d) => departmentAliases.some((a) => a.departmentId === d.departmentId && departmentKey(a.alias) === key))
+    ?? null
+}
+
+const PLACEMENT_SEED = (): PlacementLecturer[] => [
+  { userId: 'lec-9', fullName: 'Dr. Samuel Kiprono', staffNumber: 'STF/09001', title: 'Dr.', email: 's.kiprono@university.edu', departmentId: null, departmentName: null, reportedDepartment: 'Comp. Sci & IT', unitCount: 1 },
+  { userId: 'lec-10', fullName: 'Ms. Lucy Wanjiku', staffNumber: 'STF/09002', title: 'Ms.', email: 'l.wanjiku@university.edu', departmentId: null, departmentName: null, reportedDepartment: 'Maths', unitCount: 0 },
+  ...SEED_LECTURERS.map((l) => ({ userId: l.userId, fullName: l.fullName, staffNumber: l.staffNumber, title: null, email: `${l.userId}@university.edu`, departmentId: l.departmentId, departmentName: l.departmentName, reportedDepartment: l.departmentName, unitCount: l.unitsTaught })),
+  { userId: 'lec-4', fullName: 'Dr. Ruth Kamau', staffNumber: 'STF/04112', title: 'Dr.', email: 'r.kamau@university.edu', departmentId: 'dept-math', departmentName: 'Mathematics', reportedDepartment: 'Mathematics', unitCount: 2 },
+]
+let placementLecturers = PLACEMENT_SEED()
+
+/** Mirrors lecturer.placement.ts listLecturers: unassigned first, then everyone else. */
+function listPlacement(request: Request) {
+  const url = new URL(request.url)
+  const q = url.searchParams.get('q')?.trim().toLowerCase() ?? ''
+  const unassignedOnly = url.searchParams.get('unassigned') === 'true'
+  return placementLecturers
+    .filter((l) => l.departmentId === null || !unassignedOnly)
+    .filter((l) => !q || l.fullName.toLowerCase().includes(q) || l.staffNumber.toLowerCase().includes(q))
+    .sort((a, b) => Number(a.departmentId !== null) - Number(b.departmentId !== null) || a.fullName.localeCompare(b.fullName))
+}
+
+/** Mirrors lecturer.placement.ts moveLecturer, including learning SMARTTT's spelling from an unassigned lecturer. */
+function placeLecturer(lecturer: PlacementLecturer, department: AdminDepartment) {
+  const assign = (l: PlacementLecturer) => Object.assign(l, { departmentId: department.departmentId, departmentName: department.name })
+  let learnedSpelling: string | null = null
+  let alsoPlaced = 0
+  if (lecturer.departmentId === null && lecturer.reportedDepartment && departmentKey(lecturer.reportedDepartment) && !departmentForName(lecturer.reportedDepartment)) {
+    learnedSpelling = lecturer.reportedDepartment
+    departmentAliases.push({
+      aliasId: `alias-${departmentAliases.length + 1}`, alias: learnedSpelling, departmentId: department.departmentId, departmentName: department.name,
+      source: 'PLACEMENT', createdByName: currentAccount.fullName, createdAt: new Date().toISOString(),
+    })
+    for (const other of placementLecturers) {
+      if (other !== lecturer && other.departmentId === null && departmentForName(other.reportedDepartment)?.departmentId === department.departmentId) { assign(other); alsoPlaced += 1 }
+    }
+  }
+  assign(lecturer)
+  const result: PlacementResult = { ...lecturer, learnedSpelling, alsoPlaced }
+  return ok(result)
+}
+
+// --- Course evaluations ----------------------------------------------------
+
+interface MockRound { id: string; title: string; instructions: string | null; opensAt: string; closesAt: string; minResponses: number; createdAt: string; questions: EvaluationQuestion[] }
+interface MockResponse { roundId: string; unitId: string; lecturerName: string; departmentId: string; departmentName: string; answers: { questionId: string; rating?: number; text?: string }[] }
+
+const daysFromNow = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString()
+const questionsFor = (roundId: string): EvaluationQuestion[] => [
+  { id: `${roundId}-q1`, position: 1, prompt: 'The lecturer explained the material clearly.', kind: 'RATING', required: true },
+  { id: `${roundId}-q2`, position: 2, prompt: 'The unit was well organised and followed its outline.', kind: 'RATING', required: true },
+  { id: `${roundId}-q3`, position: 3, prompt: 'What should the lecturer keep doing, or change?', kind: 'TEXT', required: false },
+]
+const ROUNDS_SEED = (): MockRound[] => [
+  { id: 'round-open', title: 'Semester 1 2026/27 evaluation', instructions: 'Your answers are anonymous.', opensAt: daysFromNow(-3), closesAt: daysFromNow(11), minResponses: 3, createdAt: daysFromNow(-4), questions: questionsFor('round-open') },
+  { id: 'round-old', title: 'Semester 2 2025/26 evaluation', instructions: null, opensAt: daysFromNow(-200), closesAt: daysFromNow(-186), minResponses: 3, createdAt: daysFromNow(-201), questions: questionsFor('round-old') },
+]
+const cs301 = { unitId: 'u1', lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science' }
+const RESPONSES_SEED = (): MockResponse[] => [
+  ...[[5, 4, 'Clear examples every week.'], [4, 4, undefined], [3, 2, 'Notes came out late.'], [5, 5, undefined]].map(([a, b, text]) => ({
+    roundId: 'round-open', ...cs301, answers: [{ questionId: 'round-open-q1', rating: a as number }, { questionId: 'round-open-q2', rating: b as number }, ...(text ? [{ questionId: 'round-open-q3', text: text as string }] : [])],
+  })),
+  // One response only: below the minimum, so its ratings are withheld.
+  { roundId: 'round-open', unitId: 'u3', lecturerName: 'Dr. Mary Wambui', departmentId: 'dept-cs', departmentName: 'Computer Science', answers: [{ questionId: 'round-open-q1', rating: 2 }, { questionId: 'round-open-q2', rating: 3 }] },
+  ...[4, 5, 4].map((a) => ({ roundId: 'round-old', unitId: 'u4', lecturerName: 'Mr. Peter Njuguna', departmentId: 'dept-se', departmentName: 'Software Engineering', answers: [{ questionId: 'round-old-q1', rating: a }, { questionId: 'round-old-q2', rating: a }] })),
+]
+let evaluationRounds = ROUNDS_SEED()
+let evaluationResponses = RESPONSES_SEED()
+/** `${roundId}:${unitId}:${studentId}` — who has evaluated what, never joined to the responses. */
+const evaluationSubmissions = new Set<string>()
+let roundSeq = 0
+
+const roundStatus = (r: MockRound): EvaluationRoundStatus => (Date.now() < Date.parse(r.opensAt) ? 'UPCOMING' : Date.now() < Date.parse(r.closesAt) ? 'OPEN' : 'CLOSED')
+const toRound = (r: MockRound): EvaluationRound => ({
+  id: r.id, title: r.title, instructions: r.instructions, opensAt: r.opensAt, closesAt: r.closesAt, status: roundStatus(r),
+  minResponses: r.minResponses, questionCount: r.questions.length, responseCount: evaluationResponses.filter((x) => x.roundId === r.id).length, createdAt: r.createdAt,
+})
+const hasAnswers = (roundId: string) => evaluationResponses.some((x) => x.roundId === roundId)
+const toRoundDetail = (r: MockRound): EvaluationRoundDetail => ({ ...toRound(r), questions: r.questions, questionsEditable: !hasAnswers(r.id) })
+
+function aggregate(responses: MockResponse[], questions: EvaluationQuestion[]): EvaluationQuestionResult[] {
+  return questions.filter((q) => q.kind === 'RATING').flatMap((q) => {
+    const ratings = responses.flatMap((r) => r.answers.filter((a) => a.questionId === q.id && a.rating).map((a) => a.rating!))
+    if (ratings.length === 0) return []
+    const distribution = [1, 2, 3, 4, 5].map((n) => ratings.filter((x) => x === n).length) as [number, number, number, number, number]
+    return [{ questionId: q.id, answered: ratings.length, average: Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 100) / 100, distribution }]
+  })
+}
+
+/** Mirrors evaluation.service.ts getResults. */
+function evaluationResults(round: MockRound, inScope: (r: MockResponse) => boolean): EvaluationResults {
+  const responses = evaluationResponses.filter((r) => r.roundId === round.id && inScope(r))
+  const groups = new Map<string, MockResponse[]>()
+  for (const r of responses) groups.set(`${r.unitId}:${r.lecturerName}`, [...(groups.get(`${r.unitId}:${r.lecturerName}`) ?? []), r])
+  const unitResults: EvaluationUnitResult[] = [...groups.values()].map((list) => {
+    const first = list[0]!
+    const unit = DEPARTMENT_UNITS.find((u) => u.id === first.unitId)
+    const enrolled = unit?.studentCount ?? 0
+    const reportable = list.length >= round.minResponses
+    return {
+      unitId: first.unitId, unitCode: unit?.code ?? first.unitId, unitName: unit?.name ?? null, lecturerName: first.lecturerName,
+      departmentId: first.departmentId, departmentName: first.departmentName, responses: list.length, enrolled,
+      responseRate: enrolled ? Math.round((list.length / enrolled) * 1000) / 10 : null, reportable,
+      ratings: reportable ? aggregate(list, round.questions) : [],
+      comments: reportable ? list.flatMap((r) => r.answers.filter((a) => a.text).map((a) => ({ questionId: a.questionId, text: a.text! }))).sort((a, b) => a.text.localeCompare(b.text)) : [],
+    }
+  })
+  return { round: toRoundDetail(round), totalResponses: responses.length, overall: responses.length >= round.minResponses ? aggregate(responses, round.questions) : [], units: unitResults }
+}
+
+function resetOversightMocks() {
+  attendancePolicy = POLICY_SEED()
+  placementLecturers = PLACEMENT_SEED()
+  ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS_SEED()
+  departmentAliases = ALIASES_SEED()
+  evaluationRounds = ROUNDS_SEED()
+  evaluationResponses = RESPONSES_SEED()
+  evaluationSubmissions.clear()
+}
+
+const requireStudent = () => {
+  if (!store.get()) return unauthorized()
+  if (currentAccount.role !== 'student') return fail(403, 'FORBIDDEN', 'Forbidden')
+  return null
+}
+
+const findRound = (id: unknown) => evaluationRounds.find((r) => r.id === id)
+
+const oversightHandlers = [
+  http.get(`${API}/attendance-policy`, () => (store.get() ? ok(attendancePolicy) : unauthorized())),
+  http.get(`${API}/quality-assurance/attendance-policy`, () => requireQa() ?? ok(attendancePolicy)),
+  http.put(`${API}/quality-assurance/attendance-policy`, async ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const input = (await request.json()) as { minAttendancePercent?: number; atRiskMarginPercent?: number }
+    const min = input.minAttendancePercent ?? attendancePolicy.minAttendancePercent
+    const margin = input.atRiskMarginPercent ?? attendancePolicy.atRiskMarginPercent
+    if (min < 1 || min > 100 || margin < 0 || margin > 50) return fail(400, 'VALIDATION_FAILED', 'Out of range.')
+    attendancePolicy = { minAttendancePercent: min, atRiskMarginPercent: margin, updatedAt: new Date().toISOString(), updatedByName: currentAccount.fullName }
+    return ok(attendancePolicy)
+  }),
+
+  http.get(`${API}/departments/eligibility`, ({ request }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const officer = currentAccount as DepartmentOfficer
+    return ok(eligibilityReport((r) => r.departmentId === officer.departmentId, new URL(request.url).searchParams.get('all') === 'true'))
+  }),
+  http.get(`${API}/quality-assurance/eligibility`, ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const url = new URL(request.url)
+    const departmentId = url.searchParams.get('departmentId')
+    return ok(eligibilityReport((r) => !departmentId || r.departmentId === departmentId, url.searchParams.get('all') === 'true'))
+  }),
+
+  http.get(`${API}/admin/departments`, () => requireAdmin() ?? ok(ADMIN_DEPARTMENTS)),
+  http.get(`${API}/admin/department-aliases`, () => requireAdmin() ?? ok(departmentAliases)),
+  http.delete(`${API}/admin/department-aliases/:aliasId`, ({ params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    if (!departmentAliases.some((a) => a.aliasId === params.aliasId)) return fail(404, 'NOT_FOUND', 'No such spelling.')
+    departmentAliases = departmentAliases.filter((a) => a.aliasId !== params.aliasId)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get(`${API}/admin/department-duplicates`, () => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const groups = new Map<string, DuplicateDepartment[]>()
+    for (const d of ADMIN_DEPARTMENTS) {
+      const key = departmentKey(d.name)!
+      groups.set(key, [...(groups.get(key) ?? []), { departmentId: d.departmentId, name: d.name, code: d.code, lecturerCount: d.lecturerCount, unitCount: 0 }])
+    }
+    return ok([...groups.values()].filter((g) => g.length > 1).map((g) => g.sort((a, b) => b.lecturerCount - a.lecturerCount)))
+  }),
+  http.post(`${API}/admin/departments/:departmentId/merge`, async ({ params, request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const { intoDepartmentId } = (await request.json()) as { intoDepartmentId: string }
+    const duplicate = ADMIN_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
+    const keep = ADMIN_DEPARTMENTS.find((d) => d.departmentId === intoDepartmentId)
+    if (!duplicate) return fail(404, 'NOT_FOUND', 'No such department.')
+    if (!keep || keep === duplicate) return fail(400, 'BAD_REQUEST', 'Choose a different department to keep.')
+    keep.lecturerCount += duplicate.lecturerCount
+    ADMIN_DEPARTMENTS = ADMIN_DEPARTMENTS.filter((d) => d !== duplicate)
+    if (departmentKey(duplicate.name) !== departmentKey(keep.name)) {
+      departmentAliases.push({ aliasId: `alias-${departmentAliases.length + 1}`, alias: duplicate.name, departmentId: keep.departmentId, departmentName: keep.name, source: 'MERGE', createdByName: currentAccount.fullName, createdAt: new Date().toISOString() })
+    }
+    return ok({ departmentId: keep.departmentId, name: keep.name })
+  }),
+  http.get(`${API}/admin/lecturers`, ({ request }) => requireAdmin() ?? ok(listPlacement(request))),
+  http.patch(`${API}/admin/lecturers/:lecturerUserId/department`, async ({ params, request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const lecturer = placementLecturers.find((l) => l.userId === params.lecturerUserId)
+    if (!lecturer) return fail(404, 'NOT_FOUND', 'No such lecturer.')
+    const { departmentId } = (await request.json()) as { departmentId: string }
+    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === departmentId)
+    if (!department) return fail(400, 'BAD_REQUEST', 'That department does not exist.')
+    return placeLecturer(lecturer, department)
+  }),
+
+  // QA: evaluation rounds
+  http.get(`${API}/quality-assurance/evaluations`, () => requireQa() ?? ok([...evaluationRounds].sort((a, b) => b.opensAt.localeCompare(a.opensAt)).map(toRound))),
+  http.post(`${API}/quality-assurance/evaluations`, async ({ request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const input = (await request.json()) as EvaluationRoundInput
+    if (Date.parse(input.closesAt) <= Date.parse(input.opensAt)) return fail(400, 'VALIDATION_FAILED', 'The round must close after it opens.')
+    const id = `round-${++roundSeq}`
+    const round: MockRound = {
+      id, title: input.title, instructions: input.instructions ?? null, opensAt: input.opensAt, closesAt: input.closesAt,
+      minResponses: input.minResponses ?? 3, createdAt: new Date().toISOString(),
+      questions: input.questions.map((q, i) => ({ ...q, id: `${id}-q${i + 1}`, position: i + 1 })),
+    }
+    evaluationRounds.push(round)
+    return ok(toRoundDetail(round), 201)
+  }),
+  http.get(`${API}/quality-assurance/evaluations/:id`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    return round ? ok(toRoundDetail(round)) : fail(404, 'NOT_FOUND', 'No such evaluation round.')
+  }),
+  http.patch(`${API}/quality-assurance/evaluations/:id`, async ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    const input = (await request.json()) as Partial<EvaluationRoundInput>
+    if (input.questions && hasAnswers(round.id)) return fail(409, 'CONFLICT', 'Students have already answered this round, so its questions can no longer change.')
+    if (input.title) round.title = input.title
+    if (input.instructions !== undefined) round.instructions = input.instructions || null
+    if (input.opensAt) round.opensAt = input.opensAt
+    if (input.closesAt) round.closesAt = input.closesAt
+    if (input.minResponses) round.minResponses = input.minResponses
+    if (input.questions) round.questions = input.questions.map((q, i) => ({ ...q, id: `${round.id}-e${roundSeq}-${i + 1}`, position: i + 1 }))
+    return ok(toRoundDetail(round))
+  }),
+  http.post(`${API}/quality-assurance/evaluations/:id/close`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    if (roundStatus(round) !== 'CLOSED') {
+      round.closesAt = new Date().toISOString()
+      if (Date.parse(round.opensAt) >= Date.now()) round.opensAt = new Date(Date.now() - 1000).toISOString()
+    }
+    return ok(toRoundDetail(round))
+  }),
+  http.delete(`${API}/quality-assurance/evaluations/:id`, ({ params }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    if (hasAnswers(round.id)) return fail(409, 'CONFLICT', 'Students have already answered this round. Close it instead of deleting it.')
+    evaluationRounds = evaluationRounds.filter((r) => r.id !== round.id)
+    return new HttpResponse(null, { status: 204 })
+  }),
+  http.get(`${API}/quality-assurance/evaluations/:id/results`, ({ params, request }) => {
+    const blocked = requireQa()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round) return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    const url = new URL(request.url)
+    const departmentId = url.searchParams.get('departmentId')
+    return ok(evaluationResults(round, (r) => !departmentId || r.departmentId === departmentId))
+  }),
+
+  // Department: started rounds and their own results
+  http.get(`${API}/departments/evaluations`, () => requireDepartment() ?? ok(evaluationRounds.filter((r) => roundStatus(r) !== 'UPCOMING').map(toRound))),
+  http.get(`${API}/departments/evaluations/:id`, ({ params }) => {
+    const blocked = requireDepartment()
+    if (blocked) return blocked
+    const round = findRound(params.id)
+    if (!round || roundStatus(round) === 'UPCOMING') return fail(404, 'NOT_FOUND', 'No such evaluation round.')
+    const officer = currentAccount as DepartmentOfficer
+    return ok(evaluationResults(round, (r) => r.departmentId === officer.departmentId))
+  }),
+  // Students
+  http.get(`${API}/students/me/evaluations`, () => {
+    const blocked = requireStudent()
+    if (blocked) return blocked
+    const studentId = currentAccount.id
+    const rounds: StudentEvaluationRound[] = evaluationRounds.filter((r) => roundStatus(r) === 'OPEN').map((r) => ({
+      id: r.id, title: r.title, instructions: r.instructions, closesAt: r.closesAt, questions: r.questions,
+      units: STUDENT_UNIT_IDS.map((unitId) => {
+        const unit = units.find((u) => u.id === unitId)!
+        return { unitId, unitCode: unit.code, unitName: unit.name, lecturerName: lecturer.fullName, submitted: evaluationSubmissions.has(`${r.id}:${unitId}:${studentId}`) }
+      }),
+    }))
+    return ok(rounds)
+  }),
+  http.post(`${API}/students/me/evaluations/:roundId/units/:unitId`, async ({ params, request }) => {
+    const blocked = requireStudent()
+    if (blocked) return blocked
+    const round = findRound(params.roundId)
+    if (!round || roundStatus(round) !== 'OPEN') return fail(404, 'NOT_FOUND', 'This evaluation is not open.')
+    const unitId = String(params.unitId)
+    if (!STUDENT_UNIT_IDS.includes(unitId)) return fail(404, 'NOT_FOUND', 'You are not on that unit.')
+    const key = `${round.id}:${unitId}:${currentAccount.id}`
+    if (evaluationSubmissions.has(key)) return fail(409, 'CONFLICT', 'You have already evaluated this unit in this round.')
+    const { answers } = (await request.json()) as { answers: { questionId: string; rating?: number; text?: string }[] }
+    const missing = round.questions.find((q) => q.required && !answers.some((a) => a.questionId === q.id))
+    if (missing) return fail(400, 'BAD_REQUEST', `Please answer "${missing.prompt}".`)
+    evaluationSubmissions.add(key)
+    evaluationResponses.push({ roundId: round.id, unitId, lecturerName: lecturer.fullName, departmentId: 'dept-cs', departmentName: 'Computer Science', answers })
+    return new HttpResponse(null, { status: 204 })
+  }),
+]
+
+export const handlers = [...terminalHandlers, ...authHandlers, ...smartttAdminHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...managementHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

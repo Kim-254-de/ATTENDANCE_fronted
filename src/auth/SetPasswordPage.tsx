@@ -18,7 +18,7 @@ const schema = z
   .refine((v) => v.password === v.confirmPassword, { path: ['confirmPassword'], message: 'Passwords do not match.' })
 type Values = z.infer<typeof schema>
 
-const ROLE_LABEL = { admin: 'an administrator', faculty: 'faculty officer', department: 'department officer', qa: 'quality assurance officer' } as const
+const ROLE_LABEL = { admin: 'an administrator', management: 'a member of management', department: 'department officer', qa: 'quality assurance officer' } as const
 
 const CARD = 'space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(18,48,95,0.08)] sm:p-8'
 

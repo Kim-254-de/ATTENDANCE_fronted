@@ -4,7 +4,6 @@ import type { QaDashboard } from '@/types'
 
 export interface DashboardFilters {
   targetDepartmentId?: string
-  targetFacultyId?: string
   from?: string
   to?: string
   groupBy?: 'week' | 'month'

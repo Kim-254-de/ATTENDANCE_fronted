@@ -6,7 +6,7 @@ import { BookOpen, GraduationCap, LayoutGrid, Library, MessageSquareQuote, Shiel
  */
 export const nav = [
   { to: '/department-dashboard', label: 'Dashboard', icon: LayoutGrid, end: true },
-  { to: '/department-courses', label: 'Courses', icon: Library },
+  { to: '/department-teaching', label: 'Teaching', icon: Library },
   { to: '/department-lecturers', label: 'Lecturers', icon: GraduationCap },
   { to: '/department-students', label: 'Students', icon: Users },
   { to: '/department-units', label: 'Units', icon: BookOpen },

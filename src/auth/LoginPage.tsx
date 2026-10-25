@@ -21,7 +21,7 @@ type Values = z.infer<typeof schema>
 
 /**
  * Sign-in. Students and lecturers arrive from the public role selector
- * (`/login?role=…`). Administrators and faculty and department officers use
+ * (`/login?role=…`). Administrators, management and department officers use
  * the unlisted staff page, `/oversight` (`oversight` set): one form for all
  * three, since the account itself says which portal it opens.
  */
@@ -58,7 +58,7 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
   const landing = (r: string) => {
     if (r === 'student') return from.startsWith('/student-') || from === '/scan' ? from : roleHome(r)
     if (OVERSIGHT_ROLES.has(r)) return from.startsWith(`/${r}`) ? from : roleHome(r)
-    return from.startsWith('/student-') || from.startsWith('/department-') || from.startsWith('/faculty-') || from.startsWith('/admin') ? roleHome(r) : from
+    return from.startsWith('/student-') || from.startsWith('/department-') || from.startsWith('/faculty-') || from.startsWith('/management') || from.startsWith('/admin') ? roleHome(r) : from
   }
 
   if (me) return <Navigate to={landing(me.role)} replace />
@@ -118,7 +118,10 @@ export function LoginPage({ oversight = false }: { oversight?: boolean }) {
       subtitle={viaSmarttt
         ? 'Sign in with your SMARTTT account: the same login and password you use for SMARTTT.'
         : isStudent ? 'Sign in to access your attendance dashboard.'
-        : isOfficer ? 'For administrators and faculty and department officers. Sign in with the email your invitation was sent to.'
+        : isOfficer
+          ? smartttAccounts()
+            ? 'Administrators: your SMARTTT login and password. Management and department officers: the email your invitation was sent to.'
+            : 'For administrators, management and department officers. Sign in with the email your invitation was sent to.'
         : 'Sign in to manage attendance'}
     >
       <form

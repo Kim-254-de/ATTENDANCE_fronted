@@ -6,7 +6,7 @@ const auditsKey = (filters: AuditFilters = {}) => ['qa', 'audits', filters] as c
 const auditKey = (id: string | undefined) => ['qa', 'audits', 'one', id] as const
 const checklistKey = (auditId: string | undefined) => ['qa', 'audits', auditId, 'checklist'] as const
 
-/** Every department, for the "create audit" target picker — a QA officer has no department/faculty of its own to scope by. */
+/** Every department, for the "create audit" target picker — a QA officer has no department of its own to scope by. */
 export const useQaDepartments = () =>
   useQuery({
     queryKey: ['qa', 'departments'],
@@ -14,17 +14,9 @@ export const useQaDepartments = () =>
     staleTime: 5 * 60_000,
   })
 
-export const useQaFaculties = () =>
-  useQuery({
-    queryKey: ['qa', 'faculties'],
-    queryFn: async () => (await api.get<QaDirectoryEntry[]>('/quality-assurance/faculties')).data,
-    staleTime: 5 * 60_000,
-  })
-
 export interface AuditFilters {
   status?: QaAuditStatus
   targetDepartmentId?: string
-  targetFacultyId?: string
   from?: string
   to?: string
 }
@@ -55,8 +47,7 @@ export const useAuditChecklist = (auditId: string | undefined) =>
 
 export interface CreateAuditInput {
   title: string
-  targetDepartmentId?: string
-  targetFacultyId?: string
+  targetDepartmentId: string
   checklistTemplateId: string
   leadAuditorUserId: string
   scheduledDate: string

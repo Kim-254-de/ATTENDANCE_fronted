@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { errorMessage, fieldErrors } from '@/lib/api'
 
 /**
- * Name + email, plus whatever scope the page adds (`children`: a faculty or
+ * Name + email, plus whatever scope the page adds (`children`: a role and
  * department picker). The invitee gets an email to choose their own password;
  * nothing here ever sets one.
  */

@@ -4,10 +4,10 @@ import { env } from './env'
 
 /**
  * Auth uses an httpOnly session cookie set by the API, so no token is ever
- * readable from JavaScript (mitigates XSS token theft). Because the browser
- * attaches that cookie automatically, mutating requests also carry a CSRF
- * token: the API sets an `XSRF-TOKEN` cookie and expects it echoed back in
- * the `X-XSRF-TOKEN` header.
+ * readable from JavaScript (mitigates XSS token theft). Cross-site requests
+ * are stopped by the cookie's SameSite=Lax and the same-origin /api proxy;
+ * the API sets no XSRF-TOKEN cookie today, so the XSRF options below only
+ * take effect if it ever does.
  */
 export const api = axios.create({
   baseURL: env.apiUrl,

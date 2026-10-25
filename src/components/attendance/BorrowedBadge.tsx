@@ -1,5 +1,5 @@
 /**
- * Marks a lecturer who teaches one of the department's (or faculty's) units
+ * Marks a lecturer who teaches one of the department's units
  * but belongs to another department, or to none yet. Units belong to the
  * department that owns the curriculum, so a borrowed lecturer's figures here
  * cover only the units they teach for it.

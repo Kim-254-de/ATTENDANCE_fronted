@@ -9,8 +9,8 @@ import type { PlacementLecturer, PlacementResult } from '@/types'
 export interface PlacementDepartment {
   id: string
   name: string
-  /** Shown as an option group: the faculty, for an administrator choosing across faculties. */
-  group?: string | null
+  /** The department's code, shown next to its name. */
+  code?: string | null
 }
 
 interface Props {
@@ -27,8 +27,7 @@ interface Props {
 }
 
 /**
- * Placing lecturers in departments, shared by the faculty portal (its own departments) and the
- * administrator's (any department). A lecturer whose SMARTTT department name matched nothing
+ * Placing lecturers in departments, from the administrator's console (any department). A lecturer whose SMARTTT department name matched nothing
  * here signs in unassigned and counts toward no department until someone places them, so those
  * are listed first with the name SMARTTT gave.
  */
@@ -80,7 +79,6 @@ function PlacementRow({ lecturer, departments, onMove }: { lecturer: PlacementLe
   const [learned, setLearned] = useState<PlacementResult | null>(null)
   const unassigned = lecturer.departmentId === null
   const choices = departments.filter((d) => d.id !== lecturer.departmentId)
-  const groups = [...new Set(choices.map((d) => d.group ?? ''))]
 
   const move = async () => {
     if (!departmentId) return
@@ -110,16 +108,14 @@ function PlacementRow({ lecturer, departments, onMove }: { lecturer: PlacementLe
             <p className="mt-1 text-sm">
               {unassigned
                 ? <span className="text-warning">Unassigned{lecturer.reportedDepartment ? ` · SMARTTT says “${lecturer.reportedDepartment}”` : ''}</span>
-                : <span className="text-ink">{lecturer.departmentName}{lecturer.facultyName ? <span className="text-muted"> · {lecturer.facultyName}</span> : null}</span>}
+                : <span className="text-ink">{lecturer.departmentName}</span>}
             </p>
           </div>
           <div className="flex w-full items-center gap-2 sm:w-auto">
             <label className="sr-only" htmlFor={`place-${lecturer.userId}`}>{unassigned ? 'Place' : 'Move'} {lecturer.fullName}</label>
             <select id={`place-${lecturer.userId}`} value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="input min-w-0 flex-1 sm:w-56 sm:flex-none">
               <option value="">{unassigned ? 'Choose a department…' : 'Move to…'}</option>
-              {groups.map((g) => g
-                ? <optgroup key={g} label={g}>{choices.filter((d) => d.group === g).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</optgroup>
-                : choices.filter((d) => !d.group).map((d) => <option key={d.id} value={d.id}>{d.name}</option>))}
+              {choices.map((d) => <option key={d.id} value={d.id}>{d.code ? `${d.name} (${d.code})` : d.name}</option>)}
             </select>
             <Button type="button" variant="secondary" onClick={move} disabled={!departmentId} loading={pending}>{unassigned ? 'Place' : 'Move'}</Button>
           </div>
