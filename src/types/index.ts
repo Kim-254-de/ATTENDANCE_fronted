@@ -90,7 +90,8 @@ export type Account = Lecturer | Student | DepartmentOfficer | ManagementAccount
  */
 export interface Officer {
   userId: string
-  role: 'admin' | 'management' | 'department' | 'qa'
+  /** timetabling: the timetabling office, who sign in at the Timetable Generator. */
+  role: 'admin' | 'management' | 'department' | 'qa' | 'timetabling'
   fullName: string
   email: string
   status: AccountStatus
@@ -112,10 +113,12 @@ export interface InvitationResult {
 export interface InvitationDetails {
   fullName: string
   email: string
-  role: 'admin' | 'management' | 'department' | 'qa'
+  role: 'admin' | 'management' | 'department' | 'qa' | 'timetabling'
   /** The department's name; null for the university-wide roles. */
   scopeName: string | null
   expiresAt: string
+  /** Where to sign in afterwards when it isn't the staff page here: the Generator, for the timetabling office. */
+  signInUrl?: string | null
 }
 
 /** GET /admin/directory — departments not yet in SMARTTT. */

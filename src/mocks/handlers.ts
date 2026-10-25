@@ -1936,7 +1936,7 @@ const invitationHandlers = [
   http.post(`${API}/admin/invitations`, async ({ request }) => {
     const blocked = requireAdmin()
     if (blocked) return blocked
-    const input = (await request.json()) as { role: 'admin' | 'qa' | 'management' | 'department'; fullName: string; email: string; departmentId?: string }
+    const input = (await request.json()) as { role: 'admin' | 'qa' | 'management' | 'timetabling' | 'department'; fullName: string; email: string; departmentId?: string }
     if (input.role !== 'department') return inviteOfficer(input, { role: input.role, departmentId: null, departmentName: null })
     const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === input.departmentId)
     if (!department) return fail(400, 'BAD_REQUEST', 'That department does not exist.')
@@ -1952,6 +1952,7 @@ const invitationHandlers = [
     const details: InvitationDetails = {
       fullName: officer.fullName, email: officer.email, role: officer.role,
       scopeName: officer.departmentName, expiresAt: officer.invitationExpiresAt!,
+      signInUrl: officer.role === 'timetabling' ? 'https://generator.test.local' : null,
     }
     return ok(details)
   }),
@@ -1967,7 +1968,8 @@ const invitationHandlers = [
       : officer.role === 'management' ? { ...base, role: 'management' }
       : officer.role === 'qa' ? { ...base, role: 'qa', title: null }
       : { ...base, role: 'department', departmentId: officer.departmentId!, departmentName: officer.departmentName! }
-    accounts.set(officer.email, { user, password })
+    // The timetabling office signs in at the Generator: no account here to sign in with.
+    if (officer.role !== 'timetabling') accounts.set(officer.email, { user, password })
     return ok({ email: officer.email, message: 'Your account is ready. Sign in with your email and new password.' })
   }),
   http.post(`${API}/auth/reset-password`, async ({ request }) => {

@@ -48,7 +48,7 @@ export const useSyncDirectory = () => {
 }
 
 export type AdminInvitation =
-  | { role: 'admin' | 'qa' | 'management'; fullName: string; email: string }
+  | { role: 'admin' | 'qa' | 'management' | 'timetabling'; fullName: string; email: string }
   | { role: 'department'; fullName: string; email: string; departmentId: string }
 
 /** Invites an administrator, a QA officer, a member of management, or one department's officer. */
