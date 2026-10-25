@@ -1,5 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { EnrolmentStudent, Terminal, TerminalCapability } from '@/portals/department/terminals/terminalsApi'
+import { examHandlers, resetExams } from './exams'
 import { resetTeaching, teachingHandlers } from './teaching'
 import type { Account, Admin, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, InvitationDetails, Officer, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, PlacementLecturer, StudentEvaluationRound, PendingUnit, ManagementAccount, ManagementDepartment, ManagementDepartmentYears, ManagementStudent, ManagementUnit, ManagementUniversity, ManagementYearDetail } from '@/types'
 
@@ -182,6 +183,7 @@ export const resetMocks = () => {
   resetTerminalMocks()
   resetOversightMocks()
   resetTeaching()
+  resetExams()
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -2497,4 +2499,12 @@ const oversightHandlers = [
   }),
 ]
 
-export const handlers = [...terminalHandlers, ...authHandlers, ...smartttAdminHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...managementHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+/** Who is signed in, for the exam rooms' handlers (src/mocks/exams.ts). */
+const examWho = () => {
+  if (!store.get()) return null
+  const a = currentAccount as Account & { staffNumber?: string | null; registrationNumber?: string | null }
+  return { role: a.role, staffNumber: a.staffNumber ?? undefined, registrationNumber: a.registrationNumber ?? undefined }
+}
+
+// Exam handlers first: they answer exam codes at POST /attendance/check-in and let class codes through.
+export const handlers = [...examHandlers(API, examWho), ...terminalHandlers, ...authHandlers, ...smartttAdminHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...managementHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

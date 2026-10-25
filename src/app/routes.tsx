@@ -145,6 +145,12 @@ export const routes = [
             lazy: async () => ({ Component: (await import('@/portals/lecturer/units/UnitStudentsPage')).UnitStudentsPage }),
             handle: { title: 'Unit Students' },
           },
+          {
+            // Invigilation: the lecturer's exam rooms, from SMARTTT's exam timetable.
+            path: 'exams',
+            lazy: async () => ({ Component: (await import('@/portals/lecturer/exams/ExamsPage')).ExamsPage }),
+            handle: { title: 'Exams' },
+          },
         ],
       },
       {
@@ -227,6 +233,12 @@ export const routes = [
         path: 'session/:sessionId',
         lazy: async () => ({ Component: (await import('@/portals/lecturer/attendance/LiveSessionPage')).LiveSessionPage }),
         handle: { title: 'Live Session', role: 'lecturer' },
+      },
+      {
+        // An exam room's code, full-bleed like a live class: it's what the room sees.
+        path: 'exam-room/:sessionId',
+        lazy: async () => ({ Component: (await import('@/portals/lecturer/exams/ExamRoomPage')).ExamRoomPage }),
+        handle: { title: 'Exam Room', role: 'lecturer' },
       },
       {
         // Management: university-wide attendance, departments -> years -> units -> unit.
