@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { Download, Send, Unlock } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -59,6 +60,13 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   const [editing, setEditing] = useState<ExamPaper | 'new' | null>(null)
   const [pasting, setPasting] = useState(false)
   const [letter, setLetter] = useState(false)
+  const [search, setSearch] = useSearchParams()
+  // The Units & groups tab is the page's default: dropping `tab` opens it, keeping the term.
+  const openUnits = () => {
+    const next = new URLSearchParams(search)
+    next.delete('tab')
+    setSearch(next, { replace: true })
+  }
 
   if (board.isPending) return <Skeleton className="h-40" />
   if (board.isError) return <p role="alert" className="text-sm text-danger">{errorMessage(board.error)}</p>
@@ -67,6 +75,8 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   // A unit is examined once per sitting its classes need: regular, and ODEL when it has ODEL or part-time classes.
   const unexamined = data.units.filter((u) => !u.paperId || (u.sittings.includes('odel') && !u.odelPaperId))
   const failure = publish.error ?? fromUnits.error ?? remove.error ?? noExam.error
+  // A paper is built from units, at least one of them this department's: none yet, nothing to put on one.
+  const noUnits = data.units.length === 0
 
   return (
     <section className="space-y-4">
@@ -83,7 +93,10 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           {editable && unexamined.some((u) => !u.noWrittenExam) && (
             <Button variant="secondary" onClick={() => fromUnits.mutate()} loading={fromUnits.isPending}>A paper for each unit</Button>
           )}
-          {editable && <Button onClick={() => setEditing('new')}>Add a paper</Button>}
+          {editable && (
+            <Button onClick={() => setEditing('new')} disabled={noUnits}
+              title={noUnits ? 'Enter your units on the Units & groups tab first' : undefined}>Add a paper</Button>
+          )}
           {data.published ? (
             <Button variant="secondary" onClick={() => publish.mutate('reopen')} loading={publish.isPending}>
               <Unlock className="size-4" aria-hidden /> Reopen papers
@@ -97,6 +110,15 @@ export function ExamsTab({ term }: { term: string | undefined }) {
         </div>
       </div>
       {failure && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{errorMessage(failure)}</p>}
+      {noUnits && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-ink">
+          <p>
+            Exam papers are built from your units. Enter your units first, each with the courses that take it,
+            on the Units &amp; groups tab; then add a paper for each here.
+          </p>
+          <Button variant="secondary" onClick={openUnits}>Go to Units &amp; groups</Button>
+        </div>
+      )}
       {!data.published && data.problems.length > 0 && (
         <details className="rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning" open={data.problems.length <= 5}>
           <summary className="cursor-pointer font-semibold">{data.problems.length} to finish before publishing the papers</summary>
@@ -127,7 +149,9 @@ export function ExamsTab({ term }: { term: string | undefined }) {
             </tr>
           ))}
           {data.papers.length === 0 && (
-            <tr><td colSpan={6} className="px-3 py-8 text-center text-muted">No papers yet. Start with “A paper for each unit”, then join shared papers.</td></tr>
+            <tr><td colSpan={6} className="px-3 py-8 text-center text-muted">
+              {noUnits ? 'No papers yet: enter your units first.' : 'No papers yet. Start with “A paper for each unit”, then join shared papers.'}
+            </td></tr>
           )}
         </tbody>
       </TableCard>
@@ -198,6 +222,15 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
         <fieldset className="space-y-2">
           <legend className="font-medium text-ink">Units sitting this paper</legend>
           <p className="text-xs text-muted">Tick several for a shared paper (e.g. BITE 131/COSC 130). All groups of a unit sit one paper.</p>
+          {own.length === 0 && (
+            <p className="rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">
+              {board.units.length === 0
+                ? 'Your department has no units yet. Enter them on the Units & groups tab first.'
+                : form.sitting === 'odel'
+                  ? 'Every one of your units is already on an ODEL paper (or has no written exam).'
+                  : 'Every one of your units is already on a paper (or has no written exam). Edit that paper instead.'}
+            </p>
+          )}
           <div className="grid gap-1 sm:grid-cols-2">
             {own.map((u) => (
               <label key={u.id} className="flex items-center gap-2">
@@ -234,7 +267,8 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
           <input value={form.notes} maxLength={500} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input" />
         </Field>
         {save.isError && <p role="alert" className="text-danger">{errorMessage(save.error)}</p>}
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center justify-end gap-2">
+          {form.unitIds.length === 0 && <span className="mr-auto text-xs text-muted">Tick at least one unit to save.</span>}
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button type="submit" loading={save.isPending} disabled={form.unitIds.length === 0}>Save</Button>
         </div>

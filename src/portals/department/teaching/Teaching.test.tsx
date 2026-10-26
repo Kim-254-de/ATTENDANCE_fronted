@@ -86,6 +86,18 @@ describe('department teaching', () => {
     expect(screen.getByRole('link', { name: /excel/i })).toHaveAttribute('href', `${env.apiUrl}/departments/teaching/export/xlsx`)
   })
 
+  it('says why a paper cannot be saved until a unit is ticked', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click(await screen.findByRole('button', { name: /add a paper/i }))
+    const dialog = await screen.findByRole('dialog', { name: /add a paper/i })
+    expect(within(dialog).getByText(/tick at least one unit to save/i)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /^save$/i })).toBeDisabled()
+    await user.click(within(dialog).getByRole('checkbox', { name: /cosc 103/i }))
+    expect(within(dialog).queryByText(/tick at least one unit to save/i)).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /^save$/i })).toBeEnabled()
+  })
+
   it('has exam papers and invigilators on their own tabs, without the teaching publish button', async () => {
     const user = await openTeaching()
     await user.click(screen.getByRole('tab', { name: /^exams$/i }))
