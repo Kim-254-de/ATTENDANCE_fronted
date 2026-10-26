@@ -29,6 +29,8 @@ const PAPER_COLUMNS: BulkColumn[] = [
   { key: 'codes', label: 'Codes', example: 'BITE 131/COSC 130', required: true,
     hint: 'One code, or several units sitting one shared paper, separated by "/".' },
   { key: 'title', label: 'Title', example: 'Introduction to Programming' },
+  { key: 'sitting', label: 'Sitting', example: 'Regular',
+    hint: 'ODEL: sat by the units\' ODEL and part-time classes, a separate paper. "MATH 241 odel" in Codes works too.' },
   { key: 'written_exam', label: 'Written exam', example: 'Yes', hint: 'No: the units have no written exam this term.' },
   { key: 'examiner', label: 'Examiner', example: 'Dr. Jane Otieno', hint: 'Blank: the unit\'s lecturer.' },
   { key: 'staff_no', label: 'Staff no.', example: 'TUN/STF/0123' },
@@ -62,7 +64,8 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   if (board.isError) return <p role="alert" className="text-sm text-danger">{errorMessage(board.error)}</p>
   const data = board.data
   const editable = data.canEdit
-  const unexamined = data.units.filter((u) => !u.paperId)
+  // A unit is examined once per sitting its classes need: regular, and ODEL when it has ODEL or part-time classes.
+  const unexamined = data.units.filter((u) => !u.paperId || (u.sittings.includes('odel') && !u.odelPaperId))
   const failure = publish.error ?? fromUnits.error ?? remove.error ?? noExam.error
 
   return (
@@ -110,6 +113,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
             <tr key={p.id} className="border-t border-line align-top">
               <td className={`${td} font-semibold whitespace-nowrap text-ink`}>
                 {p.codes}
+                {p.sitting === 'odel' && <span className="ml-1 rounded-md bg-brand-soft px-1.5 text-xs font-normal text-brand-ink">ODEL</span>}
                 {p.changedSincePublished && <span className="ml-1 rounded-md bg-warning-soft px-1.5 text-xs font-normal text-warning">changed</span>}
               </td>
               <td className={td}>{p.title}{p.notes && <span className="block text-xs text-muted">{p.notes}</span>}</td>
@@ -134,7 +138,10 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           <ul className="space-y-1">
             {unexamined.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-2">
-                <span className={clsx(u.noWrittenExam && 'text-muted')}>{u.code} {u.title}</span>
+                <span className={clsx(u.noWrittenExam && 'text-muted')}>
+                  {u.code} {u.title}
+                  {u.paperId && !u.odelPaperId && <span className="ml-1 text-xs text-warning">needs an ODEL paper</span>}
+                </span>
                 {editable && (
                   <label className="flex items-center gap-1.5 text-xs">
                     <input type="checkbox" checked={u.noWrittenExam} onChange={(e) => noExam.mutate({ unitId: u.id, value: e.target.checked })} />
@@ -161,14 +168,19 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
   const [form, setForm] = useState<PaperInput>({
     unitIds: paper?.units.map((u) => u.id) ?? [],
     title: paper?.title ?? '',
+    sitting: paper?.sitting ?? 'regular',
     examinerId: paper?.examinerId ?? null,
     notes: paper?.notes ?? '',
   })
   const [query, setQuery] = useState('')
   const chosen = new Set(form.unitIds)
   const toggle = (id: string) => setForm({ ...form, unitIds: chosen.has(id) ? form.unitIds.filter((u) => u !== id) : [...form.unitIds, id] })
-  // Units this paper may take: on no paper yet, or already on this one.
-  const own = board.units.filter((u) => !u.noWrittenExam && (!u.paperId || u.paperId === paper?.id))
+  // Units this paper may take: on no paper of its sitting yet, or already on this one.
+  const own = board.units.filter((u) => {
+    if (u.noWrittenExam) return false
+    const taken = form.sitting === 'odel' ? u.odelPaperId : u.paperId
+    return !taken || taken === paper?.id
+  })
   const q = query.trim().toLowerCase()
   const others = [
     ...(paper?.units.filter((u) => u.departmentCode !== board.department.code).map((u) => ({ ...u, title: '' })) ?? []),
@@ -203,6 +215,12 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
             ))}
           </div>
         </fieldset>
+        <Field label="Sitting" hint="ODEL and part-time classes sit separate papers.">
+          <select value={form.sitting} onChange={(e) => setForm({ ...form, sitting: e.target.value as PaperInput['sitting'], unitIds: [] })} className="input">
+            <option value="regular">Regular classes</option>
+            <option value="odel">ODEL and part-time classes</option>
+          </select>
+        </Field>
         <Field label="Title" hint="Blank: the first unit's title.">
           <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" />
         </Field>

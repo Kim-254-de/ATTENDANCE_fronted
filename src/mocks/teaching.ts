@@ -195,7 +195,7 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
       const b = board()
       return ok({
         term: TERM, department: DEPARTMENT, canEdit: true, published: false, publication: null, papers: [],
-        units: b.units.map((u) => ({ id: u.id, code: u.code, title: u.title, noWrittenExam: false, paperId: null, paperCodes: null, paperDepartment: null, defaultExaminerId: null })),
+        units: b.units.map((u) => ({ id: u.id, code: u.code, title: u.title, noWrittenExam: false, paperId: null, paperCodes: null, paperDepartment: null, defaultExaminerId: null, sittings: ['regular'], odelPaperId: null })),
         otherUnits: [], practicals: [],
         lecturers: state.lecturers.map((l) => ({ id: l.id, display: `${l.title ? `${l.title} ` : ''}${l.fullName}`, staffNumber: l.staffNumber, active: l.active })),
         problems: b.units.map((u) => ({ code: 'unit_not_examined', message: `${u.code} is on no paper; add it to one, or mark it 'no written exam'.` })),

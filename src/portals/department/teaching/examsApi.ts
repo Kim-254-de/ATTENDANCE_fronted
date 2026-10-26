@@ -14,9 +14,13 @@ export interface Problem {
   message: string
 }
 
+/** Who sits a paper: the units' regular classes, or their ODEL and part-time ones. */
+export type Sitting = 'regular' | 'odel'
+
 export interface ExamPaper {
   id: string
   codes: string
+  sitting: Sitting
   units: Array<{ id: string; code: string; departmentCode: string }>
   title: string
   examinerId: string | null
@@ -47,6 +51,8 @@ export interface ExamBoard {
   units: Array<{
     id: string; code: string; title: string; noWrittenExam: boolean
     paperId: string | null; paperCodes: string | null; paperDepartment: string | null; defaultExaminerId: string | null
+    /** The sittings the unit's classes need papers for, and its ODEL paper when it has one. */
+    sittings: Sitting[]; odelPaperId: string | null
   }>
   otherUnits: Array<{ id: string; code: string; title: string; departmentCode: string }>
   practicals: Practical[]
@@ -84,6 +90,7 @@ export interface InvigilationBoard {
 export interface PaperInput {
   unitIds: string[]
   title: string
+  sitting: Sitting
   examinerId: string | null
   notes: string
 }
