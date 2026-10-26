@@ -1,11 +1,12 @@
 import clsx from 'clsx'
-import { BookOpen, ClipboardCheck, LayoutGrid, LogOut, UserRound, Users } from 'lucide-react'
+import { BookOpen, ClipboardCheck, LayoutGrid, NotebookPen, LogOut, UserRound, Users } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useLogout } from '@/auth/authApi'
 
 const nav = [
   { to: '/lecturer-dashboard', label: 'Dashboard', icon: LayoutGrid, end: true },
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
+  { to: '/exams', label: 'Exams', icon: NotebookPen },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/units', label: 'Units', icon: BookOpen },
   { to: '/profile', label: 'Profile', icon: UserRound },

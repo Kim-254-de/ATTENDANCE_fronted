@@ -99,7 +99,7 @@ export function ScanPage() {
         <div>
           <p className="text-sm font-semibold tracking-wide text-brand-ink">CHECK IN</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Scan the class QR code</h1>
-          <p className="mt-2 text-sm text-muted">Point your camera at the code your lecturer is showing. It changes every minute, so scan it live in class.</p>
+          <p className="mt-2 text-sm text-muted">Point your camera at the code your lecturer or invigilator is showing. It changes every minute, so scan it live in the room.</p>
         </div>
 
         {cameraOn && (
@@ -131,7 +131,7 @@ export function ScanPage() {
             <CheckCircle2 className="mx-auto size-12 text-success" aria-hidden />
             <div>
               <h2 className="text-xl font-bold text-ink">You're marked present</h2>
-              <p className="mt-1 text-sm text-muted">{state.result.unitCode} · recorded at {formatTime(state.result.recordedAt)}</p>
+              <p className="mt-1 text-sm text-muted">{state.result.unitCode}{state.result.room ? ` · Room ${state.result.room}` : ''} · recorded at {formatTime(state.result.recordedAt)}</p>
             </div>
             <Link to="/student-dashboard" className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-brand text-sm font-semibold text-white">Done</Link>
           </Card>
