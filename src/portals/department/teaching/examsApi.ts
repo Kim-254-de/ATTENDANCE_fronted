@@ -110,6 +110,8 @@ export interface ExamBoard {
   practicals: Practical[]
   lecturers: Array<{ id: string; display: string; staffNumber: string | null; active: boolean }>
   problems: Problem[]
+  /** Not in the way of publishing: papers nobody has synced yet (they still go to the Director). */
+  warnings: Problem[]
   summary: { papers: number; students: number; changed: number; problems: number }
 }
 
@@ -122,9 +124,16 @@ export interface InvigilationRow {
   startTime: string | null
   endTime: string | null
   rooms: string[]
+  /** In the Director's shared draft (placed in a session). */
+  placed: boolean
+  /** The room with most of its students: the main invigilator's, who collects every room's scripts. */
+  mainRoom: string | null
+  /** The main invigilator: can be named before the draft. */
   invigilatorId: string | null
   invigilator: string | null
   invigilatorDepartment: string | null
+  /** Each extra room of a paper split over rooms, with its own invigilator. */
+  extras: Array<{ room: string; invigilatorId: string | null; invigilator: string | null; invigilatorDepartment: string | null }>
 }
 
 export interface InvigilationBoard {
@@ -233,8 +242,8 @@ export const usePublishExams = (term: string | undefined) =>
   useSave(async (action: 'publish' | 'reopen') => (await api.post(`${BASE}/exams/${action}`, undefined, { params: params(term) })).data)
 
 export const useSetInvigilator = (term: string | undefined) =>
-  useSave(async ({ paperId, lecturerId }: { paperId: string; lecturerId: string | null }) =>
-    (await api.put(`${BASE}/invigilators/${paperId}`, { lecturerId }, { params: params(term) })).data,
+  useSave(async ({ paperId, lecturerId, room = '' }: { paperId: string; lecturerId: string | null; room?: string }) =>
+    (await api.put(`${BASE}/invigilators/${paperId}`, { lecturerId, room }, { params: params(term) })).data,
   )
 
 export const usePublishInvigilators = (term: string | undefined) =>

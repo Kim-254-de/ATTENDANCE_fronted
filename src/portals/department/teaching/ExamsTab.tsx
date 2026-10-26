@@ -146,6 +146,15 @@ export function ExamsTab({ term }: { term: string | undefined }) {
         </details>
       )}
 
+      {data.warnings.length > 0 && (
+        <details className="rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-ink" open={data.warnings.length <= 3}>
+          <summary className="cursor-pointer font-semibold">
+            {data.warnings.length} {data.warnings.length === 1 ? 'paper has' : 'papers have'} no students known yet (doesn't stop publishing)
+          </summary>
+          <ul className="mt-1 list-disc pl-5">{data.warnings.map((w, i) => <li key={`${w.code}${i}`}>{w.message}</li>)}</ul>
+        </details>
+      )}
+
       <TableCard>
         <thead className="bg-surface">
           <tr><th className={th}>Codes</th><th className={th}>Title</th><th className={th}>Class rows</th><th className={th}>Students</th><th className={th}>Examiner</th><th className={th}><span className="sr-only">Actions</span></th></tr>

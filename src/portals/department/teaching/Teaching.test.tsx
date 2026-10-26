@@ -140,3 +140,24 @@ describe('the uploaded exam list', () => {
     expect(await screen.findByText('107')).toBeInTheDocument()
   })
 })
+
+describe('invigilators before the draft', () => {
+  it('names a paper\'s main invigilator before the Director shares a draft, and says a paper nobody synced still goes', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
+    await within(dialog).findByText(/3 papers read/i)
+    // Keep MATH 999 this time: nobody synced it, and it still goes to the Director.
+    await user.click(within(dialog).getByRole('button', { name: /save 3 papers/i }))
+    expect(await screen.findByText(/1 paper has no students known yet/i)).toBeInTheDocument()
+    expect(screen.getByText(/nobody has synced math 999/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /invigilators/i }))
+    expect(await screen.findByText(/you can name each paper's main invigilator now/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /publish invigilators/i })).toBeDisabled()
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Main invigilator for MATH 241' }), 'tl-1')
+    expect(await screen.findByText(/1 of 3 invigilators named/i)).toBeInTheDocument()
+  })
+})

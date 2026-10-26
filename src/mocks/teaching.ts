@@ -34,6 +34,8 @@ interface State {
   published: { by: string; at: string; reopenedAt: string | null } | null
   /** Papers saved from an uploaded exam list, sized as if from SMARTTT. */
   listed: Array<{ id: string; codes: string[]; title: string; sitting: 'regular' | 'odel'; rows: ListedRow[] }>
+  /** Main invigilators named so far (no draft in the mock, so only main ones): paper id -> lecturer id. */
+  invigilators: Record<string, string>
 }
 
 /** Who "synced" each unit, as SMARTTT would count them. */
@@ -53,6 +55,7 @@ function seed(): State {
     lecturers: [{ id: 'tl-1', title: 'Dr.', fullName: 'Mary Wambui', staffNumber: 'STF/02291', employmentType: 'full_time', phone: '0700 000 001', email: '', maxWeeklyHours: 18, maxExamDuties: null, active: true }],
     published: null,
     listed: [],
+    invigilators: {},
   }
 }
 
@@ -217,12 +220,40 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
         otherUnits: [], practicals: [],
         lecturers: state.lecturers.map((l) => ({ id: l.id, display: `${l.title ? `${l.title} ` : ''}${l.fullName}`, staffNumber: l.staffNumber, active: l.active })),
         problems: b.units.map((u) => ({ code: 'unit_not_examined', message: `${u.code} is on no paper; add it to one, or mark it 'no written exam'.` })),
+        warnings: papers.filter((p) => p.students === 0).map((p) => ({
+          code: 'no_students',
+          message: `Nobody has synced ${p.codes} in SMARTTT yet. It still goes to the Director and gets a date; enter its students under Numbers so it gets a room.`,
+        })),
         summary: { papers: 0, students: 0, changed: 0, problems: b.units.length },
       })
     })),
-    http.get(`${base}/invigilators`, read(() =>
-      ok({ term: TERM, department: DEPARTMENT, draft: null, canEdit: false, published: false, publication: null, papers: [], lecturers: [], problems: [] }),
-    )),
+    // No shared draft in the mock: papers aren't timetabled, but their main invigilator can be named.
+    http.get(`${base}/invigilators`, read(() => {
+      const display = (l: State['lecturers'][number]) => `${l.title ? `${l.title} ` : ''}${l.fullName} (FT)`
+      const named = (paperId: string) => state.lecturers.find((l) => l.id === state.invigilators[paperId])
+      return ok({
+        term: TERM, department: DEPARTMENT, draft: null, canEdit: true, published: false, publication: null,
+        papers: state.listed.map((p) => {
+          const l = named(p.id)
+          return {
+            paperId: p.id, codes: p.codes.join('/'), title: p.title, date: null, session: null, startTime: null, endTime: null, rooms: [],
+            placed: false, mainRoom: null, invigilatorId: l?.id ?? null, invigilator: l ? display(l) : null, invigilatorDepartment: l ? 'DCOMP' : null, extras: [],
+          }
+        }),
+        lecturers: state.lecturers.filter((l) => l.active && l.staffNumber).map((l) => ({
+          id: l.id, display: display(l), departmentCode: 'DCOMP', staffNumber: l.staffNumber,
+          duties: Object.values(state.invigilators).filter((x) => x === l.id).length, maxExamDuties: l.maxExamDuties, own: true,
+        })),
+        problems: [],
+      })
+    })),
+    http.put(`${base}/invigilators/:id`, read(async ({ params, request }) => {
+      const { lecturerId, room } = (await request.json()) as { lecturerId: string | null; room?: string }
+      if (room) return fail(409, 'CONFLICT', `${room} is not an extra room of this paper in the Director's shared exam draft.`)
+      if (lecturerId) state.invigilators[params.id as string] = lecturerId
+      else delete state.invigilators[params.id as string]
+      return ok(null)
+    })),
     // The uploaded exam list: any file reads as the same letter (the browser can't read .docx).
     http.post(`${base}/exam-list/read`, read(() => {
       const entry = (line: number, code: string, title: string, extra: object = {}) => {
