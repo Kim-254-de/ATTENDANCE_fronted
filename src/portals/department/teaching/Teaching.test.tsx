@@ -110,3 +110,33 @@ describe('department teaching', () => {
     expect(await screen.findByText(/the director hasn't shared an exam draft yet/i)).toBeInTheDocument()
   })
 })
+
+describe('the uploaded exam list', () => {
+  it('reads the Word letter, shows what to check, saves the papers and lets the numbers be corrected', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    const file = new File(['letter'], 'drafts.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+    await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), file)
+
+    expect(await within(dialog).findByText(/3 papers read/i)).toBeInTheDocument()
+    expect(within(dialog).getByText('Same as line 1')).toBeInTheDocument()
+    expect(within(dialog).getByText(/smarttt doesn't know math 999/i)).toBeInTheDocument()
+    expect(within(dialog).getByText('Also listed by DBSC')).toBeInTheDocument()
+    // The repeated row starts left out; leave out the unknown code too.
+    expect(within(dialog).getByRole('checkbox', { name: 'Include line 3' })).not.toBeChecked()
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Include line 4' }))
+    await user.click(within(dialog).getByRole('button', { name: /save 2 papers/i }))
+
+    expect(await screen.findByText('Linear Algebra')).toBeInTheDocument()
+    expect(screen.getByText('92')).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: /^numbers/i })[0]!)
+    const numbers = await screen.findByRole('dialog', { name: /students sitting math 241/i })
+    const counts = within(numbers).getAllByRole('spinbutton', { name: 'Students' })
+    await user.clear(counts[0]!)
+    await user.type(counts[0]!, '95')
+    await user.click(within(numbers).getByRole('button', { name: /^save$/i }))
+    expect(await screen.findByText('107')).toBeInTheDocument()
+  })
+})

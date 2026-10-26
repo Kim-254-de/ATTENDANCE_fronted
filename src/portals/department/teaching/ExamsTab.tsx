@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Download, Send, Unlock } from 'lucide-react'
+import { Download, FileUp, RefreshCw, Send, Unlock } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import { BulkPaste, type BulkColumn } from './BulkPaste'
+import { ExamListUpload, PaperRows } from './ExamListUpload'
 import {
   letterUrl,
   useDeletePaper,
@@ -16,6 +17,7 @@ import {
   useNoWrittenExam,
   usePapersFromUnits,
   usePublishExams,
+  useRecount,
   useSavePaper,
   useSavePractical,
   type ExamBoard,
@@ -57,7 +59,10 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   const remove = useDeletePaper(term)
   const noExam = useNoWrittenExam(term)
   const bulk = useExamBulk(term, 'exam-papers')
+  const recount = useRecount(term)
   const [editing, setEditing] = useState<ExamPaper | 'new' | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [numbers, setNumbers] = useState<ExamPaper | null>(null)
   const [pasting, setPasting] = useState(false)
   const [letter, setLetter] = useState(false)
   const [search, setSearch] = useSearchParams()
@@ -74,7 +79,8 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   const editable = data.canEdit
   // A unit is examined once per sitting its classes need: regular, and ODEL when it has ODEL or part-time classes.
   const unexamined = data.units.filter((u) => !u.paperId || (u.sittings.includes('odel') && !u.odelPaperId))
-  const failure = publish.error ?? fromUnits.error ?? remove.error ?? noExam.error
+  const failure = publish.error ?? fromUnits.error ?? remove.error ?? noExam.error ?? recount.error
+  const anyListed = data.papers.some((p) => p.listed)
   // A paper is built from units, at least one of them this department's: none yet, nothing to put on one.
   const noUnits = data.units.length === 0
 
@@ -89,6 +95,17 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           <Button variant="secondary" onClick={() => setLetter(true)} disabled={data.papers.length === 0}>
             <Download className="size-4" aria-hidden /> Moderation letter
           </Button>
+          {editable && (
+            <Button variant={data.papers.length ? 'secondary' : 'primary'} onClick={() => setUploading(true)}>
+              <FileUp className="size-4" aria-hidden /> Upload exam list
+            </Button>
+          )}
+          {editable && anyListed && (
+            <Button variant="secondary" onClick={() => recount.mutate()} loading={recount.isPending}
+              title="Read again how many students synced each unit in SMARTTT. Numbers you changed stay.">
+              <RefreshCw className="size-4" aria-hidden /> Re-count from SMARTTT
+            </Button>
+          )}
           {editable && <Button variant="secondary" onClick={() => setPasting(true)}>Paste from Excel</Button>}
           {editable && unexamined.some((u) => !u.noWrittenExam) && (
             <Button variant="secondary" onClick={() => fromUnits.mutate()} loading={fromUnits.isPending}>A paper for each unit</Button>
@@ -110,13 +127,16 @@ export function ExamsTab({ term }: { term: string | undefined }) {
         </div>
       </div>
       {failure && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{errorMessage(failure)}</p>}
-      {noUnits && (
+      {noUnits && data.papers.length === 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-ink">
           <p>
-            Exam papers are built from your units. Enter your units first, each with the courses that take it,
-            on the Units &amp; groups tab; then add a paper for each here.
+            Upload your exam list: the Word document you send for moderation. Student numbers come from who synced
+            each unit in SMARTTT. Or build papers from your units on the Units &amp; groups tab.
           </p>
-          <Button variant="secondary" onClick={openUnits}>Go to Units &amp; groups</Button>
+          <div className="flex gap-2">
+            {editable && <Button onClick={() => setUploading(true)}><FileUp className="size-4" aria-hidden /> Upload exam list</Button>}
+            <Button variant="secondary" onClick={openUnits}>Go to Units &amp; groups</Button>
+          </div>
         </div>
       )}
       {!data.published && data.problems.length > 0 && (
@@ -140,8 +160,16 @@ export function ExamsTab({ term }: { term: string | undefined }) {
               </td>
               <td className={td}>{p.title}{p.notes && <span className="block text-xs text-muted">{p.notes}</span>}</td>
               <td className={`${td} text-xs text-muted`}>{p.classRows.join(', ')}</td>
-              <td className={td}>{p.students}</td>
-              <td className={td}>{p.examiner ?? <span className="text-warning">None</span>}</td>
+              <td className={td}>
+                {p.students}
+                {p.listed && (
+                  <button onClick={() => setNumbers(p)} className={`${linkButton} block text-xs`}>
+                    {editable ? 'Numbers' : 'Classes'}
+                    {p.rows.some((r) => r.edited) && <span className="sr-only"> (changed here)</span>}
+                  </button>
+                )}
+              </td>
+              <td className={td}>{p.examiner ?? <span className={p.listed ? 'text-muted' : 'text-warning'}>None</span>}</td>
               <td className={`${td} space-x-3 text-right whitespace-nowrap`}>
                 {editable && <button onClick={() => setEditing(p)} className={linkButton}>Edit</button>}
                 {editable && <button onClick={() => { if (window.confirm(`Remove ${p.codes}?`)) remove.mutate(p.id) }} className={dangerLink}>Remove</button>}
@@ -150,7 +178,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           ))}
           {data.papers.length === 0 && (
             <tr><td colSpan={6} className="px-3 py-8 text-center text-muted">
-              {noUnits ? 'No papers yet: enter your units first.' : 'No papers yet. Start with “A paper for each unit”, then join shared papers.'}
+              {noUnits ? 'No papers yet: upload your exam list.' : 'No papers yet. Upload your exam list, or start with “A paper for each unit”.'}
             </td></tr>
           )}
         </tbody>
@@ -183,6 +211,8 @@ export function ExamsTab({ term }: { term: string | undefined }) {
       {editing && <PaperForm term={term} board={data} paper={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {pasting && <BulkPaste title="Paste exam papers" columns={PAPER_COLUMNS} templateName="exam-papers.csv" submit={(rows) => bulk.mutateAsync(rows)} onClose={() => setPasting(false)} />}
       {letter && <LetterForm term={term} onClose={() => setLetter(false)} />}
+      {uploading && <ExamListUpload term={term} onClose={() => setUploading(false)} />}
+      {numbers && <PaperRows term={term} paper={numbers} onClose={() => setNumbers(null)} />}
     </section>
   )
 }
@@ -211,15 +241,19 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
     ...board.otherUnits.filter((u) => q && `${u.code} ${u.title} ${u.departmentCode}`.toLowerCase().includes(q)),
   ]
 
+  // An uploaded paper keeps its codes; only its title, sitting, examiner and notes change here.
+  const listed = !!paper?.listed
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    save.mutate({ id: paper?.id, body: { ...form, examinerId: form.examinerId || null } }, { onSuccess: onClose })
+    const { unitIds, ...rest } = form
+    const body = listed ? (rest as PaperInput) : { ...form, unitIds }
+    save.mutate({ id: paper?.id, body: { ...body, examinerId: form.examinerId || null } }, { onSuccess: onClose })
   }
 
   return (
     <Dialog title={paper ? `Edit ${paper.codes}` : 'Add a paper'} onClose={onClose} wide>
       <form onSubmit={submit} className="space-y-4 text-sm">
-        <fieldset className="space-y-2">
+        {!listed && <fieldset className="space-y-2">
           <legend className="font-medium text-ink">Units sitting this paper</legend>
           <p className="text-xs text-muted">Tick several for a shared paper (e.g. BITE 131/COSC 130). All groups of a unit sit one paper.</p>
           {own.length === 0 && (
@@ -247,9 +281,9 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
               </label>
             ))}
           </div>
-        </fieldset>
+        </fieldset>}
         <Field label="Sitting" hint="ODEL and part-time classes sit separate papers.">
-          <select value={form.sitting} onChange={(e) => setForm({ ...form, sitting: e.target.value as PaperInput['sitting'], unitIds: [] })} className="input">
+          <select value={form.sitting} onChange={(e) => setForm({ ...form, sitting: e.target.value as PaperInput['sitting'], unitIds: listed ? form.unitIds : [] })} className="input">
             <option value="regular">Regular classes</option>
             <option value="odel">ODEL and part-time classes</option>
           </select>
@@ -257,9 +291,9 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
         <Field label="Title" hint="Blank: the first unit's title.">
           <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" />
         </Field>
-        <Field label="Examiner" hint="Blank: the unit's lecturer.">
+        <Field label="Examiner" hint={listed ? 'Optional for an uploaded paper.' : "Blank: the unit's lecturer."}>
           <select value={form.examinerId ?? ''} onChange={(e) => setForm({ ...form, examinerId: e.target.value || null })} className="input">
-            <option value="">The unit's lecturer</option>
+            <option value="">{listed ? 'None' : "The unit's lecturer"}</option>
             {board.lecturers.filter((x) => x.active || x.id === form.examinerId).map((x) => <option key={x.id} value={x.id}>{x.display}</option>)}
           </select>
         </Field>
@@ -268,9 +302,9 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
         </Field>
         {save.isError && <p role="alert" className="text-danger">{errorMessage(save.error)}</p>}
         <div className="flex items-center justify-end gap-2">
-          {form.unitIds.length === 0 && <span className="mr-auto text-xs text-muted">Tick at least one unit to save.</span>}
+          {!listed && form.unitIds.length === 0 && <span className="mr-auto text-xs text-muted">Tick at least one unit to save.</span>}
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={save.isPending} disabled={form.unitIds.length === 0}>Save</Button>
+          <Button type="submit" loading={save.isPending} disabled={!listed && form.unitIds.length === 0}>Save</Button>
         </div>
       </form>
     </Dialog>

@@ -29,6 +29,58 @@ export interface ExamPaper {
   classRows: string[]
   students: number
   changedSincePublished: boolean
+  /** Uploaded with the exam list: its students are `rows`, from SMARTTT or corrected here. */
+  listed: boolean
+  rows: ListedRow[]
+}
+
+/** A class sitting a listed paper, and how many: who synced the unit in SMARTTT, or the department's number. */
+export interface ListedRow {
+  id: string
+  programme: string
+  year: number
+  semester: number
+  stream: string
+  students: number
+  /** SMARTTT's count when last read; null for a class the department added. */
+  smartttStudents: number | null
+  /** The department set this number: a fresh SMARTTT count leaves it. */
+  edited: boolean
+}
+
+/** The uploaded exam list as read, before anything is saved. */
+export interface ExamListReview {
+  entries: Array<{
+    line: number
+    codes: string[]
+    title: string
+    section: string
+    sitting: Sitting
+    /** Who synced it in SMARTTT; null when SMARTTT couldn't be read. */
+    students: number | null
+    classRows: Array<{ label: string; students: number }>
+    unknownCodes: string[]
+    duplicateOf: number | null
+    otherDepartments: string[]
+    existingPaperId: string | null
+    examiner: { lecturerId: string | null; staffNumber: string; name: string } | null
+  }>
+  smarttt: { available: boolean; reason: string | null }
+  summary: { papers: number; newPapers: number; duplicates: number; unknown: number; noStudents: number }
+}
+
+export interface ListedPaperInput {
+  codes: string[]
+  title: string
+  sitting: Sitting
+}
+
+export interface RowInput {
+  programme: string
+  year: number
+  semester: number
+  stream: string
+  students: number
 }
 
 export interface Practical {
@@ -154,6 +206,28 @@ export const useExamBulk = (term: string | undefined, kind: 'exam-papers' | 'pra
   useSave(async (rows: Record<string, string>[]) =>
     (await api.post<BulkResult>(`${BASE}/${kind}/bulk`, { rows }, { params: params(term), timeout: 120_000 })).data,
   )
+
+/** The department's exam list (.docx) read and checked against SMARTTT; nothing is saved. */
+export async function readExamList(term: string | undefined, file: File): Promise<ExamListReview> {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  const { data } = await api.post<ExamListReview>(`${BASE}/exam-list/read`, { file: btoa(binary) }, { params: params(term), timeout: 120_000 })
+  return data
+}
+
+export const useSaveExamList = (term: string | undefined) =>
+  useSave(async (papers: ListedPaperInput[]) =>
+    (await api.post<{ created: number; updated: number; smarttt: ExamListReview['smarttt'] }>(`${BASE}/exam-list`, { papers }, { params: params(term), timeout: 120_000 })).data,
+  )
+
+export const useSetPaperRows = (term: string | undefined) =>
+  useSave(async ({ paperId, rows }: { paperId: string; rows: RowInput[] }) =>
+    (await api.put<ExamBoard>(`${BASE}/exam-papers/${paperId}/rows`, { rows }, { params: params(term) })).data,
+  )
+
+export const useRecount = (term: string | undefined) =>
+  useSave(async () => (await api.post<ExamBoard>(`${BASE}/exam-papers/recount`, undefined, { params: params(term), timeout: 120_000 })).data)
 
 export const usePublishExams = (term: string | undefined) =>
   useSave(async (action: 'publish' | 'reopen') => (await api.post(`${BASE}/exams/${action}`, undefined, { params: params(term) })).data)
