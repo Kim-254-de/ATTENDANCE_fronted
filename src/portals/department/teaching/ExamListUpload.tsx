@@ -1,13 +1,15 @@
 import clsx from 'clsx'
 import { FileUp, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ClipboardEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
 import {
   editedRows,
+  guessedRow,
   readExamList,
   rowInputs,
   useSaveExamList,
+  useSetManyPaperRows,
   useSetPaperRows,
   type EditedRow,
   type ExamListReview,
@@ -222,6 +224,105 @@ export function PaperRows({ term, paper, onClose }: { term: string | undefined; 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={submit} loading={save.isPending}>Save</Button>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
+const classLabel = (r: RowInput) => `${r.programme} Y${r.year}S${r.semester}${r.stream ? ` (${r.stream})` : ''}`
+
+/**
+ * Every uploaded paper's number on one screen, saved in one go. A paper sat
+ * by one class (or nobody yet: a guessed class) takes its number here; one
+ * sat by several classes is changed under its Numbers. A column of numbers
+ * pasted from Excel fills the boxes downward.
+ */
+export function NumbersAtOnce({ term, papers, onClose }: { term: string | undefined; papers: ExamPaper[]; onClose: () => void }) {
+  const save = useSetManyPaperRows(term)
+  const listed = papers.filter((p) => p.listed)
+  const [onlyMissing, setOnlyMissing] = useState(listed.some((p) => p.students === 0))
+  // Typed numbers by paper id; a paper not typed in keeps its number.
+  const [typed, setTyped] = useState<Record<string, string>>({})
+  const shown = listed.filter((p) => !onlyMissing || p.students === 0 || p.id in typed)
+  const single = (p: ExamPaper) => p.rows.filter((r) => r.students > 0 || r.smartttStudents === null).length <= 1
+  const classOf = (p: ExamPaper): EditedRow => {
+    const own = editedRows(p).filter((r) => r.students > 0 || r.smartttStudents === null)
+    return own[0] ?? editedRows(p)[0] ?? guessedRow(p)
+  }
+  const editableIds = shown.filter(single).map((p) => p.id)
+
+  const paste = (paperId: string, e: ClipboardEvent<HTMLInputElement>) => {
+    const values = e.clipboardData.getData('text').split(/\r?\n/).map((v) => v.trim()).filter((v, i, all) => v !== '' || i < all.length - 1)
+    if (values.length < 2) return
+    e.preventDefault()
+    const from = editableIds.indexOf(paperId)
+    const next = { ...typed }
+    values.forEach((v, i) => {
+      const id = editableIds[from + i]
+      if (id && /^\d*$/.test(v)) next[id] = v
+    })
+    setTyped(next)
+  }
+
+  const changes = listed
+    .filter((p) => p.id in typed && typed[p.id] !== '' && Number(typed[p.id]) !== p.students)
+    .map((p) => {
+      const row = classOf(p)
+      const others = editedRows(p).filter((r) => r !== row && classLabel(r) !== classLabel(row))
+      return { paperId: p.id, rows: rowInputs([{ ...row, students: Number(typed[p.id]) }, ...others]) }
+    })
+  const submit = () => save.mutate(changes, { onSuccess: onClose })
+
+  return (
+    <Dialog title="Enter student numbers" onClose={onClose} wide>
+      <div className="space-y-4 text-sm">
+        <p className="text-muted">
+          Type how many students sit each paper, or paste a column of numbers from Excel into the first box: it fills
+          the boxes below it in order. A paper sat by several classes is changed under its Numbers.
+        </p>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
+          Only papers with no students yet
+        </label>
+        <TableCard>
+          <thead className="bg-surface">
+            <tr><th className={th}>Codes</th><th className={th}>Title</th><th className={th}>Class</th><th className={th}>Students</th></tr>
+          </thead>
+          <tbody>
+            {shown.map((p) => {
+              const row = classOf(p)
+              return (
+                <tr key={p.id} className="border-t border-line">
+                  <td className={`${td} font-semibold whitespace-nowrap text-ink`}>
+                    {p.codes}
+                    {p.sitting === 'odel' && <span className="ml-1 rounded-md bg-brand-soft px-1.5 text-xs font-normal text-brand-ink">ODEL</span>}
+                  </td>
+                  <td className={td}>{p.title}</td>
+                  <td className={`${td} text-xs text-muted`}>{single(p) ? classLabel(row) : `${p.classRows.length} classes`}</td>
+                  <td className={td}>
+                    {single(p) ? (
+                      <input type="number" min={0} max={5000} inputMode="numeric" className="input w-20"
+                        aria-label={`Students sitting ${p.codes}${p.sitting === 'odel' ? ' (ODEL)' : ''}`}
+                        value={typed[p.id] ?? String(p.students)}
+                        onChange={(e) => setTyped({ ...typed, [p.id]: e.target.value })}
+                        onPaste={(e) => paste(p.id, e)} />
+                    ) : (
+                      <span>{p.students} <span className="text-xs text-muted">(under Numbers)</span></span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+            {shown.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-muted">Every uploaded paper has its students.</td></tr>}
+          </tbody>
+        </TableCard>
+        {save.isError && <p role="alert" className="text-danger">{errorMessage(save.error)}</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} loading={save.isPending} disabled={changes.length === 0}>
+            Save {changes.length || ''} {changes.length === 1 ? 'number' : 'numbers'}
+          </Button>
         </div>
       </div>
     </Dialog>

@@ -171,6 +171,35 @@ describe('editing an uploaded paper', () => {
   })
 })
 
+describe('student numbers at a go', () => {
+  it('enters many papers\' numbers on one screen, a pasted column filling the boxes below', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const upload = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    await user.upload(within(upload).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
+    await within(upload).findByText(/3 papers read/i)
+    await user.click(within(upload).getByRole('button', { name: /save 3 papers/i }))
+    expect(await screen.findByText(/nobody has synced math 999/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /enter student numbers/i }))
+    const dialog = await screen.findByRole('dialog', { name: /enter student numbers/i })
+    // Starts on the papers nobody synced; show them all, then paste two numbers into the first box.
+    expect(within(dialog).getAllByRole('spinbutton')).toHaveLength(1)
+    await user.click(within(dialog).getByRole('checkbox', { name: /only papers with no students/i }))
+    const boxes = within(dialog).getAllByRole('spinbutton')
+    await user.click(boxes[0]!)
+    await user.paste('70\n33')
+    expect(within(dialog).getAllByRole('spinbutton').map((b) => (b as HTMLInputElement).value).slice(0, 2)).toEqual(['70', '33'])
+    await user.click(within(dialog).getByRole('button', { name: /save 2 numbers/i }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /enter student numbers/i })).not.toBeInTheDocument())
+    // MATH 241 has two classes (changed under its Numbers); the boxes were MATH 446's and MATH 999's.
+    expect(within(screen.getByRole('row', { name: /math 446/i })).getByText('70')).toBeInTheDocument()
+    expect(within(screen.getByRole('row', { name: /math 999/i })).getByText('33')).toBeInTheDocument()
+    expect(screen.queryByText(/nobody has synced math 999/i)).not.toBeInTheDocument()
+  })
+})
+
 describe('invigilators before the draft', () => {
   it('names a paper\'s main invigilator before the Director shares a draft, and says a paper nobody synced still goes', async () => {
     const user = await openTeaching()

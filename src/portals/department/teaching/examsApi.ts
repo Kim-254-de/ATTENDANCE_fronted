@@ -260,6 +260,12 @@ export const useSetPaperRows = (term: string | undefined) =>
     (await api.put<ExamBoard>(`${BASE}/exam-papers/${paperId}/rows`, { rows }, { params: params(term) })).data,
   )
 
+/** Many listed papers' class rows in one save, all or none. */
+export const useSetManyPaperRows = (term: string | undefined) =>
+  useSave(async (papers: Array<{ paperId: string; rows: RowInput[] }>) =>
+    (await api.put<ExamBoard>(`${BASE}/exam-papers/rows`, { papers }, { params: params(term), timeout: 120_000 })).data,
+  )
+
 export const useRecount = (term: string | undefined) =>
   useSave(async () => (await api.post<ExamBoard>(`${BASE}/exam-papers/recount`, undefined, { params: params(term), timeout: 120_000 })).data)
 

@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Download, FileUp, RefreshCw, Send, Trash2, Unlock } from 'lucide-react'
+import { Download, FileUp, Hash, RefreshCw, Send, Trash2, Unlock } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import { BulkPaste, type BulkColumn } from './BulkPaste'
-import { ClassNumbers, ExamListUpload, PaperRows } from './ExamListUpload'
+import { ClassNumbers, ExamListUpload, NumbersAtOnce, PaperRows } from './ExamListUpload'
 import {
   editedRows,
   guessedRow,
@@ -70,6 +70,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   const [editing, setEditing] = useState<ExamPaper | 'new' | null>(null)
   const [uploading, setUploading] = useState(false)
   const [numbers, setNumbers] = useState<ExamPaper | null>(null)
+  const [allNumbers, setAllNumbers] = useState(false)
   const [pasting, setPasting] = useState(false)
   const [letter, setLetter] = useState(false)
   const [search, setSearch] = useSearchParams()
@@ -106,6 +107,11 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           {editable && (
             <Button variant={data.papers.length ? 'secondary' : 'primary'} onClick={() => setUploading(true)}>
               <FileUp className="size-4" aria-hidden /> Upload exam list
+            </Button>
+          )}
+          {editable && anyListed && (
+            <Button variant="secondary" onClick={() => setAllNumbers(true)}>
+              <Hash className="size-4" aria-hidden /> Enter student numbers
             </Button>
           )}
           {editable && anyListed && (
@@ -237,6 +243,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
       {letter && <LetterForm term={term} onClose={() => setLetter(false)} />}
       {uploading && <ExamListUpload term={term} onClose={() => setUploading(false)} />}
       {numbers && <PaperRows term={term} paper={numbers} onClose={() => setNumbers(null)} />}
+      {allNumbers && <NumbersAtOnce term={term} papers={data.papers} onClose={() => setAllNumbers(false)} />}
     </section>
   )
 }
