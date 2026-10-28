@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, vi } from 'vitest'
 import { env } from '@/lib/env'
@@ -138,6 +138,36 @@ describe('the uploaded exam list', () => {
     await user.type(counts[0]!, '95')
     await user.click(within(numbers).getByRole('button', { name: /^save$/i }))
     expect(await screen.findByText('107')).toBeInTheDocument()
+  })
+})
+
+describe('editing an uploaded paper', () => {
+  it('takes the number of students for a paper nobody synced, and removes the uploaded list as a whole', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
+    await within(dialog).findByText(/3 papers read/i)
+    await user.click(within(dialog).getByRole('button', { name: /save 3 papers/i }))
+    expect(await screen.findByText(/nobody has synced math 999/i)).toBeInTheDocument()
+
+    // MATH 999 is the third paper; its Edit dialog starts with a guessed class, so only the number is typed.
+    await user.click(screen.getAllByRole('button', { name: /^edit$/i })[2]!)
+    const edit = await screen.findByRole('dialog', { name: /edit math 999/i })
+    expect(within(edit).getByRole('textbox', { name: 'Programme' })).toHaveValue('MATH')
+    expect(within(edit).getByRole('spinbutton', { name: 'Year' })).toHaveValue(9)
+    const students = within(edit).getByRole('spinbutton', { name: 'Students' })
+    await user.clear(students)
+    await user.type(students, '40')
+    await user.click(within(edit).getByRole('button', { name: /^save$/i }))
+    await waitFor(() => expect(screen.queryByText(/nobody has synced math 999/i)).not.toBeInTheDocument())
+    expect(within(screen.getByRole('row', { name: /math 999/i })).getByText('40')).toBeInTheDocument()
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await user.click(screen.getByRole('button', { name: /remove uploaded list/i }))
+    expect(await screen.findByText(/no papers yet/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /remove uploaded list/i })).not.toBeInTheDocument()
   })
 })
 

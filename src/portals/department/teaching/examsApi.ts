@@ -156,6 +156,27 @@ export interface PaperInput {
   notes: string
 }
 
+/** A class row being edited: SMARTTT's count kept beside it, null for a class the department added. */
+export type EditedRow = RowInput & { smartttStudents: number | null }
+
+export const editedRows = (paper: ExamPaper): EditedRow[] =>
+  paper.rows.map(({ programme, year, semester, stream, students, smartttStudents }) => ({ programme, year, semester, stream, students, smartttStudents }))
+
+/**
+ * A class for a paper nobody has synced, so the department only types its
+ * number: programme from the first code's letters, year from its first
+ * non-zero digit ("MATH 241" → MATH Y2S1). They can correct either.
+ */
+export function guessedRow(paper: ExamPaper): EditedRow {
+  const first = paper.codes.split('/')[0]?.trim() ?? ''
+  const year = Number(/[1-9]/.exec(first.replace(/^\D+/, ''))?.[0] ?? 1)
+  return { programme: first.replace(/[^A-Za-z]/g, '').toUpperCase(), year: Math.min(year, 10), semester: 1, stream: '', students: 0, smartttStudents: null }
+}
+
+/** What is saved: classes with a programme, without SMARTTT's count. */
+export const rowInputs = (rows: EditedRow[]): RowInput[] =>
+  rows.filter((r) => r.programme.trim()).map(({ programme, year, semester, stream, students }) => ({ programme, year, semester, stream, students }))
+
 export interface PracticalInput {
   unitId: string
   date: string
@@ -229,6 +250,10 @@ export const useSaveExamList = (term: string | undefined) =>
   useSave(async (papers: ListedPaperInput[]) =>
     (await api.post<{ created: number; updated: number; smarttt: ExamListReview['smarttt'] }>(`${BASE}/exam-list`, { papers }, { params: params(term), timeout: 120_000 })).data,
   )
+
+/** Every paper of the uploaded list removed at once; papers built from units stay. */
+export const useDeleteExamList = (term: string | undefined) =>
+  useSave(async () => (await api.delete<{ deleted: number }>(`${BASE}/exam-list`, { params: params(term) })).data)
 
 export const useSetPaperRows = (term: string | undefined) =>
   useSave(async ({ paperId, rows }: { paperId: string; rows: RowInput[] }) =>

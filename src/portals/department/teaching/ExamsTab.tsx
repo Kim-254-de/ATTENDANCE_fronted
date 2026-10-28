@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { Download, FileUp, RefreshCw, Send, Unlock } from 'lucide-react'
+import { Download, FileUp, RefreshCw, Send, Trash2, Unlock } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -7,9 +7,13 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import { BulkPaste, type BulkColumn } from './BulkPaste'
-import { ExamListUpload, PaperRows } from './ExamListUpload'
+import { ClassNumbers, ExamListUpload, PaperRows } from './ExamListUpload'
 import {
+  editedRows,
+  guessedRow,
   letterUrl,
+  rowInputs,
+  useDeleteExamList,
   useDeletePaper,
   useDeletePractical,
   useExamBoard,
@@ -20,6 +24,8 @@ import {
   useRecount,
   useSavePaper,
   useSavePractical,
+  useSetPaperRows,
+  type EditedRow,
   type ExamBoard,
   type ExamPaper,
   type PaperInput,
@@ -60,6 +66,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   const noExam = useNoWrittenExam(term)
   const bulk = useExamBulk(term, 'exam-papers')
   const recount = useRecount(term)
+  const removeList = useDeleteExamList(term)
   const [editing, setEditing] = useState<ExamPaper | 'new' | null>(null)
   const [uploading, setUploading] = useState(false)
   const [numbers, setNumbers] = useState<ExamPaper | null>(null)
@@ -79,8 +86,9 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   const editable = data.canEdit
   // A unit is examined once per sitting its classes need: regular, and ODEL when it has ODEL or part-time classes.
   const unexamined = data.units.filter((u) => !u.paperId || (u.sittings.includes('odel') && !u.odelPaperId))
-  const failure = publish.error ?? fromUnits.error ?? remove.error ?? noExam.error ?? recount.error
+  const failure = publish.error ?? fromUnits.error ?? remove.error ?? noExam.error ?? recount.error ?? removeList.error
   const anyListed = data.papers.some((p) => p.listed)
+  const listedCount = data.papers.filter((p) => p.listed).length
   // A paper is built from units, at least one of them this department's: none yet, nothing to put on one.
   const noUnits = data.units.length === 0
 
@@ -104,6 +112,13 @@ export function ExamsTab({ term }: { term: string | undefined }) {
             <Button variant="secondary" onClick={() => recount.mutate()} loading={recount.isPending}
               title="Read again how many students synced each unit in SMARTTT. Numbers you changed stay.">
               <RefreshCw className="size-4" aria-hidden /> Re-count from SMARTTT
+            </Button>
+          )}
+          {editable && anyListed && (
+            <Button variant="secondary" loading={removeList.isPending}
+              onClick={() => { if (window.confirm(`Remove the uploaded exam list: all ${listedCount} papers from it, with their numbers and invigilators? Papers built from your units stay.`)) removeList.mutate() }}
+              title="Remove every paper that came from the uploaded exam list, to upload it again or start over">
+              <Trash2 className="size-4" aria-hidden /> Remove uploaded list
             </Button>
           )}
           {editable && <Button variant="secondary" onClick={() => setPasting(true)}>Paste from Excel</Button>}
@@ -228,6 +243,10 @@ export function ExamsTab({ term }: { term: string | undefined }) {
 
 function PaperForm({ term, board, paper, onClose }: { term: string | undefined; board: ExamBoard; paper: ExamPaper | null; onClose: () => void }) {
   const save = useSavePaper(term)
+  const saveRows = useSetPaperRows(term)
+  // A listed paper's students are its class rows; one nobody synced starts with a guessed class, so only the number is typed.
+  const startRows = paper?.listed ? (paper.rows.length ? editedRows(paper) : [guessedRow(paper)]) : []
+  const [rows, setRows] = useState<EditedRow[]>(startRows)
   const [form, setForm] = useState<PaperInput>({
     unitIds: paper?.units.map((u) => u.id) ?? [],
     title: paper?.title ?? '',
@@ -256,7 +275,14 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
     e.preventDefault()
     const { unitIds, ...rest } = form
     const body = listed ? (rest as PaperInput) : { ...form, unitIds }
-    save.mutate({ id: paper?.id, body: { ...body, examinerId: form.examinerId || null } }, { onSuccess: onClose })
+    save.mutate({ id: paper?.id, body: { ...body, examinerId: form.examinerId || null } }, {
+      onSuccess: () => {
+        // The guessed class left at 0 isn't saved: the paper still has no students known.
+        const untouched = paper?.rows.length === 0 && rows.length === 1 && rows[0]!.students === 0
+        if (!paper || !listed || untouched || JSON.stringify(rows) === JSON.stringify(startRows)) return onClose()
+        saveRows.mutate({ paperId: paper.id, rows: rowInputs(rows) }, { onSuccess: onClose })
+      },
+    })
   }
 
   return (
@@ -309,11 +335,31 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
         <Field label="Notes">
           <input value={form.notes} maxLength={500} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input" />
         </Field>
+        {paper && (
+          <fieldset className="space-y-2">
+            <legend className="font-medium text-ink">Number of students</legend>
+            {listed ? (
+              <>
+                <p className="text-xs text-muted">
+                  {paper.rows.length
+                    ? 'By class, from who synced the unit in SMARTTT. Correct a number or add a class; your numbers stay when SMARTTT is read again.'
+                    : 'Nobody has synced this unit in SMARTTT. Enter how many sit it; correct the class if it is not the right one.'}
+                </p>
+                <ClassNumbers rows={rows} onChange={setRows} />
+              </>
+            ) : (
+              <p className="text-xs text-muted">
+                {paper.students} students, from your units&apos; classes on the Units &amp; groups tab. Change them there.
+              </p>
+            )}
+          </fieldset>
+        )}
         {save.isError && <p role="alert" className="text-danger">{errorMessage(save.error)}</p>}
+        {saveRows.isError && <p role="alert" className="text-danger">{errorMessage(saveRows.error)}</p>}
         <div className="flex items-center justify-end gap-2">
           {!listed && form.unitIds.length === 0 && <span className="mr-auto text-xs text-muted">Tick at least one unit to save.</span>}
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" loading={save.isPending} disabled={!listed && form.unitIds.length === 0}>Save</Button>
+          <Button type="submit" loading={save.isPending || saveRows.isPending} disabled={!listed && form.unitIds.length === 0}>Save</Button>
         </div>
       </form>
     </Dialog>

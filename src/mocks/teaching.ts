@@ -285,6 +285,23 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
       }
       return ok({ created: papers.length, updated: 0, smarttt: { available: true, reason: null } })
     })),
+    http.patch(`${base}/exam-papers/:id`, read(async ({ params, request }) => {
+      const paper = state.listed.find((p) => p.id === params.id)
+      if (!paper) return fail(404, 'NOT_FOUND', 'No such paper in your department.')
+      const { title, sitting } = (await request.json()) as { title?: string; sitting?: 'regular' | 'odel' }
+      if (title) paper.title = title
+      if (sitting) paper.sitting = sitting
+      return ok(null)
+    })),
+    http.delete(`${base}/exam-papers/:id`, read(({ params }) => {
+      state.listed = state.listed.filter((p) => p.id !== params.id)
+      return ok(null)
+    })),
+    http.delete(`${base}/exam-list`, read(() => {
+      const deleted = state.listed.length
+      state.listed = []
+      return ok({ deleted })
+    })),
     http.put(`${base}/exam-papers/:id/rows`, read(async ({ params, request }) => {
       const paper = state.listed.find((p) => p.id === params.id)
       if (!paper) return fail(404, 'NOT_FOUND', 'No such paper in your department.')

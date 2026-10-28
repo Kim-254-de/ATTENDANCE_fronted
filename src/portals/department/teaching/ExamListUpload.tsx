@@ -4,9 +4,12 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
 import {
+  editedRows,
   readExamList,
+  rowInputs,
   useSaveExamList,
   useSetPaperRows,
+  type EditedRow,
   type ExamListReview,
   type ExamPaper,
   type RowInput,
@@ -152,23 +155,61 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
 }
 
 /**
- * A listed paper's classes and how many students sit it. SMARTTT's count is
- * shown beside each; a number changed from it is kept when SMARTTT is read
- * again. A class SMARTTT doesn't have can be added.
+ * A listed paper's classes and how many sit each. SMARTTT's count is shown
+ * beside each; a class SMARTTT doesn't have can be added and removed.
+ */
+export function ClassNumbers({ rows, onChange }: { rows: EditedRow[]; onChange: (rows: EditedRow[]) => void }) {
+  const set = (i: number, patch: Partial<RowInput>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  const total = rows.reduce((n, r) => n + (Number.isFinite(r.students) ? r.students : 0), 0)
+  const num = 'input w-16'
+  return (
+    <div className="space-y-2">
+      <TableCard>
+        <thead className="bg-surface">
+          <tr>
+            <th className={th}>Programme</th><th className={th}>Year</th><th className={th}>Semester</th><th className={th}>Stream</th>
+            <th className={th}>Students</th><th className={th}>SMARTTT</th><th className={th}><span className="sr-only">Remove</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-t border-line">
+              <td className={td}><input value={r.programme} onChange={(e) => set(i, { programme: e.target.value })} disabled={r.smartttStudents !== null} className="input w-32" aria-label="Programme" /></td>
+              <td className={td}><input type="number" min={1} max={10} value={r.year} onChange={(e) => set(i, { year: Number(e.target.value) })} disabled={r.smartttStudents !== null} className={num} aria-label="Year" /></td>
+              <td className={td}><input type="number" min={1} max={3} value={r.semester} onChange={(e) => set(i, { semester: Number(e.target.value) })} disabled={r.smartttStudents !== null} className={num} aria-label="Semester" /></td>
+              <td className={td}><input value={r.stream} onChange={(e) => set(i, { stream: e.target.value })} disabled={r.smartttStudents !== null} className="input w-20" aria-label="Stream" /></td>
+              <td className={td}><input type="number" min={0} max={5000} value={r.students} onChange={(e) => set(i, { students: Number(e.target.value) })} className={num} aria-label="Students" /></td>
+              <td className={`${td} text-muted`}>{r.smartttStudents ?? 'added'}</td>
+              <td className={`${td} text-right`}>
+                {r.smartttStudents === null && (
+                  <button type="button" onClick={() => onChange(rows.filter((_, j) => j !== i))} className={dangerLink} aria-label="Remove the class">
+                    <Trash2 className="size-4" aria-hidden />
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+          {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-muted">No class yet: nobody has synced this unit. Add the classes that sit it.</td></tr>}
+        </tbody>
+      </TableCard>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button type="button" variant="secondary" onClick={() => onChange([...rows, { programme: '', year: 1, semester: 1, stream: '', students: 0, smartttStudents: null }])}>
+          <Plus className="size-4" aria-hidden /> Add a class
+        </Button>
+        <span className="text-muted">{total} students</span>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A listed paper's classes and how many students sit it. A number changed
+ * from SMARTTT's is kept when SMARTTT is read again.
  */
 export function PaperRows({ term, paper, onClose }: { term: string | undefined; paper: ExamPaper; onClose: () => void }) {
   const save = useSetPaperRows(term)
-  const [rows, setRows] = useState<Array<RowInput & { smartttStudents: number | null }>>(
-    paper.rows.map(({ programme, year, semester, stream, students, smartttStudents }) => ({ programme, year, semester, stream, students, smartttStudents })),
-  )
-  const set = (i: number, patch: Partial<RowInput>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
-  const total = rows.reduce((n, r) => n + (Number.isFinite(r.students) ? r.students : 0), 0)
-  const submit = () =>
-    save.mutate(
-      { paperId: paper.id, rows: rows.filter((r) => r.programme.trim()).map(({ programme, year, semester, stream, students }) => ({ programme, year, semester, stream, students })) },
-      { onSuccess: onClose },
-    )
-  const num = 'input w-16'
+  const [rows, setRows] = useState<EditedRow[]>(editedRows(paper))
+  const submit = () => save.mutate({ paperId: paper.id, rows: rowInputs(rows) }, { onSuccess: onClose })
   return (
     <Dialog title={`Students sitting ${paper.codes}${paper.sitting === 'odel' ? ' (ODEL)' : ''}`} onClose={onClose} wide>
       <div className="space-y-4 text-sm">
@@ -176,40 +217,7 @@ export function PaperRows({ term, paper, onClose }: { term: string | undefined; 
           From the students who synced the unit in SMARTTT. Correct a number, or add a class whose students haven't
           synced yet; your numbers stay when SMARTTT is read again. Set a class to 0 if it doesn't sit this paper.
         </p>
-        <TableCard>
-          <thead className="bg-surface">
-            <tr>
-              <th className={th}>Programme</th><th className={th}>Year</th><th className={th}>Semester</th><th className={th}>Stream</th>
-              <th className={th}>Students</th><th className={th}>SMARTTT</th><th className={th}><span className="sr-only">Remove</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-t border-line">
-                <td className={td}><input value={r.programme} onChange={(e) => set(i, { programme: e.target.value })} disabled={r.smartttStudents !== null} className="input w-32" aria-label="Programme" /></td>
-                <td className={td}><input type="number" min={1} max={10} value={r.year} onChange={(e) => set(i, { year: Number(e.target.value) })} disabled={r.smartttStudents !== null} className={num} aria-label="Year" /></td>
-                <td className={td}><input type="number" min={1} max={3} value={r.semester} onChange={(e) => set(i, { semester: Number(e.target.value) })} disabled={r.smartttStudents !== null} className={num} aria-label="Semester" /></td>
-                <td className={td}><input value={r.stream} onChange={(e) => set(i, { stream: e.target.value })} disabled={r.smartttStudents !== null} className="input w-20" aria-label="Stream" /></td>
-                <td className={td}><input type="number" min={0} max={5000} value={r.students} onChange={(e) => set(i, { students: Number(e.target.value) })} className={num} aria-label="Students" /></td>
-                <td className={`${td} text-muted`}>{r.smartttStudents ?? 'added'}</td>
-                <td className={`${td} text-right`}>
-                  {r.smartttStudents === null && (
-                    <button type="button" onClick={() => setRows(rows.filter((_, j) => j !== i))} className={dangerLink} aria-label="Remove the class">
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-muted">No class yet: nobody has synced this unit. Add the classes that sit it.</td></tr>}
-          </tbody>
-        </TableCard>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button type="button" variant="secondary" onClick={() => setRows([...rows, { programme: '', year: 1, semester: 1, stream: '', students: 0, smartttStudents: null }])}>
-            <Plus className="size-4" aria-hidden /> Add a class
-          </Button>
-          <span className="text-muted">{total} students</span>
-        </div>
+        <ClassNumbers rows={rows} onChange={setRows} />
         {save.isError && <p role="alert" className="text-danger">{errorMessage(save.error)}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
