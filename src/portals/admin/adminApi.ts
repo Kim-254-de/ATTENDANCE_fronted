@@ -29,6 +29,22 @@ export const useCreateDepartment = () => {
   })
 }
 
+/**
+ * Corrects a department's name and code: in SMARTTT first, then here.
+ * Lecturers, officers and teaching stay with it.
+ */
+export const useEditDepartment = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ departmentId, ...input }: { departmentId: string; name: string; code: string }) =>
+      (await api.patch<CreatedDepartment>(`/admin/departments/${departmentId}`, input)).data,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: DEPARTMENTS_KEY })
+      await qc.invalidateQueries({ queryKey: ['admin', 'department-duplicates'] })
+    },
+  })
+}
+
 const DIRECTORY_KEY = ['admin', 'directory'] as const
 
 /** Departments belong to SMARTTT: whether it is connected, and what only exists here. */

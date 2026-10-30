@@ -1,5 +1,6 @@
 import { delay, http, HttpResponse } from 'msw'
 import type { EnrolmentStudent, Terminal, TerminalCapability } from '@/portals/department/terminals/terminalsApi'
+import { examHandlers, resetExams } from './exams'
 import { resetTeaching, teachingHandlers } from './teaching'
 import type { Account, Admin, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, InvitationDetails, Officer, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, PlacementLecturer, StudentEvaluationRound, PendingUnit, ManagementAccount, ManagementDepartment, ManagementDepartmentYears, ManagementStudent, ManagementUnit, ManagementUniversity, ManagementYearDetail } from '@/types'
 
@@ -183,6 +184,7 @@ export const resetMocks = () => {
   resetTerminalMocks()
   resetOversightMocks()
   resetTeaching()
+  resetExams()
 }
 
 const ok = <T>(data: T, status = 200) => HttpResponse.json({ success: true, data }, { status })
@@ -1923,6 +1925,23 @@ const invitationHandlers = [
     ADMIN_DEPARTMENTS.push(department)
     return ok({ departmentId: department.departmentId, name: department.name, code: department.code }, 201)
   }),
+  http.patch(`${API}/admin/departments/:departmentId`, async ({ params, request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const department = ADMIN_DEPARTMENTS.find((d) => d.departmentId === params.departmentId)
+    if (!department) return fail(404, 'NOT_FOUND', 'No such department.')
+    const { name, code } = (await request.json()) as { name?: string; code?: string }
+    const trimmed = name?.trim() ?? ''
+    const upper = code?.trim().toUpperCase() ?? ''
+    if (trimmed.length < 3 || !/^[A-Z0-9][A-Z0-9 ./&-]{0,31}$/.test(upper)) return fail(400, 'VALIDATION_FAILED', 'Enter the department name and a code, e.g. DCOMP.')
+    // Mirrors directory.service.ts editDepartment: another department's name, spelling or code is refused.
+    const same = departmentForName(trimmed)
+    if (same && same.departmentId !== department.departmentId) return fail(409, 'CONFLICT', `"${trimmed}" is the same department as "${same.name}", which already exists.`)
+    const holder = ADMIN_DEPARTMENTS.find((d) => d !== department && d.code?.toUpperCase() === upper)
+    if (holder) return fail(409, 'CONFLICT', `The code ${upper} is already used by ${holder.name}.`)
+    Object.assign(department, { name: trimmed, code: upper })
+    return ok({ departmentId: department.departmentId, name: department.name, code: department.code })
+  }),
   http.get(`${API}/admin/officers`, () => requireAdmin() ?? ok(officers)),
   http.get(`${API}/admin/units/pending`, () => requireAdmin() ?? ok(pendingUnits)),
   http.post(`${API}/admin/units/:unitId/verify`, ({ params }) => {
@@ -2481,4 +2500,12 @@ const oversightHandlers = [
   }),
 ]
 
-export const handlers = [...terminalHandlers, ...authHandlers, ...smartttAdminHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...managementHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]
+/** Who is signed in, for the exam rooms' handlers (src/mocks/exams.ts). */
+const examWho = () => {
+  if (!store.get()) return null
+  const a = currentAccount as Account & { staffNumber?: string | null; registrationNumber?: string | null }
+  return { role: a.role, staffNumber: a.staffNumber ?? undefined, registrationNumber: a.registrationNumber ?? undefined }
+}
+
+// Exam handlers first: they answer exam codes at POST /attendance/check-in and let class codes through.
+export const handlers = [...examHandlers(API, examWho), ...terminalHandlers, ...authHandlers, ...smartttAdminHandlers, ...invitationHandlers, overviewHandler, recentSessionsHandler, studentsHandler, ...departmentHandlers, ...managementHandlers, ...qaHandlers, ...oversightHandlers, ...dataHandlers, ...liveHandlers, ...faceHandlers]

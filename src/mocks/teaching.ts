@@ -1,4 +1,5 @@
 import { HttpResponse, http, type HttpResponseResolver } from 'msw'
+import type { ListedRow } from '@/portals/department/teaching/examsApi'
 import type { Board, BoardLecturer, GroupInput, TeachingCourse, TeachingUnit, Term } from '@/portals/department/teaching/teachingApi'
 
 /**
@@ -31,6 +32,16 @@ interface State {
   }>
   lecturers: Array<Omit<BoardLecturer, 'groups' | 'weeklyHours' | 'display'>>
   published: { by: string; at: string; reopenedAt: string | null } | null
+  /** Papers saved from an uploaded exam list, sized as if from SMARTTT. */
+  listed: Array<{ id: string; codes: string[]; title: string; sitting: 'regular' | 'odel'; rows: ListedRow[] }>
+  /** Main invigilators named so far (no draft in the mock, so only main ones): paper id -> lecturer id. */
+  invigilators: Record<string, string>
+}
+
+/** Who "synced" each unit, as SMARTTT would count them. */
+const SYNCED: Record<string, Array<{ programme: string; year: number; students: number }>> = {
+  'MATH 241': [{ programme: 'BSC.MATH', year: 2, students: 80 }, { programme: 'BED.SCI', year: 2, students: 12 }],
+  'MATH 446': [{ programme: 'BSC.STAT', year: 4, students: 40 }],
 }
 
 function seed(): State {
@@ -43,6 +54,8 @@ function seed(): State {
     }],
     lecturers: [{ id: 'tl-1', title: 'Dr.', fullName: 'Mary Wambui', staffNumber: 'STF/02291', employmentType: 'full_time', phone: '0700 000 001', email: '', maxWeeklyHours: 18, maxExamDuties: null, active: true }],
     published: null,
+    listed: [],
+    invigilators: {},
   }
 }
 
@@ -190,21 +203,129 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
       state.lecturers = state.lecturers.filter((l) => l.id !== params.id)
       return ok(null)
     })),
-    // Exams: the papers board, empty until a paper is added; no shared draft yet, so no invigilators.
+    // Exams: the papers board, with any papers saved from an uploaded list; no shared draft yet, so no invigilators.
     http.get(`${base}/exams`, read(() => {
       const b = board()
+      const papers = state.listed.map((p) => {
+        const rows = p.rows.filter((r) => r.students > 0)
+        return {
+          id: p.id, codes: p.codes.join('/'), sitting: p.sitting, units: [], title: p.title, examinerId: null, examiner: null, notes: '',
+          classRows: rows.map((r) => `${r.programme} Y${r.year}S${r.semester}${r.stream ? ` (${r.stream})` : ''}`),
+          students: rows.reduce((n, r) => n + r.students, 0), changedSincePublished: false, listed: true, rows: p.rows,
+        }
+      })
       return ok({
-        term: TERM, department: DEPARTMENT, canEdit: true, published: false, publication: null, papers: [],
-        units: b.units.map((u) => ({ id: u.id, code: u.code, title: u.title, noWrittenExam: false, paperId: null, paperCodes: null, paperDepartment: null, defaultExaminerId: null })),
+        term: TERM, department: DEPARTMENT, canEdit: true, published: false, publication: null, papers,
+        units: b.units.map((u) => ({ id: u.id, code: u.code, title: u.title, noWrittenExam: false, paperId: null, paperCodes: null, paperDepartment: null, defaultExaminerId: null, sittings: ['regular'], odelPaperId: null })),
         otherUnits: [], practicals: [],
         lecturers: state.lecturers.map((l) => ({ id: l.id, display: `${l.title ? `${l.title} ` : ''}${l.fullName}`, staffNumber: l.staffNumber, active: l.active })),
         problems: b.units.map((u) => ({ code: 'unit_not_examined', message: `${u.code} is on no paper; add it to one, or mark it 'no written exam'.` })),
+        warnings: papers.filter((p) => p.students === 0).map((p) => ({
+          code: 'no_students',
+          message: `Nobody has synced ${p.codes} in SMARTTT yet. It still goes to the Director and gets a date; enter its students under Numbers so it gets a room.`,
+        })),
         summary: { papers: 0, students: 0, changed: 0, problems: b.units.length },
       })
     })),
-    http.get(`${base}/invigilators`, read(() =>
-      ok({ term: TERM, department: DEPARTMENT, draft: null, canEdit: false, published: false, publication: null, papers: [], lecturers: [], problems: [] }),
-    )),
+    // No shared draft in the mock: papers aren't timetabled, but their main invigilator can be named.
+    http.get(`${base}/invigilators`, read(() => {
+      const display = (l: State['lecturers'][number]) => `${l.title ? `${l.title} ` : ''}${l.fullName} (FT)`
+      const named = (paperId: string) => state.lecturers.find((l) => l.id === state.invigilators[paperId])
+      return ok({
+        term: TERM, department: DEPARTMENT, draft: null, canEdit: true, published: false, publication: null,
+        papers: state.listed.map((p) => {
+          const l = named(p.id)
+          return {
+            paperId: p.id, codes: p.codes.join('/'), title: p.title, date: null, session: null, startTime: null, endTime: null, rooms: [],
+            placed: false, mainRoom: null, invigilatorId: l?.id ?? null, invigilator: l ? display(l) : null, invigilatorDepartment: l ? 'DCOMP' : null, extras: [],
+          }
+        }),
+        lecturers: state.lecturers.filter((l) => l.active && l.staffNumber).map((l) => ({
+          id: l.id, display: display(l), departmentCode: 'DCOMP', staffNumber: l.staffNumber,
+          duties: Object.values(state.invigilators).filter((x) => x === l.id).length, maxExamDuties: l.maxExamDuties, own: true,
+        })),
+        problems: [],
+      })
+    })),
+    http.put(`${base}/invigilators/:id`, read(async ({ params, request }) => {
+      const { lecturerId, room } = (await request.json()) as { lecturerId: string | null; room?: string }
+      if (room) return fail(409, 'CONFLICT', `${room} is not an extra room of this paper in the Director's shared exam draft.`)
+      if (lecturerId) state.invigilators[params.id as string] = lecturerId
+      else delete state.invigilators[params.id as string]
+      return ok(null)
+    })),
+    // The uploaded exam list: any file reads as the same letter (the browser can't read .docx).
+    http.post(`${base}/exam-list/read`, read(() => {
+      const entry = (line: number, code: string, title: string, extra: object = {}) => {
+        const rows = SYNCED[code] ?? []
+        return {
+          line, codes: [code], title, section: '', sitting: 'regular', students: rows.reduce((n, r) => n + r.students, 0),
+          classRows: rows.map((r) => ({ label: `${r.programme} Y${r.year}S1`, students: r.students })),
+          unknownCodes: [], duplicateOf: null, otherDepartments: [], existingPaperId: null, examiner: null, ...extra,
+        }
+      }
+      return ok({
+        entries: [
+          entry(1, 'MATH 241', 'Linear Algebra'),
+          entry(2, 'MATH 446', 'Statistical Inference II', { otherDepartments: ['DBSC'] }),
+          entry(3, 'MATH 241', 'Linear Algebra', { duplicateOf: 1 }),
+          entry(4, 'MATH 999', 'Not a unit', { unknownCodes: ['MATH 999'] }),
+        ],
+        smarttt: { available: true, reason: null },
+        summary: { papers: 3, newPapers: 3, duplicates: 1, unknown: 1, noStudents: 1 },
+      })
+    })),
+    http.post(`${base}/exam-list`, read(async ({ request }) => {
+      const { papers } = (await request.json()) as { papers: Array<{ codes: string[]; title: string; sitting: 'regular' | 'odel' }> }
+      for (const p of papers) {
+        const rows = p.codes.flatMap((c) => SYNCED[c] ?? []).map((r) => ({
+          id: id('row'), programme: r.programme, year: r.year, semester: 1, stream: '', students: r.students, smartttStudents: r.students, edited: false,
+        }))
+        state.listed.push({ id: id('paper'), codes: p.codes, title: p.title, sitting: p.sitting, rows })
+      }
+      return ok({ created: papers.length, updated: 0, smarttt: { available: true, reason: null } })
+    })),
+    http.patch(`${base}/exam-papers/:id`, read(async ({ params, request }) => {
+      const paper = state.listed.find((p) => p.id === params.id)
+      if (!paper) return fail(404, 'NOT_FOUND', 'No such paper in your department.')
+      const { title, sitting } = (await request.json()) as { title?: string; sitting?: 'regular' | 'odel' }
+      if (title) paper.title = title
+      if (sitting) paper.sitting = sitting
+      return ok(null)
+    })),
+    http.delete(`${base}/exam-papers/:id`, read(({ params }) => {
+      state.listed = state.listed.filter((p) => p.id !== params.id)
+      return ok(null)
+    })),
+    http.delete(`${base}/exam-list`, read(() => {
+      const deleted = state.listed.length
+      state.listed = []
+      return ok({ deleted })
+    })),
+    http.put(`${base}/exam-papers/rows`, read(async ({ request }) => {
+      const { papers } = (await request.json()) as { papers: Array<{ paperId: string; rows: Array<Omit<ListedRow, 'id' | 'smartttStudents' | 'edited'>> }> }
+      if (papers.some((x) => !state.listed.some((p) => p.id === x.paperId))) return fail(404, 'NOT_FOUND', 'No such paper in your department.')
+      for (const x of papers) {
+        const paper = state.listed.find((p) => p.id === x.paperId)!
+        paper.rows = x.rows.map((r) => {
+          const was = paper.rows.find((y) => y.programme === r.programme && y.year === r.year && y.stream === r.stream)
+          const smartttStudents = was?.smartttStudents ?? null
+          return { ...r, id: was?.id ?? id('row'), smartttStudents, edited: smartttStudents === null || r.students !== smartttStudents }
+        })
+      }
+      return ok(null)
+    })),
+    http.put(`${base}/exam-papers/:id/rows`, read(async ({ params, request }) => {
+      const paper = state.listed.find((p) => p.id === params.id)
+      if (!paper) return fail(404, 'NOT_FOUND', 'No such paper in your department.')
+      const { rows } = (await request.json()) as { rows: Array<Omit<ListedRow, 'id' | 'smartttStudents' | 'edited'>> }
+      paper.rows = rows.map((r) => {
+        const was = paper.rows.find((x) => x.programme === r.programme && x.year === r.year && x.stream === r.stream)
+        const smartttStudents = was?.smartttStudents ?? null
+        return { ...r, id: was?.id ?? id('row'), smartttStudents, edited: smartttStudents === null || r.students !== smartttStudents }
+      })
+      return ok(null)
+    })),
     http.post(`${base}/:kind/bulk`, read(() => fail(501, 'NOT_IMPLEMENTED', 'Pasting from Excel needs the real backend.'))),
     http.post(`${base}/spreadsheet`, read(() => fail(501, 'NOT_IMPLEMENTED', 'Reading a workbook needs the real backend.'))),
 

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, vi } from 'vitest'
 import { env } from '@/lib/env'
@@ -86,6 +86,18 @@ describe('department teaching', () => {
     expect(screen.getByRole('link', { name: /excel/i })).toHaveAttribute('href', `${env.apiUrl}/departments/teaching/export/xlsx`)
   })
 
+  it('says why a paper cannot be saved until a unit is ticked', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click(await screen.findByRole('button', { name: /add a paper/i }))
+    const dialog = await screen.findByRole('dialog', { name: /add a paper/i })
+    expect(within(dialog).getByText(/tick at least one unit to save/i)).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /^save$/i })).toBeDisabled()
+    await user.click(within(dialog).getByRole('checkbox', { name: /cosc 103/i }))
+    expect(within(dialog).queryByText(/tick at least one unit to save/i)).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /^save$/i })).toBeEnabled()
+  })
+
   it('has exam papers and invigilators on their own tabs, without the teaching publish button', async () => {
     const user = await openTeaching()
     await user.click(screen.getByRole('tab', { name: /^exams$/i }))
@@ -96,5 +108,115 @@ describe('department teaching', () => {
 
     await user.click(screen.getByRole('tab', { name: /invigilators/i }))
     expect(await screen.findByText(/the director hasn't shared an exam draft yet/i)).toBeInTheDocument()
+  })
+})
+
+describe('the uploaded exam list', () => {
+  it('reads the Word letter, shows what to check, saves the papers and lets the numbers be corrected', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    const file = new File(['letter'], 'drafts.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+    await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), file)
+
+    expect(await within(dialog).findByText(/3 papers read/i)).toBeInTheDocument()
+    expect(within(dialog).getByText('Same as line 1')).toBeInTheDocument()
+    expect(within(dialog).getByText(/smarttt doesn't know math 999/i)).toBeInTheDocument()
+    expect(within(dialog).getByText('Also listed by DBSC')).toBeInTheDocument()
+    // The repeated row starts left out; leave out the unknown code too.
+    expect(within(dialog).getByRole('checkbox', { name: 'Include line 3' })).not.toBeChecked()
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Include line 4' }))
+    await user.click(within(dialog).getByRole('button', { name: /save 2 papers/i }))
+
+    expect(await screen.findByText('Linear Algebra')).toBeInTheDocument()
+    expect(screen.getByText('92')).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: /^numbers/i })[0]!)
+    const numbers = await screen.findByRole('dialog', { name: /students sitting math 241/i })
+    const counts = within(numbers).getAllByRole('spinbutton', { name: 'Students' })
+    await user.clear(counts[0]!)
+    await user.type(counts[0]!, '95')
+    await user.click(within(numbers).getByRole('button', { name: /^save$/i }))
+    expect(await screen.findByText('107')).toBeInTheDocument()
+  })
+})
+
+describe('editing an uploaded paper', () => {
+  it('takes the number of students for a paper nobody synced, and removes the uploaded list as a whole', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
+    await within(dialog).findByText(/3 papers read/i)
+    await user.click(within(dialog).getByRole('button', { name: /save 3 papers/i }))
+    expect(await screen.findByText(/nobody has synced math 999/i)).toBeInTheDocument()
+
+    // MATH 999 is the third paper; its Edit dialog starts with a guessed class, so only the number is typed.
+    await user.click(screen.getAllByRole('button', { name: /^edit$/i })[2]!)
+    const edit = await screen.findByRole('dialog', { name: /edit math 999/i })
+    expect(within(edit).getByRole('textbox', { name: 'Programme' })).toHaveValue('MATH')
+    expect(within(edit).getByRole('spinbutton', { name: 'Year' })).toHaveValue(9)
+    const students = within(edit).getByRole('spinbutton', { name: 'Students' })
+    await user.clear(students)
+    await user.type(students, '40')
+    await user.click(within(edit).getByRole('button', { name: /^save$/i }))
+    await waitFor(() => expect(screen.queryByText(/nobody has synced math 999/i)).not.toBeInTheDocument())
+    expect(within(screen.getByRole('row', { name: /math 999/i })).getByText('40')).toBeInTheDocument()
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await user.click(screen.getByRole('button', { name: /remove uploaded list/i }))
+    expect(await screen.findByText(/no papers yet/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /remove uploaded list/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('student numbers at a go', () => {
+  it('enters many papers\' numbers on one screen, a pasted column filling the boxes below', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const upload = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    await user.upload(within(upload).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
+    await within(upload).findByText(/3 papers read/i)
+    await user.click(within(upload).getByRole('button', { name: /save 3 papers/i }))
+    expect(await screen.findByText(/nobody has synced math 999/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /enter student numbers/i }))
+    const dialog = await screen.findByRole('dialog', { name: /enter student numbers/i })
+    // Starts on the papers nobody synced; show them all, then paste two numbers into the first box.
+    expect(within(dialog).getAllByRole('spinbutton')).toHaveLength(1)
+    await user.click(within(dialog).getByRole('checkbox', { name: /only papers with no students/i }))
+    const boxes = within(dialog).getAllByRole('spinbutton')
+    await user.click(boxes[0]!)
+    await user.paste('70\n33')
+    expect(within(dialog).getAllByRole('spinbutton').map((b) => (b as HTMLInputElement).value).slice(0, 2)).toEqual(['70', '33'])
+    await user.click(within(dialog).getByRole('button', { name: /save 2 numbers/i }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /enter student numbers/i })).not.toBeInTheDocument())
+    // MATH 241 has two classes (changed under its Numbers); the boxes were MATH 446's and MATH 999's.
+    expect(within(screen.getByRole('row', { name: /math 446/i })).getByText('70')).toBeInTheDocument()
+    expect(within(screen.getByRole('row', { name: /math 999/i })).getByText('33')).toBeInTheDocument()
+    expect(screen.queryByText(/nobody has synced math 999/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('invigilators before the draft', () => {
+  it('names a paper\'s main invigilator before the Director shares a draft, and says a paper nobody synced still goes', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
+    await within(dialog).findByText(/3 papers read/i)
+    // Keep MATH 999 this time: nobody synced it, and it still goes to the Director.
+    await user.click(within(dialog).getByRole('button', { name: /save 3 papers/i }))
+    expect(await screen.findByText(/1 paper has no students known yet/i)).toBeInTheDocument()
+    expect(screen.getByText(/nobody has synced math 999/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: /invigilators/i }))
+    expect(await screen.findByText(/you can name each paper's main invigilator now/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /publish invigilators/i })).toBeDisabled()
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Main invigilator for MATH 241' }), 'tl-1')
+    expect(await screen.findByText(/1 of 3 invigilators named/i)).toBeInTheDocument()
   })
 })

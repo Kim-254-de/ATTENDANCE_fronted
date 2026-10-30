@@ -1,16 +1,17 @@
-import { CheckCircle2, GitMerge, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Check, CheckCircle2, GitMerge, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage, fieldErrors } from '@/lib/api'
-import type { DuplicateDepartment } from '@/types'
+import type { AdminDepartment, DuplicateDepartment } from '@/types'
 import {
   useAdminDepartments,
   useCreateDepartment,
   useDepartmentAliases,
   useDirectoryStatus,
   useDuplicateDepartments,
+  useEditDepartment,
   useMergeDepartment,
   useRemoveDepartmentAlias,
   useSyncDirectory,
@@ -19,8 +20,9 @@ import {
 /**
  * The university's departments. Faculties play no part: the administrator
  * creates each department here with a name and a code ("DCOMP"), unique
- * across the university. It is created in SMARTTT first, and the Timetable
- * Allocator and Generator import it from here to build the timetable.
+ * across the university, and corrects either later. Both are made in SMARTTT
+ * first, and the Timetable Generator imports them from here to build the
+ * timetable.
  *
  * One department, one spelling: departments created under two spellings
  * ("Computer Science" and "Department of Computer Science") are merged here,
@@ -77,9 +79,15 @@ function AddDepartment() {
 
 function DepartmentList() {
   const { data: departments, isPending, error, refetch } = useAdminDepartments()
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [saved, setSaved] = useState<string | null>(null)
   return (
     <section aria-labelledby="all-departments" className="space-y-3">
-      <h2 id="all-departments" className="font-semibold text-ink">All departments</h2>
+      <div>
+        <h2 id="all-departments" className="font-semibold text-ink">All departments</h2>
+        <p className="mt-1 text-sm text-muted">Correct a name or code with the pencil. Lecturers, officers and teaching stay with the department.</p>
+      </div>
+      {saved && <p role="status" className="text-sm text-success">{saved}</p>}
       {error ? (
         <Card className="flex items-center justify-between p-5" role="alert">
           <p className="text-sm text-danger">{errorMessage(error, 'Could not load the departments.')}</p>
@@ -98,22 +106,88 @@ function DepartmentList() {
                 <th scope="col" className="px-5 py-3">Code</th>
                 <th scope="col" className="px-5 py-3">Lecturers</th>
                 <th scope="col" className="px-5 py-3">SMARTTT</th>
+                <th scope="col" className="px-5 py-3"><span className="sr-only">Edit</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {departments.map((d) => (
-                <tr key={d.departmentId}>
-                  <td className="px-5 py-3 font-medium text-ink">{d.name}</td>
-                  <td className="px-5 py-3 font-mono text-ink">{d.code ?? <span className="font-sans text-warning">No code</span>}</td>
-                  <td className="px-5 py-3 text-ink">{d.lecturerCount}</td>
-                  <td className="px-5 py-3">{d.inSmarttt ? <span className="text-success">Linked</span> : <span className="text-warning">Only here</span>}</td>
-                </tr>
-              ))}
+              {departments.map((d) =>
+                editingId === d.departmentId ? (
+                  <EditDepartmentRow
+                    key={d.departmentId}
+                    department={d}
+                    onDone={(message) => { setEditingId(null); setSaved(message) }}
+                  />
+                ) : (
+                  <tr key={d.departmentId}>
+                    <td className="px-5 py-3 font-medium text-ink">{d.name}</td>
+                    <td className="px-5 py-3 font-mono text-ink">{d.code ?? <span className="font-sans text-warning">No code</span>}</td>
+                    <td className="px-5 py-3 text-ink">{d.lecturerCount}</td>
+                    <td className="px-5 py-3">{d.inSmarttt ? <span className="text-success">Linked</span> : <span className="text-warning">Only here</span>}</td>
+                    <td className="px-3 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => { setEditingId(d.departmentId); setSaved(null) }}
+                        className="rounded-lg p-2 text-muted hover:bg-surface hover:text-ink"
+                        aria-label={`Edit ${d.name}`}
+                      >
+                        <Pencil className="size-4" aria-hidden />
+                      </button>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         </Card>
       )}
     </section>
+  )
+}
+
+/** One department's name and code, being corrected in place. */
+function EditDepartmentRow({ department, onDone }: { department: AdminDepartment; onDone: (message: string | null) => void }) {
+  const id = useId()
+  const save = useEditDepartment()
+  const [name, setName] = useState(department.name)
+  const [code, setCode] = useState(department.code ?? '')
+  const fields = fieldErrors(save.error)
+  const unchanged = name.trim() === department.name && code.trim().toUpperCase() === (department.code ?? '')
+
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault()
+    if (unchanged) return onDone(null)
+    save.mutate(
+      { departmentId: department.departmentId, name: name.trim(), code: code.trim().toUpperCase() },
+      { onSuccess: (d) => onDone(`${department.name} is now ${d.name} (${d.code}).`) },
+    )
+  }
+
+  return (
+    <tr className="bg-surface">
+      <td colSpan={5} className="px-5 py-3">
+        <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-start" noValidate>
+          <div className="space-y-1">
+            <label htmlFor={`${id}-name`} className="text-xs font-medium text-muted">Department name</label>
+            <input id={`${id}-name`} value={name} onChange={(e) => setName(e.target.value)} className="input" maxLength={160} autoFocus aria-invalid={!!fields.name || undefined} />
+            {fields.name && <p className="text-xs text-danger">{fields.name}</p>}
+          </div>
+          <div className="space-y-1">
+            <label htmlFor={`${id}-code`} className="text-xs font-medium text-muted">Code</label>
+            <input id={`${id}-code`} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="input uppercase" maxLength={32} aria-invalid={!!fields.code || undefined} />
+            {fields.code && <p className="text-xs text-danger">{fields.code}</p>}
+          </div>
+          <div className="flex gap-2 sm:mt-5">
+            <Button type="submit" loading={save.isPending} disabled={name.trim().length < 3 || !code.trim()}>
+              <Check className="size-4" aria-hidden /> Save
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => onDone(null)} disabled={save.isPending}>
+              <X className="size-4" aria-hidden /> Cancel
+            </Button>
+          </div>
+        </form>
+        {save.isError && !fields.name && !fields.code && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(save.error)}</p>}
+      </td>
+    </tr>
   )
 }
 

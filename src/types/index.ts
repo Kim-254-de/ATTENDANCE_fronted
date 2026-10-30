@@ -662,6 +662,8 @@ export interface CheckInResult {
   /** The class checked in to, e.g. "COSC 103 GR A". */
   unitCode: string
   recordedAt: string
+  /** An exam room's code: the room the student sits the paper in. */
+  room?: string
 }
 
 export interface ApiErrorBody {
