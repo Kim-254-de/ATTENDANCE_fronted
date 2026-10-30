@@ -1,12 +1,13 @@
 import { ArrowLeft, LocateFixed, Pause, PictureInPicture2, Play, ScanFace, Smartphone, TabletSmartphone, TriangleAlert, X } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
 import { formatElapsed } from '@/lib/format'
 import { bestPosition } from '@/lib/geolocation'
+import { useNow } from '@/lib/useNow'
 import type { SessionAttendance, SessionStatus, SessionSummary } from '@/types'
 import { useSessionAttendance, useSessionQr, useSetGeofence, useSetSessionStatus, useTerminalLink } from './sessionApi'
 
@@ -22,15 +23,6 @@ declare global {
   interface Window {
     documentPictureInPicture?: DocumentPictureInPicture
   }
-}
-
-const subscribeToSeconds = (notify: () => void) => {
-  const t = setInterval(notify, 1000)
-  return () => clearInterval(t)
-}
-const currentSecond = () => Math.floor(Date.now() / 1000) * 1000
-function useNow() {
-  return useSyncExternalStore(subscribeToSeconds, currentSecond)
 }
 
 /**

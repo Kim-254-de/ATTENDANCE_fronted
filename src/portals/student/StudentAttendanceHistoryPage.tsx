@@ -6,13 +6,12 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import { RecordRow } from './AttendanceRecordRow'
 import { useMinAttendance } from '@/lib/attendancePolicy'
-import { displayMark, groupByDay } from './attendanceStats'
+import { displayMark, formatRate, groupByDay } from './attendanceStats'
 import { useMyAttendance } from './studentApi'
-import { useAnimated, useFirstVisit } from './useAnimated'
+import { useAnimated, useFirstVisit } from '@/lib/useAnimated'
 
 const HISTORY_LIMIT = 200
 
-const formatRate = (rate: number | null) => (rate === null ? '—' : `${Math.round(rate)}%`)
 
 type StatusFilter = 'ALL' | 'PRESENT' | 'LATE' | 'ABSENT'
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [

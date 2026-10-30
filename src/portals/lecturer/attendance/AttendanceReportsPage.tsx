@@ -8,7 +8,7 @@ import { useMyUnits } from '@/portals/lecturer/units/unitsApi'
 import { errorMessage } from '@/lib/api'
 import { formatShortDate } from '@/lib/format'
 import type { RecentSession, TaughtUnit } from '@/types'
-import { useAnimated, useFirstVisit } from '@/portals/lecturer/useAnimated'
+import { useAnimated, useFirstVisit } from '@/lib/useAnimated'
 import { rateColour, sessionExportUrl, useSessionReports, useUnitAttendanceRates } from './reportingApi'
 
 /**

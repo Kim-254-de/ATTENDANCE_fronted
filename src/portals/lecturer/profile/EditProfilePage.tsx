@@ -1,9 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { ArrowLeft, Check, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMe, useUpdateProfile, type UpdateProfileInput } from '@/auth/authApi'
 import type { Lecturer } from '@/types'
-import { Field } from '@/auth/ChangePasswordCard'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
@@ -58,6 +57,42 @@ function EditProfileForm({ user }: { user: Lecturer }) {
           </div>
         </form>
       </Card>
+    </div>
+  )
+}
+
+/** Small label+input for this form. */
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  required,
+  readOnly,
+}: {
+  label: string
+  value: string
+  onChange?: (value: string) => void
+  type?: string
+  placeholder?: string
+  required?: boolean
+  readOnly?: boolean
+}) {
+  const id = useId()
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-semibold text-ink">{label}</label>
+      <input
+        id={id}
+        className={`input mt-2 ${readOnly ? 'cursor-not-allowed bg-brand-soft text-muted' : ''}`}
+        type={type}
+        value={value}
+        onChange={(event) => onChange?.(event.target.value)}
+        placeholder={placeholder}
+        required={required}
+        readOnly={readOnly}
+      />
     </div>
   )
 }

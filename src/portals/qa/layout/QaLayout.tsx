@@ -1,7 +1,7 @@
 import { Outlet, useMatches } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
 import { AccountMenu } from '@/components/layout/AccountMenu'
-import { officerSubtitle } from '@/components/officers/OfficerProfilePage'
+import { officerSubtitle } from '@/components/officers/officerSubtitle'
 import { formatLongDate } from '@/lib/format'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { BottomNav } from './BottomNav'
