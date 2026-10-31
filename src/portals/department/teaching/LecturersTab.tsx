@@ -13,7 +13,8 @@ import {
   type LecturerInput,
   type TeachingLecturer,
 } from './teachingApi'
-import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const LECTURER_COLUMNS: BulkColumn[] = [
   { key: 'name', label: 'Name', example: 'Dr. Jane Otieno (FT)', required: true },

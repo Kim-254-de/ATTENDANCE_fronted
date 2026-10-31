@@ -32,7 +32,8 @@ import {
   type Practical,
   type PracticalInput,
 } from './examsApi'
-import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const PAPER_COLUMNS: BulkColumn[] = [
   { key: 'codes', label: 'Codes', example: 'BITE 131/COSC 130', required: true,

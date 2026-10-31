@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import { bestPosition } from '@/lib/geolocation'
+import { useNow } from '@/lib/useNow'
 import type { DeviceLocation } from '@/types'
 import { canOpenNow, OPEN_EARLY_MINUTES, useMyExamSessions, useOpenExamSession, type ExamSession } from './examsApi'
 
@@ -26,9 +27,9 @@ export function ExamsPage() {
 
   if (error) {
     return (
-      <Card className="flex items-center justify-between p-5" role="alert">
+      <Card className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 p-5" role="alert">
         <p className="text-sm text-danger">{errorMessage(error, 'Could not load your exam rooms.')}</p>
-        <button onClick={() => refetch()} className="text-sm font-semibold text-ink underline">Retry</button>
+        <Button variant="secondary" onClick={() => refetch()}>Retry</Button>
       </Card>
     )
   }
@@ -41,11 +42,7 @@ export function ExamsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <p className="text-sm font-semibold tracking-wide text-brand-ink">INVIGILATION</p>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight text-ink">Your exam rooms</h2>
-        <p className="mt-1 text-sm text-muted">Open your room from {OPEN_EARLY_MINUTES} minutes before the paper. Students scan its code with the usual check-in scanner.</p>
-      </div>
+      <p className="text-sm text-muted">Open your room from {OPEN_EARLY_MINUTES} minutes before the paper. Students scan its code with the usual check-in scanner.</p>
       {sessions.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted">No invigilation duties from today on.</Card>
       ) : (
@@ -62,6 +59,9 @@ export function ExamsPage() {
 
 function ExamRoomCard({ session }: { session: ExamSession }) {
   const navigate = useNavigate()
+  // Re-checked every half minute, so Open room appears on its own when the room's slot starts.
+  const now = useNow(30_000)
+  const openable = canOpenNow(session, now)
   const open = useOpenExamSession(session.id)
   const [locating, setLocating] = useState(false)
   // The room isn't surveyed and this device's fix was too vague: the fence can only be switched off.
@@ -114,17 +114,17 @@ function ExamRoomCard({ session }: { session: ExamSession }) {
         {session.status === 'OPEN' && (
           <Button onClick={show}><QrCode className="size-4" aria-hidden /> Show code</Button>
         )}
-        {canOpenNow(session) && !needsFenceOff && (
+        {openable && !needsFenceOff && (
           <Button onClick={openRoom} loading={locating || open.isPending}>
             <DoorOpen className="size-4" aria-hidden /> {locating ? 'Getting your location…' : 'Open room'}
           </Button>
         )}
-        {canOpenNow(session) && needsFenceOff && (
+        {openable && needsFenceOff && (
           <Button onClick={openWithoutFence} loading={open.isPending}>
             <DoorOpen className="size-4" aria-hidden /> Open without the location check
           </Button>
         )}
-        {session.status === 'NOT_OPENED' && !canOpenNow(session) && (
+        {session.status === 'NOT_OPENED' && !openable && (
           <p className="text-sm text-muted">Opens {OPEN_EARLY_MINUTES} minutes before the paper.</p>
         )}
         {session.status !== 'NOT_OPENED' && (

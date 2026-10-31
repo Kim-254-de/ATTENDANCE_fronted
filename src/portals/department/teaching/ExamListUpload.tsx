@@ -17,7 +17,8 @@ import {
   type RowInput,
   type Sitting,
 } from './examsApi'
-import { Dialog, TableCard, dangerLink, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { TableCard, dangerLink, td, th } from './ui'
 
 const DOCX = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 

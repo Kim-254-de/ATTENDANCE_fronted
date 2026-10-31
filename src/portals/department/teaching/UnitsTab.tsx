@@ -21,7 +21,8 @@ import {
   type UnitGroup,
   type UnitInput,
 } from './teachingApi'
-import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const UNIT_COLUMNS: BulkColumn[] = [
   { key: 'code', label: 'Code', example: 'COSC 103', required: true },

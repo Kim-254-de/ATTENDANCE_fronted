@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { errorMessage } from '@/lib/api'
 import { readSpreadsheet, type BulkResult } from './teachingApi'
-import { Dialog } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
 
 export interface BulkColumn {
   key: string

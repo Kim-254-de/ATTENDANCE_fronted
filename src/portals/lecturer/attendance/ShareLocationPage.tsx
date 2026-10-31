@@ -7,6 +7,7 @@ import { errorMessage } from '@/lib/api'
 import { bestPosition } from '@/lib/geolocation'
 import type { DeviceLocation, SessionSummary } from '@/types'
 import { useLiveSessions, useSetGeofence } from './sessionApi'
+import { SkipLocationDialog } from './SkipLocationDialog'
 
 /**
  * Opened on the lecturer's phone, signed in to the same account as the laptop
@@ -61,11 +62,7 @@ export function ShareLocationCard({ session }: { session: SessionSummary }) {
     }
   }
 
-  const skip = () => {
-    if (window.confirm('Open this class without checking where students are? Anyone with the code could check in from anywhere.')) {
-      setGeofence.mutate({ mode: 'OFF' })
-    }
-  }
+  const [confirmingSkip, setConfirmingSkip] = useState(false)
 
   const busy = locating || setGeofence.isPending
   const room = roomCode ? ` ${roomCode}` : ''
@@ -120,12 +117,13 @@ export function ShareLocationCard({ session }: { session: SessionSummary }) {
             {mode === 'AWAITING_LOCATION' || mode === 'OFF' ? "Share this phone's location" : 'Share location again'}
           </Button>
           {mode === 'AWAITING_LOCATION' && (
-            <Button variant="ghost" className="w-full" onClick={skip} disabled={busy}>
+            <Button variant="ghost" className="w-full" onClick={() => setConfirmingSkip(true)} disabled={busy}>
               Open without a location check
             </Button>
           )}
         </div>
       )}
+      {confirmingSkip && <SkipLocationDialog sessionId={session.id} onClose={() => setConfirmingSkip(false)} />}
     </Card>
   )
 }

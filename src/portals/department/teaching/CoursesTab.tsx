@@ -4,7 +4,8 @@ import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
 import { BulkPaste, type BulkColumn } from './BulkPaste'
 import { COURSE_MODES, useBulk, useDeleteCourse, useSaveCourse, type Board, type CourseInput, type CourseMode } from './teachingApi'
-import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const COURSE_COLUMNS: BulkColumn[] = [
   { key: 'programme', label: 'Programme', example: 'BSC.COMP SCI', required: true },
