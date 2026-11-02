@@ -165,7 +165,9 @@ export const editedRows = (paper: ExamPaper): EditedRow[] =>
 /**
  * A class for a paper nobody has synced, so the department only types its
  * number: programme from the first code's letters, year from its first
- * non-zero digit ("MATH 241" → MATH Y2S1). They can correct either.
+ * non-zero digit ("MATH 241" → MATH Y2S1). They can correct either. Left
+ * as it is, the backend treats it as a guess (isGuessedRow): the Generator
+ * seats it but doesn't hold it to a class's hard rules.
  */
 export function guessedRow(paper: ExamPaper): EditedRow {
   const first = paper.codes.split('/')[0]?.trim() ?? ''
