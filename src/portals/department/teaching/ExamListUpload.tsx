@@ -279,7 +279,9 @@ export function NumbersAtOnce({ term, papers, onClose }: { term: string | undefi
       <div className="space-y-4 text-sm">
         <p className="text-muted">
           Type how many students sit each paper, or paste a column of numbers from Excel into the first box: it fills
-          the boxes below it in order. A paper sat by several classes is changed under its Numbers.
+          the boxes below it in order. A paper sat by several classes is changed under its Numbers. A guessed class comes
+          from the paper's code: it only helps spread the papers, so correct it under Numbers to keep that class's
+          papers from clashing.
         </p>
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
@@ -299,7 +301,7 @@ export function NumbersAtOnce({ term, papers, onClose }: { term: string | undefi
                     {p.sitting === 'odel' && <span className="ml-1 rounded-md bg-brand-soft px-1.5 text-xs font-normal text-brand-ink">ODEL</span>}
                   </td>
                   <td className={td}>{p.title}</td>
-                  <td className={`${td} text-xs text-muted`}>{single(p) ? classLabel(row) : `${p.classRows.length} classes`}</td>
+                  <td className={`${td} text-xs text-muted`}>{single(p) ? <>{classLabel(row)}{row.smartttStudents === null && classLabel(row) === classLabel(guessedRow(p)) && ' (guessed)'}</> : `${p.classRows.length} classes`}</td>
                   <td className={td}>
                     {single(p) ? (
                       <input type="number" min={0} max={5000} inputMode="numeric" className="input w-20"
