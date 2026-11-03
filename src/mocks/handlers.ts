@@ -2,7 +2,7 @@ import { delay, http, HttpResponse } from 'msw'
 import type { EnrolmentStudent, Terminal, TerminalCapability } from '@/portals/department/terminals/terminalsApi'
 import { examHandlers, resetExams } from './exams'
 import { resetTeaching, teachingHandlers } from './teaching'
-import type { Account, Admin, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, InvitationDetails, Officer, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, PlacementLecturer, StudentEvaluationRound, PendingUnit, ManagementAccount, ManagementDepartment, ManagementDepartmentYears, ManagementStudent, ManagementUnit, ManagementUniversity, ManagementYearDetail } from '@/types'
+import type { Account, Admin, Allocation, AttendanceMark, CheckInResult, DepartmentLecturer, DepartmentOfficer, DepartmentOverview, DepartmentProfile, DepartmentTimekeepingEntry, DepartmentUnit, FaceCheckInResult, FaceIdentifyResult, FaceStatus, InvitationDetails, Officer, CreateSessionInput, CreateUnitInput, CurrentQr, GeofenceStatus, Lecturer, LecturerStudent, Overview, QaAttendanceTrendPoint, QaAudit, QaAuditStatus, QaChecklistItem, QaChecklistTemplate, QaCorrectiveAction, QaCapaStatus, QaDirectoryEntry, QaFindingRating, QaOfficer, QaStandard, RecentSession, SessionAttendance, SessionStatus, SessionSummary, Student, StudentAttendance, StudentAttendanceRecord, StudentUnit, TaughtUnit, Unit, UnitSchedule, VerificationMethod, AdminDepartment, DepartmentAlias, DuplicateDepartment, PlacementResult, AttendancePolicy, EligibilityReport, EligibilityRow, EligibilityStatus, EvaluationQuestion, EvaluationQuestionResult, EvaluationResults, EvaluationRound, EvaluationRoundDetail, EvaluationRoundInput, EvaluationRoundStatus, EvaluationUnitResult, PlacementLecturer, StudentEvaluationRound, PendingUnit, ManagementAccount, ManagementDepartment, ManagementDepartmentYears, ManagementStudent, ManagementUnit, ManagementUniversity, ManagementYearDetail, SmartttVenue, SmartttVenueInput } from '@/types'
 
 // Mocks follow the same base URL as the client, so the two can never disagree.
 const API = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/+$/, '')
@@ -1340,6 +1340,10 @@ const SMARTTT_ADMIN_SEED = () => ({
     { id: 'staff-upload-1', file_name: 'staff_ids.csv', ids_created: 2, ids_skipped: 0, ids_remaining: 2, ids_claimed: 1, uploaded_by: 'Ms. Aisha Njeri', uploaded_at: '2026-08-01T08:00:00Z' },
   ],
   venues: { total: 102, confirmed: 99, unconfirmed: 3, unconfirmed_codes: ['G 12', 'UTC-AA 3', 'STB 4'] },
+  rooms: [
+    { id: '11111111-1111-4111-8111-111111111111', code: 'TC 1', name: 'TC 1', building: 'TC', capacity: 100, capacity_confirmed: true, room_type: 'lecture_hall', status: 'active', for_exams: true, health_unit: false },
+    { id: '22222222-2222-4222-8222-222222222222', code: 'G 12', name: 'G 12', building: 'G', capacity: 30, capacity_confirmed: false, room_type: 'lecture_hall', status: 'active', for_exams: true, health_unit: false },
+  ] as SmartttVenue[],
 })
 let smartttAdmin = SMARTTT_ADMIN_SEED()
 
@@ -1899,6 +1903,23 @@ const smartttAdminHandlers = [
     return ok({ detail: 'Removed 2 staff ID(s) from staff_ids.csv.', removed: 2, accounts_disabled: 1 })
   }),
   http.get(`${API}/admin/smarttt/rooms/capacities`, () => requireAdmin() ?? ok(smartttAdmin.venues)),
+  http.get(`${API}/admin/smarttt/rooms`, () => requireAdmin() ?? ok({ rooms: smartttAdmin.rooms })),
+  http.post(`${API}/admin/smarttt/rooms`, async ({ request }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const body = (await request.json()) as SmartttVenueInput
+    if (smartttAdmin.rooms.some((r) => r.code === body.code)) return fail(400, 'VALIDATION_FAILED', 'A venue with this code already exists.')
+    const room: SmartttVenue = { ...body, id: crypto.randomUUID(), capacity_confirmed: true }
+    smartttAdmin.rooms = [...smartttAdmin.rooms, room]
+    return ok(room, 201)
+  }),
+  http.patch(`${API}/admin/smarttt/rooms/:id`, async ({ request, params }) => {
+    const blocked = requireAdmin()
+    if (blocked) return blocked
+    const body = (await request.json()) as Partial<SmartttVenueInput>
+    smartttAdmin.rooms = smartttAdmin.rooms.map((r) => (r.id === params.id ? { ...r, ...body } : r))
+    return ok(smartttAdmin.rooms.find((r) => r.id === params.id))
+  }),
   http.post(`${API}/admin/smarttt/rooms/capacities`, () => {
     const blocked = requireAdmin()
     if (blocked) return blocked

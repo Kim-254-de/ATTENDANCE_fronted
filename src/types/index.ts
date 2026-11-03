@@ -271,6 +271,25 @@ export interface SmartttVenueSummary {
   unconfirmed_codes: string[]
 }
 
+export type SmartttVenueType = 'lecture_hall' | 'lab' | 'seminar'
+export type SmartttVenueStatus = 'active' | 'maintenance' | 'closed' | 'unavailable'
+
+/** A venue in SMARTTT. The Director can overrule `for_exams` in the Timetable Generator. */
+export interface SmartttVenue {
+  id: string
+  code: string
+  name: string
+  building: string
+  capacity: number
+  capacity_confirmed: boolean
+  room_type: SmartttVenueType
+  status: SmartttVenueStatus
+  for_exams: boolean
+  health_unit: boolean
+}
+
+export type SmartttVenueInput = Omit<SmartttVenue, 'id' | 'capacity_confirmed'>
+
 export interface SmartttVenueUpload {
   detail?: string
   errors?: { row: number; code?: string; error: string }[]
