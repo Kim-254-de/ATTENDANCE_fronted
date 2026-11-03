@@ -16,6 +16,8 @@ import type {
   SmartttTimetableUpload,
   SmartttUploadStarted,
   SmartttUploadStatus,
+  SmartttVenue,
+  SmartttVenueInput,
   SmartttVenueSummary,
   SmartttVenueUpload,
 } from '@/types'
@@ -211,6 +213,22 @@ export const useUploadVenues = () => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (file: File) => upload<SmartttVenueUpload>('/rooms/capacities', file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.venues }),
+  })
+}
+
+export const useVenues = () =>
+  useQuery({
+    queryKey: [...keys.venues, 'list'],
+    queryFn: async () => (await api.get<{ rooms: SmartttVenue[] }>(`${BASE}/rooms`)).data.rooms,
+  })
+
+/** Adds a venue, or changes one (only the fields given). */
+export const useSaveVenue = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, body }: { id?: string; body: Partial<SmartttVenueInput> }) =>
+      (id ? await api.patch<SmartttVenue>(`${BASE}/rooms/${id}`, body) : await api.post<SmartttVenue>(`${BASE}/rooms`, body)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.venues }),
   })
 }
