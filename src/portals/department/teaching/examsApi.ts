@@ -34,7 +34,7 @@ export interface ExamPaper {
   rows: ListedRow[]
 }
 
-/** A class sitting a listed paper, and how many: who synced the unit in SMARTTT, or the department's number. */
+/** A class sitting a listed paper (from the master timetable, or who synced), and how many: who synced, or the department's number. */
 export interface ListedRow {
   id: string
   programme: string
@@ -66,7 +66,7 @@ export interface ExamListReview {
     examiner: { lecturerId: string | null; staffNumber: string; name: string } | null
   }>
   smarttt: { available: boolean; reason: string | null }
-  summary: { papers: number; newPapers: number; duplicates: number; unknown: number; noStudents: number }
+  summary: { papers: number; newPapers: number; duplicates: number; unknown: number; noStudents: number; noClasses: number }
 }
 
 export interface ListedPaperInput {
@@ -159,8 +159,9 @@ export interface PaperInput {
 /** A class row being edited: SMARTTT's count kept beside it, null for a class the department added. */
 export type EditedRow = RowInput & { smartttStudents: number | null }
 
+/** The paper's classes; one the department took off the paper (0, set by them) stays gone. */
 export const editedRows = (paper: ExamPaper): EditedRow[] =>
-  paper.rows.map(({ programme, year, semester, stream, students, smartttStudents }) => ({ programme, year, semester, stream, students, smartttStudents }))
+  paper.rows.filter((r) => !(r.edited && r.students === 0)).map(({ programme, year, semester, stream, students, smartttStudents }) => ({ programme, year, semester, stream, students, smartttStudents }))
 
 /**
  * A class for a paper nobody has synced, so the department only types its

@@ -120,13 +120,16 @@ describe('the uploaded exam list', () => {
     const file = new File(['letter'], 'drafts.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
     await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), file)
 
-    expect(await within(dialog).findByText(/3 papers read/i)).toBeInTheDocument()
+    expect(await within(dialog).findByText(/4 papers read/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/on the master timetable, nobody synced yet/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/not on the master timetable and nobody synced/i)).toBeInTheDocument()
     expect(within(dialog).getByText('Same as line 1')).toBeInTheDocument()
     expect(within(dialog).getByText(/smarttt doesn't know math 999/i)).toBeInTheDocument()
     expect(within(dialog).getByText('Also listed by DBSC')).toBeInTheDocument()
     // The repeated row starts left out; leave out the unknown code too.
     expect(within(dialog).getByRole('checkbox', { name: 'Include line 3' })).not.toBeChecked()
     await user.click(within(dialog).getByRole('checkbox', { name: 'Include line 4' }))
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Include line 5' }))
     await user.click(within(dialog).getByRole('button', { name: /save 2 papers/i }))
 
     expect(await screen.findByText('Linear Algebra')).toBeInTheDocument()
@@ -134,6 +137,8 @@ describe('the uploaded exam list', () => {
     await user.click(screen.getAllByRole('button', { name: /^numbers/i })[0]!)
     const numbers = await screen.findByRole('dialog', { name: /students sitting math 241/i })
     const counts = within(numbers).getAllByRole('spinbutton', { name: 'Students' })
+    // Any class can come off the paper, one from SMARTTT too.
+    expect(within(numbers).getAllByRole('button', { name: /remove the class/i })).toHaveLength(counts.length)
     await user.clear(counts[0]!)
     await user.type(counts[0]!, '95')
     await user.click(within(numbers).getByRole('button', { name: /^save$/i }))
@@ -148,7 +153,8 @@ describe('editing an uploaded paper', () => {
     await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
     const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
     await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
-    await within(dialog).findByText(/3 papers read/i)
+    await within(dialog).findByText(/4 papers read/i)
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Include line 5' }))
     await user.click(within(dialog).getByRole('button', { name: /save 3 papers/i }))
     expect(await screen.findByText(/nobody has synced math 999/i)).toBeInTheDocument()
 
@@ -178,7 +184,8 @@ describe('student numbers at a go', () => {
     await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
     const upload = await screen.findByRole('dialog', { name: /upload your exam list/i })
     await user.upload(within(upload).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
-    await within(upload).findByText(/3 papers read/i)
+    await within(upload).findByText(/4 papers read/i)
+    await user.click(within(upload).getByRole('checkbox', { name: 'Include line 5' }))
     await user.click(within(upload).getByRole('button', { name: /save 3 papers/i }))
     expect(await screen.findByText(/nobody has synced math 999/i)).toBeInTheDocument()
 
@@ -207,8 +214,9 @@ describe('invigilators before the draft', () => {
     await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
     const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
     await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), new File(['x'], 'list.docx'))
-    await within(dialog).findByText(/3 papers read/i)
+    await within(dialog).findByText(/4 papers read/i)
     // Keep MATH 999 this time: nobody synced it, and it still goes to the Director.
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Include line 5' }))
     await user.click(within(dialog).getByRole('button', { name: /save 3 papers/i }))
     expect(await screen.findByText(/1 paper has no students known yet/i)).toBeInTheDocument()
     expect(screen.getByText(/nobody has synced math 999/i)).toBeInTheDocument()

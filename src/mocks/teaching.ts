@@ -270,9 +270,10 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
           entry(2, 'MATH 446', 'Statistical Inference II', { otherDepartments: ['DBSC'] }),
           entry(3, 'MATH 241', 'Linear Algebra', { duplicateOf: 1 }),
           entry(4, 'MATH 999', 'Not a unit', { unknownCodes: ['MATH 999'] }),
+          entry(5, 'STAT 300', 'Regression', { classRows: [{ label: 'BSC.STAT Y3S2', students: 0 }] }),
         ],
         smarttt: { available: true, reason: null },
-        summary: { papers: 3, newPapers: 3, duplicates: 1, unknown: 1, noStudents: 1 },
+        summary: { papers: 4, newPapers: 4, duplicates: 1, unknown: 1, noStudents: 2, noClasses: 1 },
       })
     })),
     http.post(`${base}/exam-list`, read(async ({ request }) => {
