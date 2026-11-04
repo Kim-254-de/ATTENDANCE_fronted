@@ -142,6 +142,29 @@ describe('the uploaded exam list', () => {
     await user.click(within(numbers).getByRole('button', { name: /^save$/i }))
     expect(await screen.findByText('107')).toBeInTheDocument()
   })
+
+  it("takes classes and numbers from the letter's headings, and leaves out a class with no programme until one is chosen", async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), new File(['nursing letter'], 'nursing.docx'))
+
+    expect(await within(dialog).findByRole('spinbutton', { name: 'Students of BSc Nursing' })).toHaveValue(107)
+    expect(within(dialog).getByRole('combobox', { name: 'Programme of BSc Nursing' })).toHaveValue('BSC.NURS')
+    expect(within(dialog).getByRole('combobox', { name: 'Programme of BSc Health Records' })).toHaveValue('')
+    expect(within(dialog).getByText(/1 have no programme yet/i)).toBeInTheDocument()
+    await user.type(within(dialog).getByRole('combobox', { name: 'Programme of BSc Health Records' }), 'BSC.HRIM')
+    expect(within(dialog).queryByText(/no programme yet/i)).not.toBeInTheDocument()
+    const students = within(dialog).getByRole('spinbutton', { name: 'Students of BSc Health Records' })
+    await user.clear(students)
+    await user.type(students, '15')
+    await user.click(within(dialog).getByRole('button', { name: /save 2 papers/i }))
+
+    expect(await screen.findByText('Anatomy')).toBeInTheDocument()
+    expect(screen.getByText('107')).toBeInTheDocument()
+    expect(screen.getByText('15')).toBeInTheDocument()
+  })
 })
 
 describe('editing an uploaded paper', () => {
