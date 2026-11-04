@@ -16,6 +16,9 @@ import type {
   SmartttTimetableUpload,
   SmartttUploadStarted,
   SmartttUploadStatus,
+  SmartttDuplicateGroup,
+  SmartttVenue,
+  SmartttVenueInput,
   SmartttVenueSummary,
   SmartttVenueUpload,
 } from '@/types'
@@ -211,6 +214,46 @@ export const useUploadVenues = () => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (file: File) => upload<SmartttVenueUpload>('/rooms/capacities', file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.venues }),
+  })
+}
+
+export const useVenues = () =>
+  useQuery({
+    queryKey: [...keys.venues, 'list'],
+    queryFn: async () => (await api.get<{ rooms: SmartttVenue[] }>(`${BASE}/rooms`)).data.rooms,
+  })
+
+export const useDuplicateVenues = () =>
+  useQuery({
+    queryKey: [...keys.venues, 'duplicates'],
+    queryFn: async () => (await api.get<{ groups: SmartttDuplicateGroup[] }>(`${BASE}/rooms/duplicates`)).data.groups,
+  })
+
+/** Folds every room known by several codes into one; timetable slots and exam seats move with it. */
+export const useMergeDuplicateVenues = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => (await api.post<{ groups: number; rooms_removed: number }>(`${BASE}/rooms/merge-duplicates`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.venues }),
+  })
+}
+
+/** Merges venues the administrator knows are one room, whatever their codes. */
+export const useMergeVenues = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: { keep: string; merge: string[] }) => (await api.post(`${BASE}/rooms/merge`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.venues }),
+  })
+}
+
+/** Adds a venue, or changes one (only the fields given). */
+export const useSaveVenue = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, body }: { id?: string; body: Partial<SmartttVenueInput> }) =>
+      (id ? await api.patch<SmartttVenue>(`${BASE}/rooms/${id}`, body) : await api.post<SmartttVenue>(`${BASE}/rooms`, body)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.venues }),
   })
 }

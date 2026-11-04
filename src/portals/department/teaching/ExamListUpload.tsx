@@ -34,8 +34,9 @@ const splitCodes = (codes: string) => codes.split('/').map((c) => c.trim()).filt
 /**
  * The department's exam list uploaded as the Word letter it sends for
  * moderation: read, shown for review with what needs a look (duplicates,
- * codes SMARTTT doesn't know, codes another department listed, papers nobody
- * synced), corrected, then saved. Students come from SMARTTT.
+ * codes SMARTTT doesn't know, codes another department listed, papers with no
+ * class), corrected, then saved. Classes come from SMARTTT's master timetable
+ * and who synced; numbers from who synced.
  */
 export function ExamListUpload({ term, onClose }: { term: string | undefined; onClose: () => void }) {
   const [reading, setReading] = useState(false)
@@ -71,8 +72,9 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
           <>
             <p className="text-muted">
               Upload the Word document you send for moderation (.docx). Every table row with a unit code becomes a
-              paper; rows under an ODEL or part-time heading, or written “MATH 241 odel”, are ODEL papers. Student
-              numbers come from the students who synced each unit in SMARTTT, and you can correct them after saving.
+              paper; rows under an ODEL or part-time heading, or written “MATH 241 odel”, are ODEL papers. The classes
+              taking each unit come from the SMARTTT master timetable, so the Director's timetable keeps them from
+              clashing. Student numbers come from who synced each unit, and you can correct them after saving.
             </p>
             <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-line px-4 py-8 text-center hover:bg-surface">
               <FileUp className="size-6 text-brand" aria-hidden />
@@ -92,7 +94,7 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
             </p>
             {!review.smarttt.available && (
               <p role="status" className="rounded-xl bg-warning-soft px-4 py-3 text-warning">
-                Student numbers couldn't be read from SMARTTT: {review.smarttt.reason} You can still save, and enter or re-count them later.
+                Classes and student numbers couldn't be read from SMARTTT: {review.smarttt.reason} You can still save, and enter or re-count them later.
               </p>
             )}
             <TableCard>
@@ -110,10 +112,11 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
                     e.duplicateOf !== null && `Same as line ${e.duplicateOf}`,
                     e.unknownCodes.length > 0 && `SMARTTT doesn't know ${e.unknownCodes.join(', ')}: check the code`,
                     e.otherDepartments.length > 0 && `Also listed by ${e.otherDepartments.join(', ')}`,
-                    e.students === 0 && 'Nobody has synced it: enter the number after saving',
+                    e.students === 0 && e.classRows.length > 0 && 'On the master timetable, nobody synced yet: enter the numbers after saving',
+                    e.students === 0 && e.classRows.length === 0 && 'Not on the master timetable and nobody synced: add its classes after saving',
                     e.existingPaperId && 'Already yours: updates it',
                   ].filter((n): n is string => !!n)
-                  const warn = e.unknownCodes.length > 0 || e.otherDepartments.length > 0 || e.students === 0
+                  const warn = e.unknownCodes.length > 0 || e.otherDepartments.length > 0 || (e.students === 0 && e.classRows.length === 0)
                   return (
                     <tr key={e.line} className={clsx('border-t border-line align-top', !d.include && 'opacity-50', warn && d.include && 'bg-warning-soft/40')}>
                       <td className={td}>
@@ -159,7 +162,7 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
 
 /**
  * A listed paper's classes and how many sit each. SMARTTT's count is shown
- * beside each; a class SMARTTT doesn't have can be added and removed.
+ * beside each; a class can be added, and one that doesn't sit the paper removed.
  */
 export function ClassNumbers({ rows, onChange }: { rows: EditedRow[]; onChange: (rows: EditedRow[]) => void }) {
   const set = (i: number, patch: Partial<RowInput>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
@@ -184,15 +187,13 @@ export function ClassNumbers({ rows, onChange }: { rows: EditedRow[]; onChange: 
               <td className={td}><input type="number" min={0} max={5000} value={r.students} onChange={(e) => set(i, { students: Number(e.target.value) })} className={num} aria-label="Students" /></td>
               <td className={`${td} text-muted`}>{r.smartttStudents ?? 'added'}</td>
               <td className={`${td} text-right`}>
-                {r.smartttStudents === null && (
-                  <button type="button" onClick={() => onChange(rows.filter((_, j) => j !== i))} className={dangerLink} aria-label="Remove the class">
-                    <Trash2 className="size-4" aria-hidden />
-                  </button>
-                )}
+                <button type="button" onClick={() => onChange(rows.filter((_, j) => j !== i))} className={dangerLink} aria-label="Remove the class">
+                  <Trash2 className="size-4" aria-hidden />
+                </button>
               </td>
             </tr>
           ))}
-          {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-muted">No class yet: nobody has synced this unit. Add the classes that sit it.</td></tr>}
+          {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-muted">No class yet: it isn't on the master timetable and nobody has synced it. Add the classes that sit it.</td></tr>}
         </tbody>
       </TableCard>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -217,8 +218,8 @@ export function PaperRows({ term, paper, onClose }: { term: string | undefined; 
     <Dialog title={`Students sitting ${paper.codes}${paper.sitting === 'odel' ? ' (ODEL)' : ''}`} onClose={onClose} wide>
       <div className="space-y-4 text-sm">
         <p className="text-muted">
-          From the students who synced the unit in SMARTTT. Correct a number, or add a class whose students haven't
-          synced yet; your numbers stay when SMARTTT is read again. Set a class to 0 if it doesn't sit this paper.
+          The classes taking the unit on the master timetable, with who synced it in SMARTTT. Correct a number, add a
+          class, or remove one that doesn't sit this paper; what you set stays when SMARTTT is read again.
         </p>
         <ClassNumbers rows={rows} onChange={setRows} />
         {save.isError && <p role="alert" className="text-danger">{errorMessage(save.error)}</p>}
@@ -246,11 +247,8 @@ export function NumbersAtOnce({ term, papers, onClose }: { term: string | undefi
   // Typed numbers by paper id; a paper not typed in keeps its number.
   const [typed, setTyped] = useState<Record<string, string>>({})
   const shown = listed.filter((p) => !onlyMissing || p.students === 0 || p.id in typed)
-  const single = (p: ExamPaper) => p.rows.filter((r) => r.students > 0 || r.smartttStudents === null).length <= 1
-  const classOf = (p: ExamPaper): EditedRow => {
-    const own = editedRows(p).filter((r) => r.students > 0 || r.smartttStudents === null)
-    return own[0] ?? editedRows(p)[0] ?? guessedRow(p)
-  }
+  const single = (p: ExamPaper) => editedRows(p).length <= 1
+  const classOf = (p: ExamPaper): EditedRow => editedRows(p)[0] ?? guessedRow(p)
   const editableIds = shown.filter(single).map((p) => p.id)
 
   const paste = (paperId: string, e: ClipboardEvent<HTMLInputElement>) => {
@@ -280,7 +278,9 @@ export function NumbersAtOnce({ term, papers, onClose }: { term: string | undefi
       <div className="space-y-4 text-sm">
         <p className="text-muted">
           Type how many students sit each paper, or paste a column of numbers from Excel into the first box: it fills
-          the boxes below it in order. A paper sat by several classes is changed under its Numbers.
+          the boxes below it in order. A paper sat by several classes is changed under its Numbers. A guessed class comes
+          from the paper's code: it only helps spread the papers, so correct it under Numbers to keep that class's
+          papers from clashing.
         </p>
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
@@ -300,7 +300,7 @@ export function NumbersAtOnce({ term, papers, onClose }: { term: string | undefi
                     {p.sitting === 'odel' && <span className="ml-1 rounded-md bg-brand-soft px-1.5 text-xs font-normal text-brand-ink">ODEL</span>}
                   </td>
                   <td className={td}>{p.title}</td>
-                  <td className={`${td} text-xs text-muted`}>{single(p) ? classLabel(row) : `${p.classRows.length} classes`}</td>
+                  <td className={`${td} text-xs text-muted`}>{single(p) ? <>{classLabel(row)}{row.smartttStudents === null && classLabel(row) === classLabel(guessedRow(p)) && ' (guessed)'}</> : `${p.classRows.length} classes`}</td>
                   <td className={td}>
                     {single(p) ? (
                       <input type="number" min={0} max={5000} inputMode="numeric" className="input w-20"

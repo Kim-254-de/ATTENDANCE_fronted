@@ -139,6 +139,57 @@ describe("SMARTTT's admin functions in the console", () => {
     expect(await screen.findByText(/99 of 102 venue\(s\) have a confirmed capacity/)).toBeInTheDocument()
     expect(screen.getByText('G 12, UTC-AA 3, STB 4')).toBeInTheDocument()
   })
+
+  it('shows one room under two codes and what merging does, and merges them', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await signInAsAdmin(user)
+    await openSmarttt(user, /venues/i)
+    expect(await screen.findByText(/1 room is listed under more than one code/i)).toBeInTheDocument()
+    expect(screen.getByText('TC1 (100)')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'TC1 used for exams' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /merge duplicates/i }))
+    expect(await screen.findByText(/each room is now one venue/i)).toBeInTheDocument()
+    await vi.waitFor(() => expect(screen.queryByRole('checkbox', { name: 'TC1 used for exams' })).not.toBeInTheDocument())
+    expect(screen.getByRole('checkbox', { name: 'TC 1 used for exams' })).not.toBeChecked()
+  })
+
+  it('merges a venue whose code does not say it is the same room', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await signInAsAdmin(user)
+    await openSmarttt(user, /venues/i)
+    await user.click(await screen.findByRole('button', { name: 'Edit G 12' }))
+    await user.selectOptions(screen.getByLabelText(/merge another venue into g 12/i), screen.getByRole('option', { name: 'TC1' }))
+    await user.click(screen.getByRole('button', { name: /^merge into g 12/i }))
+    await vi.waitFor(() => expect(screen.queryByRole('checkbox', { name: 'TC1 used for exams' })).not.toBeInTheDocument())
+  })
+
+  it('adds a venue and edits one without a file, with exam use and the health unit', async () => {
+    const user = userEvent.setup()
+    await signInAsAdmin(user)
+    await openSmarttt(user, /venues/i)
+    const used = await screen.findByRole('checkbox', { name: 'TC 1 used for exams' })
+    expect(used).toBeChecked()
+    await user.click(used)
+    await vi.waitFor(() => expect(screen.getByRole('checkbox', { name: 'TC 1 used for exams' })).not.toBeChecked())
+
+    await user.click(screen.getByRole('button', { name: /add a venue/i }))
+    const form = screen.getByRole('form', { name: /add a venue/i })
+    await user.type(within(form).getByLabelText('Code'), 'NURS 1')
+    await user.type(within(form).getByLabelText('Building'), 'Health Unit')
+    await user.click(within(form).getByRole('checkbox', { name: /in the health unit/i }))
+    await user.click(within(form).getByRole('button', { name: /^save$/i }))
+    expect(await screen.findByRole('checkbox', { name: 'NURS 1 in the health unit' })).toBeChecked()
+    expect(screen.queryByRole('form', { name: /add a venue/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Edit G 12' }))
+    const edit = screen.getByRole('form', { name: 'Edit G 12' })
+    await user.clear(within(edit).getByLabelText('Capacity'))
+    await user.type(within(edit).getByLabelText('Capacity'), '45')
+    await user.click(within(edit).getByRole('button', { name: /^save$/i }))
+    expect(await screen.findByText('45')).toBeInTheDocument()
+  })
 })
 
 describe('departments, owned by SMARTTT', () => {

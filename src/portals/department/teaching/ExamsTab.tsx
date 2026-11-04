@@ -117,7 +117,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           )}
           {editable && anyListed && (
             <Button variant="secondary" onClick={() => recount.mutate()} loading={recount.isPending}
-              title="Read again how many students synced each unit in SMARTTT. Numbers you changed stay.">
+              title="Read again the classes on the master timetable and how many students synced each unit in SMARTTT. What you changed stays.">
               <RefreshCw className="size-4" aria-hidden /> Re-count from SMARTTT
             </Button>
           )}
@@ -152,8 +152,8 @@ export function ExamsTab({ term }: { term: string | undefined }) {
       {noUnits && data.papers.length === 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-ink">
           <p>
-            Upload your exam list: the Word document you send for moderation. Student numbers come from who synced
-            each unit in SMARTTT. Or build papers from your units on the Units &amp; groups tab.
+            Upload your exam list: the Word document you send for moderation. The classes come from the SMARTTT master
+            timetable and student numbers from who synced each unit. Or build papers from your units on the Units &amp; groups tab.
           </p>
           <div className="flex gap-2">
             {editable && <Button onClick={() => setUploading(true)}><FileUp className="size-4" aria-hidden /> Upload exam list</Button>}
@@ -350,8 +350,8 @@ function PaperForm({ term, board, paper, onClose }: { term: string | undefined; 
               <>
                 <p className="text-xs text-muted">
                   {paper.rows.length
-                    ? 'By class, from who synced the unit in SMARTTT. Correct a number or add a class; your numbers stay when SMARTTT is read again.'
-                    : 'Nobody has synced this unit in SMARTTT. Enter how many sit it; correct the class if it is not the right one.'}
+                    ? 'By class, from the master timetable and who synced the unit in SMARTTT. Correct a number, add a class or remove one; what you set stays when SMARTTT is read again.'
+                    : 'This unit is not on the master timetable and nobody has synced it. Enter how many sit it; correct the class if it is not the right one.'}
                 </p>
                 <ClassNumbers rows={rows} onChange={setRows} />
               </>
