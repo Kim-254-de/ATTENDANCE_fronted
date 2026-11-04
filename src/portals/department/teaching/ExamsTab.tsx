@@ -1,4 +1,4 @@
-import { Download, FileUp, Hash, RefreshCw, Send, Trash2, Unlock } from 'lucide-react'
+import { Download, FileUp, Hash, RefreshCw, Send, Trash2, Unlock, Plus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -26,6 +26,8 @@ import {
   type PaperInput,
   type Practical,
   type PracticalInput,
+  typedCodes,
+  useSaveExamList,
 } from './examsApi'
 import { Dialog } from '@/components/ui/Dialog'
 import { useConfirm } from '@/components/ui/useConfirm'
@@ -52,6 +54,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   const [ask, confirmDialog] = useConfirm()
   const [editing, setEditing] = useState<ExamPaper | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [adding, setAdding] = useState(false)
   const [numbers, setNumbers] = useState<ExamPaper | null>(null)
   const [allNumbers, setAllNumbers] = useState(false)
   const [letter, setLetter] = useState(false)
@@ -79,6 +82,11 @@ export function ExamsTab({ term }: { term: string | undefined }) {
               <FileUp className="size-4" aria-hidden /> Upload exam list
             </Button>
           )}
+          {editable && (
+            <Button variant="secondary" onClick={() => setAdding(true)}>
+              <Plus className="size-4" aria-hidden /> Add a unit
+            </Button>
+          )}
           {editable && anyListed && (
             <Button variant="secondary" onClick={() => setAllNumbers(true)}>
               <Hash className="size-4" aria-hidden /> Enter student numbers
@@ -94,12 +102,12 @@ export function ExamsTab({ term }: { term: string | undefined }) {
             <Button variant="secondary" loading={removeList.isPending}
               onClick={() => ask({
                 title: 'Remove the uploaded exam list?',
-                message: `All ${listedCount} papers from it go, with their numbers and invigilators.`,
+                message: `All ${listedCount} papers go, ones you typed in too, with their numbers and invigilators.`,
                 confirmLabel: 'Remove list',
                 action: () => removeList.mutateAsync(),
                 errorFallback: 'Could not remove the exam list.',
               })}
-              title="Remove every paper that came from the uploaded exam list, to upload it again or start over">
+              title="Remove every paper on your list, uploaded or typed in, to upload it again or start over">
               <Trash2 className="size-4" aria-hidden /> Remove uploaded list
             </Button>
           )}
@@ -119,9 +127,9 @@ export function ExamsTab({ term }: { term: string | undefined }) {
       {data.papers.length === 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-ink">
           <p>
-            Upload your moderation letter: the Word document you send with your exam drafts. Its units are the ones on the
-            exam timetable. The classes sitting them come from the SMARTTT master timetable and student numbers from who
-            synced each unit.
+            Upload your moderation letter, the Word document you send with your exam drafts, or add its units one by one.
+            These are the units on the exam timetable. The classes sitting them come from the SMARTTT master timetable and
+            student numbers from who synced each unit.
           </p>
           {editable && <Button onClick={() => setUploading(true)}><FileUp className="size-4" aria-hidden /> Upload exam list</Button>}
         </div>
@@ -173,7 +181,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           ))}
           {data.papers.length === 0 && (
             <tr><td colSpan={6} className="px-3 py-8 text-center text-muted">
-              No papers yet: upload your moderation letter.
+              No papers yet: upload your moderation letter, or add its units one by one.
             </td></tr>
           )}
         </tbody>
@@ -184,10 +192,71 @@ export function ExamsTab({ term }: { term: string | undefined }) {
       {editing && <PaperForm term={term} board={data} paper={editing} onClose={() => setEditing(null)} />}
       {letter && <LetterForm term={term} onClose={() => setLetter(false)} />}
       {uploading && <ExamListUpload term={term} onClose={() => setUploading(false)} />}
+      {adding && <AddPaper term={term} papers={data.papers} onClose={() => setAdding(false)} />}
       {numbers && <PaperRows term={term} paper={numbers} onClose={() => setNumbers(null)} />}
       {allNumbers && <NumbersAtOnce term={term} papers={data.papers} onClose={() => setAllNumbers(false)} />}
       {confirmDialog}
     </section>
+  )
+}
+
+const sameCodes = (a: string[]) => a.map((c) => c.replace(/\s+/g, '').toUpperCase()).sort().join('/')
+
+/** One unit typed in, saved like a line of the letter; the form stays open for the next. */
+function AddPaper({ term, papers, onClose }: { term: string | undefined; papers: ExamPaper[]; onClose: () => void }) {
+  const save = useSaveExamList(term)
+  const [codes, setCodes] = useState('')
+  const [title, setTitle] = useState('')
+  const [sitting, setSitting] = useState<PaperInput['sitting']>('regular')
+  const [problem, setProblem] = useState<string | null>(null)
+  const [added, setAdded] = useState<string | null>(null)
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    setAdded(null)
+    const parsed = typedCodes(codes)
+    if (!parsed) return setProblem('Type a unit code like COSC 130. For a joint paper, separate them with /: COSC 0172/0170.')
+    if (!title.trim()) return setProblem('Give the unit a title.')
+    const key = sameCodes(parsed)
+    if (papers.some((p) => p.sitting === sitting && sameCodes(p.codes.split('/')) === key)) {
+      return setProblem(`${parsed.join('/')} is already on your list${sitting === 'odel' ? ' as an ODEL paper' : ''}. Use Edit to change it.`)
+    }
+    setProblem(null)
+    save.mutate([{ codes: parsed, title: title.trim(), sitting }], {
+      onSuccess: () => {
+        setAdded(parsed.join('/'))
+        setCodes('')
+        setTitle('')
+      },
+    })
+  }
+  return (
+    <Dialog title="Add a unit" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4 text-sm">
+        <p className="text-muted">
+          It goes on the exam timetable like a unit on your moderation letter. Its classes come from the SMARTTT master
+          timetable; enter or correct its numbers under Numbers once it is added.
+        </p>
+        <Field label="Unit code" hint="For a joint paper, separate the codes with /: COSC 0172/0170.">
+          <input value={codes} onChange={(e) => setCodes(e.target.value)} className="input" autoFocus />
+        </Field>
+        <Field label="Title">
+          <input value={title} maxLength={255} onChange={(e) => setTitle(e.target.value)} className="input" />
+        </Field>
+        <Field label="Sitting" hint="ODEL and part-time classes sit separate papers.">
+          <select value={sitting} onChange={(e) => setSitting(e.target.value as PaperInput['sitting'])} className="input">
+            <option value="regular">Regular classes</option>
+            <option value="odel">ODEL and part-time classes</option>
+          </select>
+        </Field>
+        {problem && <p role="alert" className="text-danger">{problem}</p>}
+        {save.isError && <p role="alert" className="text-danger">{errorMessage(save.error)}</p>}
+        {added && <p role="status" className="text-success">{added} added. Type the next one, or close.</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
+          <Button type="submit" loading={save.isPending}>Add</Button>
+        </div>
+      </form>
+    </Dialog>
   )
 }
 

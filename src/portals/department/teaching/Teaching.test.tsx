@@ -4,6 +4,7 @@ import { afterEach, vi } from 'vitest'
 import { env } from '@/lib/env'
 import { renderApp } from '@/test/renderApp'
 import { answerConfirm } from '@/test/confirmDialog'
+import { typedCodes } from './examsApi'
 
 /**
  * The department's Teaching page, against the in-memory teaching API
@@ -90,7 +91,7 @@ describe('department teaching', () => {
   it('makes papers only from an uploaded moderation letter, not from units', async () => {
     const user = await openTeaching()
     await user.click(screen.getByRole('tab', { name: /^exams$/i }))
-    expect(await screen.findByText(/its units are the ones on the\s+exam timetable/i)).toBeInTheDocument()
+    expect(await screen.findByText(/these are the units on the exam\s+timetable/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /add a paper/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /a paper for each unit/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/units on no paper/i)).not.toBeInTheDocument()
@@ -100,7 +101,7 @@ describe('department teaching', () => {
   it('has exam papers and invigilators on their own tabs, without the teaching publish button', async () => {
     const user = await openTeaching()
     await user.click(screen.getByRole('tab', { name: /^exams$/i }))
-    expect(await screen.findByText(/upload your moderation letter: the word document/i)).toBeInTheDocument()
+    expect(await screen.findByText(/upload your moderation letter, the word document/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /publish papers/i })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /publish to the director/i })).not.toBeInTheDocument()
 
@@ -164,6 +165,46 @@ describe('the uploaded exam list', () => {
     expect(await screen.findByText('Anatomy')).toBeInTheDocument()
     expect(screen.getByText('107')).toBeInTheDocument()
     expect(screen.getByText('15')).toBeInTheDocument()
+  })
+})
+
+describe('adding units one by one', () => {
+  it('reads codes as people type them', () => {
+    expect(typedCodes('math 241')).toEqual(['MATH 241'])
+    expect(typedCodes('COSC130')).toEqual(['COSC 130'])
+    expect(typedCodes('COSC 0172/0170')).toEqual(['COSC 0172', 'COSC 0170'])
+    expect(typedCodes('BITE 131 / cosc 130')).toEqual(['BITE 131', 'COSC 130'])
+    expect(typedCodes('COSC 00101')).toEqual(['COSC 00101'])
+    for (const bad of ['', 'COSC', '130', 'not a code', 'COSC 130/hello']) expect(typedCodes(bad)).toBeNull()
+  })
+
+  it('adds a typed unit, stays open for the next, and refuses bad or repeated codes', async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click(await screen.findByRole('button', { name: /add a unit/i }))
+    const dialog = await screen.findByRole('dialog', { name: /add a unit/i })
+    const code = within(dialog).getByLabelText(/unit code/i)
+    const title = within(dialog).getByLabelText(/^title/i)
+    const add = within(dialog).getByRole('button', { name: /^add$/i })
+
+    await user.type(code, 'nonsense')
+    await user.type(title, 'Anatomy')
+    await user.click(add)
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(/type a unit code/i)
+
+    await user.clear(code)
+    await user.type(code, 'nurs 111')
+    await user.click(add)
+    expect(await within(dialog).findByRole('status')).toHaveTextContent('NURS 111 added')
+    expect(code).toHaveValue('')
+    expect(title).toHaveValue('')
+    expect(await screen.findByRole('cell', { name: 'Anatomy' })).toBeInTheDocument()
+
+    await user.type(code, 'NURS111')
+    await user.type(title, 'Again')
+    await user.click(add)
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/already on your list/i)
+    expect(screen.queryByRole('cell', { name: 'Again' })).not.toBeInTheDocument()
   })
 })
 
