@@ -27,7 +27,9 @@ import {
   type Practical,
   type PracticalInput,
 } from './examsApi'
-import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { useConfirm } from '@/components/ui/useConfirm'
+import { Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const PRACTICAL_COLUMNS: BulkColumn[] = [
   { key: 'unit_code', label: 'Unit code', example: 'COSC 200', required: true },
@@ -47,6 +49,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
   const remove = useDeletePaper(term)
   const recount = useRecount(term)
   const removeList = useDeleteExamList(term)
+  const [ask, confirmDialog] = useConfirm()
   const [editing, setEditing] = useState<ExamPaper | null>(null)
   const [uploading, setUploading] = useState(false)
   const [numbers, setNumbers] = useState<ExamPaper | null>(null)
@@ -89,7 +92,13 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           )}
           {editable && anyListed && (
             <Button variant="secondary" loading={removeList.isPending}
-              onClick={() => { if (window.confirm(`Remove the uploaded exam list: all ${listedCount} papers from it, with their numbers and invigilators?`)) removeList.mutate() }}
+              onClick={() => ask({
+                title: 'Remove the uploaded exam list?',
+                message: `All ${listedCount} papers from it go, with their numbers and invigilators.`,
+                confirmLabel: 'Remove list',
+                action: () => removeList.mutateAsync(),
+                errorFallback: 'Could not remove the exam list.',
+              })}
               title="Remove every paper that came from the uploaded exam list, to upload it again or start over">
               <Trash2 className="size-4" aria-hidden /> Remove uploaded list
             </Button>
@@ -152,7 +161,13 @@ export function ExamsTab({ term }: { term: string | undefined }) {
               <td className={td}>{p.examiner ?? <span className={p.listed ? 'text-muted' : 'text-warning'}>None</span>}</td>
               <td className={`${td} space-x-3 text-right whitespace-nowrap`}>
                 {editable && <button onClick={() => setEditing(p)} className={linkButton}>Edit</button>}
-                {editable && <button onClick={() => { if (window.confirm(`Remove ${p.codes}?`)) remove.mutate(p.id) }} className={dangerLink}>Remove</button>}
+                {editable && <button onClick={() => ask({
+                  title: `Remove ${p.codes}?`,
+                  message: "The paper comes off this term's exam list.",
+                  confirmLabel: 'Remove paper',
+                  action: () => remove.mutateAsync(p.id),
+                  errorFallback: 'Could not remove the paper.',
+                })} className={dangerLink}>Remove</button>}
               </td>
             </tr>
           ))}
@@ -171,6 +186,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
       {uploading && <ExamListUpload term={term} onClose={() => setUploading(false)} />}
       {numbers && <PaperRows term={term} paper={numbers} onClose={() => setNumbers(null)} />}
       {allNumbers && <NumbersAtOnce term={term} papers={data.papers} onClose={() => setAllNumbers(false)} />}
+      {confirmDialog}
     </section>
   )
 }

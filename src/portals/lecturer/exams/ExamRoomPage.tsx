@@ -1,16 +1,12 @@
 import { ArrowLeft } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
-import { useSyncExternalStore } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { errorMessage } from '@/lib/api'
+import { useNow } from '@/lib/useNow'
 import { useCloseExamSession, useExamCode, useExamReport, type ExamReport } from './examsApi'
-
-const subscribeToSeconds = (notify: () => void) => {
-  const t = setInterval(notify, 1000)
-  return () => clearInterval(t)
-}
-const currentSecond = () => Math.floor(Date.now() / 1000) * 1000
 
 /**
  * The exam room's screen: its rotating code, as large as the live class's,
@@ -22,7 +18,8 @@ export function ExamRoomPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const now = useSyncExternalStore(subscribeToSeconds, currentSecond)
+  const now = useNow()
+  const [confirmingClose, setConfirmingClose] = useState(false)
   const reportOnly = searchParams.get('report') === '1'
 
   const code = useExamCode(sessionId, !reportOnly)
@@ -34,9 +31,7 @@ export function ExamRoomPage() {
   const thisRoom = report.data?.rooms.find((r) => r.room === session?.room) ?? (report.data?.rooms.length === 1 ? report.data.rooms[0] : undefined)
   const secondsLeft = code.data ? Math.max(0, Math.round((new Date(code.data.rotatesAt).getTime() - now) / 1000)) : null
 
-  const closeRoom = () => {
-    if (window.confirm('Close this room? Students will no longer be able to check in.')) close.mutate()
-  }
+  const closeRoom = () => close.mutate(undefined, { onSuccess: () => setConfirmingClose(false) })
 
   return (
     <div className="flex min-h-dvh flex-col bg-brand-950 text-white">
@@ -66,25 +61,37 @@ export function ExamRoomPage() {
               <p className="text-sm text-brand-300" role="timer" aria-live="off">
                 Refreshes in <b className="tabular-nums text-white">{secondsLeft}s</b>
               </p>
-              <Button variant="ghost" onClick={closeRoom} loading={close.isPending} className="text-red-300 hover:bg-red-500/10">
+              <Button variant="ghost" onClick={() => setConfirmingClose(true)} className="text-on-dark-danger hover:bg-white/10">
                 Close room
               </Button>
             </>
           ) : code.error ? (
-            <p role="alert" className="text-amber-200">{errorMessage(code.error, 'Could not load this room’s code.')}</p>
+            <p role="alert" className="text-gold-300">{errorMessage(code.error, 'Could not load this room’s code.')}</p>
           ) : (
-            <p role="status" className="text-brand-300">Getting the code…</p>
+            <div role="status" aria-label="Getting the code" className="size-80 max-w-full animate-pulse rounded-3xl bg-white/10 motion-reduce:animate-none" />
           )
         )}
         {close.isSuccess && <p className="text-lg font-semibold" role="status">Room closed. Check-ins have stopped.</p>}
-        {close.error && <p role="alert" className="text-amber-200">{errorMessage(close.error, 'Could not close this room.')}</p>}
 
         {report.data ? (
           <Report report={report.data} />
         ) : report.error ? (
-          <p role="alert" className="text-amber-200">{errorMessage(report.error, 'Could not load the attendance.')}</p>
+          <p role="alert" className="text-gold-300">{errorMessage(report.error, 'Could not load the attendance.')}</p>
         ) : null}
       </main>
+
+      {confirmingClose && (
+        <ConfirmDialog
+          title="Close this room?"
+          confirmLabel="Close room"
+          onConfirm={closeRoom}
+          onClose={() => { setConfirmingClose(false); close.reset() }}
+          pending={close.isPending}
+          error={close.error ? errorMessage(close.error, 'Could not close this room.') : null}
+        >
+          Students in {session ? `Room ${session.room}` : 'this room'} can no longer check in. You can still see who sat and who was absent.
+        </ConfirmDialog>
+      )}
     </div>
   )
 }
@@ -100,7 +107,7 @@ function Report({ report }: { report: ExamReport }) {
           </div>
           {r.absent.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs font-semibold tracking-widest text-amber-200">ABSENT</p>
+              <p className="text-xs font-semibold tracking-widest text-gold-300">ABSENT</p>
               <ul aria-label={`Absent in ${r.room}`} className="mt-1 flex flex-wrap gap-1.5 text-sm">
                 {r.absent.map((n) => <li key={n} className="rounded-lg bg-white/10 px-2 py-0.5 font-mono">{n}</li>)}
               </ul>
@@ -108,9 +115,9 @@ function Report({ report }: { report: ExamReport }) {
           )}
           {r.sat.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs font-semibold tracking-widest text-emerald-300">SAT</p>
+              <p className="text-xs font-semibold tracking-widest text-on-dark-success">SAT</p>
               <ul aria-label={`Sat in ${r.room}`} className="mt-1 flex flex-wrap gap-1.5 text-sm">
-                {r.sat.map((n) => <li key={n} className="rounded-lg bg-emerald-400/10 px-2 py-0.5 font-mono">{n}</li>)}
+                {r.sat.map((n) => <li key={n} className="rounded-lg bg-on-dark-success/10 px-2 py-0.5 font-mono">{n}</li>)}
               </ul>
             </div>
           )}

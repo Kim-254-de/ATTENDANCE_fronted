@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, vi } from 'vitest'
 import { env } from '@/lib/env'
 import { renderApp } from '@/test/renderApp'
+import { answerConfirm } from '@/test/confirmDialog'
 
 /**
  * The department's Teaching page, against the in-memory teaching API
@@ -167,8 +168,8 @@ describe('editing an uploaded paper', () => {
     await waitFor(() => expect(screen.queryByText(/nobody has synced math 999/i)).not.toBeInTheDocument())
     expect(within(screen.getByRole('row', { name: /math 999/i })).getByText('40')).toBeInTheDocument()
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: /remove uploaded list/i }))
+    await answerConfirm(user, /remove the uploaded exam list\?/i, /^remove list$/i)
     expect(await screen.findByText(/no papers yet/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /remove uploaded list/i })).not.toBeInTheDocument()
   })

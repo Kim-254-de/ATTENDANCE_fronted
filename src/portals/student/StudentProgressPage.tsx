@@ -6,9 +6,9 @@ import { errorMessage } from '@/lib/api'
 import type { StudentUnit } from '@/types'
 import { useMinAttendance } from '@/lib/attendancePolicy'
 import { attendanceStreak, thisMonthsWeeks, thisWeeksDays, type DayAttendance, type WeekRate } from './attendanceStats'
-import { formatRate, rateTone } from './StudentUnitCard'
+import { formatRate, rateTone } from './attendanceStats'
 import { useMyAttendance, useMyStudentUnits } from './studentApi'
-import { useAnimated, useFirstVisit } from './useAnimated'
+import { useAnimated, useFirstVisit } from '@/lib/useAnimated'
 // Deep enough for a meaningful streak, weekly/monthly breakdown and overall rate, unlike the
 // Home page's short preview fetch.
 const PROGRESS_ATTENDANCE_LIMIT = 200

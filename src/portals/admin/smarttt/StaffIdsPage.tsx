@@ -3,6 +3,7 @@ import { Trash2, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { errorMessage } from '@/lib/api'
 import { formatDateTime, formatShortDate } from '@/lib/format'
 import { Badge, FileUpload, Head, Notice, type Tone } from './parts'
@@ -19,6 +20,7 @@ export function StaffIdsPage() {
   const send = useUploadStaffIds()
   const remove = useRemoveStaffId()
   const undo = useUndoStaffIdUpload()
+  const [ask, confirmDialog] = useConfirm()
   const [search, setSearch] = useState('')
   const [notice, setNotice] = useState<{ tone: Tone; text: string } | null>(null)
 
@@ -60,9 +62,13 @@ export function StaffIdsPage() {
                     <td className="whitespace-nowrap px-5 py-3 text-muted">{formatDateTime(u.uploaded_at)}{u.uploaded_by ? ` · ${u.uploaded_by}` : ''}</td>
                     <td className="px-5 py-3 text-right">
                       <Button variant="ghost" aria-label={`Undo the upload ${u.file_name}`} loading={undo.isPending && undo.variables === u.id}
-                        onClick={() => {
-                          if (window.confirm(`Remove every staff ID ${u.file_name} added? Lecturer accounts registered with them are disabled.`)) undo.mutate(u.id, done)
-                        }}>
+                        onClick={() => ask({
+                          title: `Undo the upload ${u.file_name}?`,
+                          message: 'Every staff ID it added is removed, and lecturer accounts registered with them are disabled.',
+                          confirmLabel: 'Undo upload',
+                          action: async () => done.onSuccess(await undo.mutateAsync(u.id)),
+                          errorFallback: 'Could not undo the upload.',
+                        })}>
                         <Undo2 className="size-4" aria-hidden />
                       </Button>
                     </td>
@@ -104,10 +110,15 @@ export function StaffIdsPage() {
                     <td className="whitespace-nowrap px-5 py-3 text-muted">{formatShortDate(s.uploaded_at)}</td>
                     <td className="px-5 py-3 text-right">
                       <Button variant="ghost" aria-label={`Remove ${s.staff_id}`} loading={remove.isPending && remove.variables === s.id}
-                        onClick={() => {
-                          const warning = s.is_claimed ? ' The lecturer account registered with it is disabled.' : ''
-                          if (window.confirm(`Remove ${s.staff_id} from the list?${warning}`)) remove.mutate(s.id, done)
-                        }}>
+                        onClick={() => ask({
+                          title: `Remove ${s.staff_id} from the list?`,
+                          message: s.is_claimed
+                            ? 'The lecturer account registered with it is disabled.'
+                            : 'Nobody has registered with it yet, so no account is affected.',
+                          confirmLabel: 'Remove',
+                          action: async () => done.onSuccess(await remove.mutateAsync(s.id)),
+                          errorFallback: 'Could not remove the staff ID.',
+                        })}>
                         <Trash2 className="size-4" aria-hidden />
                       </Button>
                     </td>
@@ -118,6 +129,7 @@ export function StaffIdsPage() {
           </Card>
         )}
       </section>
+      {confirmDialog}
     </div>
   )
 }

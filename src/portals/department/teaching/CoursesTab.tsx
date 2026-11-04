@@ -4,7 +4,9 @@ import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
 import { BulkPaste, type BulkColumn } from './BulkPaste'
 import { COURSE_MODES, useBulk, useDeleteCourse, useSaveCourse, type Board, type CourseInput, type CourseMode } from './teachingApi'
-import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { useConfirm } from '@/components/ui/useConfirm'
+import { Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const COURSE_COLUMNS: BulkColumn[] = [
   { key: 'programme', label: 'Programme', example: 'BSC.COMP SCI', required: true },
@@ -26,6 +28,7 @@ export function CoursesTab({ term, board }: { term: string | undefined; board: B
   const [pasting, setPasting] = useState(false)
   const [query, setQuery] = useState('')
   const remove = useDeleteCourse(term)
+  const [ask, confirmDialog] = useConfirm()
   const bulk = useBulk(term, 'courses')
   const editable = board.canEdit
   const q = query.trim().toLowerCase()
@@ -39,7 +42,7 @@ export function CoursesTab({ term, board }: { term: string | undefined; board: B
           <Button onClick={() => setEditing('new')}>Add a course</Button>
         </div>
       )}
-      {remove.isError && <p role="alert" className="text-sm text-danger">{errorMessage(remove.error)}</p>}
+      {remove.isError && !confirmDialog && <p role="alert" className="text-sm text-danger">{errorMessage(remove.error)}</p>}
       <TableCard>
         <thead className="bg-surface">
           <tr><th className={th}>Course</th><th className={th}>Students</th><th className={th}>Mode</th><th className={th}>Units taking it</th><th className={th}><span className="sr-only">Actions</span></th></tr>
@@ -53,7 +56,13 @@ export function CoursesTab({ term, board }: { term: string | undefined; board: B
               <td className={`${td} text-xs text-muted`}>{c.usedBy.join(', ') || 'None yet'}</td>
               <td className={`${td} space-x-3 text-right whitespace-nowrap`}>
                 {editable && <button onClick={() => setEditing(c)} className={linkButton}>Edit</button>}
-                {editable && <button onClick={() => { if (window.confirm(`Remove ${c.label}?`)) remove.mutate(c.id) }} className={dangerLink}>Remove</button>}
+                {editable && <button onClick={() => ask({
+                  title: `Remove ${c.label}?`,
+                  message: c.usedBy.length ? `It comes off this term's list. ${c.usedBy.join(', ')} use${c.usedBy.length === 1 ? 's' : ''} it.` : "It comes off this term's list. No unit uses it yet.",
+                  confirmLabel: 'Remove course',
+                  action: () => remove.mutateAsync(c.id),
+                  errorFallback: 'Could not remove the course.',
+                })} className={dangerLink}>Remove</button>}
               </td>
             </tr>
           ))}
@@ -85,6 +94,7 @@ export function CoursesTab({ term, board }: { term: string | undefined; board: B
       {pasting && (
         <BulkPaste title="Paste courses" columns={COURSE_COLUMNS} templateName="courses.csv" submit={(rows) => bulk.mutateAsync(rows)} onClose={() => setPasting(false)} />
       )}
+      {confirmDialog}
     </section>
   )
 }

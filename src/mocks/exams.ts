@@ -117,7 +117,11 @@ export function examHandlers(API: string, who: MockWho) {
       if (now < new Date(session.startsAt).getTime() - 30 * MINUTE || now > new Date(session.endsAt).getTime()) {
         return fail(403, 'FORBIDDEN', 'You can open this room from 30 minutes before the paper until it ends.')
       }
-      const body = (await request.json()) as { geofence: 'ON' | 'OFF' }
+      const body = (await request.json()) as { geofence: 'ON' | 'OFF'; location?: unknown }
+      // The rooms aren't surveyed here, so the fence needs this phone's fix (as the backend does for an unsurveyed room).
+      if (body.geofence === 'ON' && !body.location) {
+        return fail(422, 'GEOFENCE_ANCHOR_UNAVAILABLE', `Room ${session.room} hasn’t been mapped and this phone couldn’t tell where it is.`)
+      }
       session.status = 'OPEN'
       session.geofence = body.geofence === 'OFF' ? 'OFF' : 'ROOM'
       return ok(session)

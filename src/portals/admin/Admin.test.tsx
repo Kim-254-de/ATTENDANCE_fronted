@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, vi } from 'vitest'
 import { lastMockInvitationToken } from '@/mocks/handlers'
 import { renderApp } from '@/test/renderApp'
+import { answerConfirm } from '@/test/confirmDialog'
 
 afterEach(() => { vi.restoreAllMocks() })
 
@@ -74,7 +75,7 @@ describe('admin console', () => {
     expect(await screen.findByRole('heading', { name: 'My Profile' })).toBeInTheDocument()
     expect(screen.getAllByText('Ms. Aisha Njeri').length).toBeGreaterThan(0)
     expect(screen.getAllByText('admin@university.edu').length).toBeGreaterThan(0)
-    expect(screen.getByRole('heading', { name: 'Change password' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change password' })).toBeInTheDocument()
   })
 
   it('invites a QA officer, who needs no department', async () => {
@@ -148,10 +149,10 @@ describe('admin console', () => {
   })
 
   it('removes an officer’s access after a confirmation, and they can no longer sign in', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
     const admin = await signInAtOversight(user, 'admin@university.edu')
     await user.click(await screen.findByRole('button', { name: /remove prof\. grace n\. mutiso's access/i }))
+    await answerConfirm(user, /remove prof\. grace n\. mutiso's access\?/i, /^remove access$/i)
     const row = (await screen.findByText('Prof. Grace N. Mutiso')).closest('tr')!
     expect(await within(row).findByText('Deactivated')).toBeInTheDocument()
     await signOut(user, admin)
