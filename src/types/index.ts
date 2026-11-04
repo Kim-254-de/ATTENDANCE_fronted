@@ -290,6 +290,23 @@ export interface SmartttVenue {
 
 export type SmartttVenueInput = Omit<SmartttVenue, 'id' | 'capacity_confirmed'>
 
+export interface SmartttDuplicateVenue {
+  id: string
+  code: string
+  capacity: number
+  capacity_confirmed: boolean
+  for_exams: boolean
+  health_unit: boolean
+  slots: number
+}
+
+/** One room under several codes: which is kept, and what it becomes. */
+export interface SmartttDuplicateGroup {
+  keep: SmartttDuplicateVenue
+  merge: SmartttDuplicateVenue[]
+  result: { capacity: number; capacity_confirmed: boolean; for_exams: boolean; health_unit: boolean }
+}
+
 export interface SmartttVenueUpload {
   detail?: string
   errors?: { row: number; code?: string; error: string }[]

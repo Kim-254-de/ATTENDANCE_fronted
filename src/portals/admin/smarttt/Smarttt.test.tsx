@@ -140,6 +140,31 @@ describe("SMARTTT's admin functions in the console", () => {
     expect(screen.getByText('G 12, UTC-AA 3, STB 4')).toBeInTheDocument()
   })
 
+  it('shows one room under two codes and what merging does, and merges them', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await signInAsAdmin(user)
+    await openSmarttt(user, /venues/i)
+    expect(await screen.findByText(/1 room is listed under more than one code/i)).toBeInTheDocument()
+    expect(screen.getByText('TC1 (100)')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'TC1 used for exams' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /merge duplicates/i }))
+    expect(await screen.findByText(/each room is now one venue/i)).toBeInTheDocument()
+    await vi.waitFor(() => expect(screen.queryByRole('checkbox', { name: 'TC1 used for exams' })).not.toBeInTheDocument())
+    expect(screen.getByRole('checkbox', { name: 'TC 1 used for exams' })).not.toBeChecked()
+  })
+
+  it('merges a venue whose code does not say it is the same room', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await signInAsAdmin(user)
+    await openSmarttt(user, /venues/i)
+    await user.click(await screen.findByRole('button', { name: 'Edit G 12' }))
+    await user.selectOptions(screen.getByLabelText(/merge another venue into g 12/i), screen.getByRole('option', { name: 'TC1' }))
+    await user.click(screen.getByRole('button', { name: /^merge into g 12/i }))
+    await vi.waitFor(() => expect(screen.queryByRole('checkbox', { name: 'TC1 used for exams' })).not.toBeInTheDocument())
+  })
+
   it('adds a venue and edits one without a file, with exam use and the health unit', async () => {
     const user = userEvent.setup()
     await signInAsAdmin(user)
