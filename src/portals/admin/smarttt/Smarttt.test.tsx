@@ -165,7 +165,7 @@ describe("SMARTTT's admin functions in the console", () => {
     await vi.waitFor(() => expect(screen.queryByRole('checkbox', { name: 'TC1 used for exams' })).not.toBeInTheDocument())
   })
 
-  it('adds a venue and edits one without a file, with exam use and the health unit', async () => {
+  it('adds a venue and edits one without a file, with exam use', async () => {
     const user = userEvent.setup()
     await signInAsAdmin(user)
     await openSmarttt(user, /venues/i)
@@ -178,9 +178,9 @@ describe("SMARTTT's admin functions in the console", () => {
     const form = screen.getByRole('form', { name: /add a venue/i })
     await user.type(within(form).getByLabelText('Code'), 'NURS 1')
     await user.type(within(form).getByLabelText('Building'), 'Health Unit')
-    await user.click(within(form).getByRole('checkbox', { name: /in the health unit/i }))
     await user.click(within(form).getByRole('button', { name: /^save$/i }))
-    expect(await screen.findByRole('checkbox', { name: 'NURS 1 in the health unit' })).toBeChecked()
+    expect(await screen.findByRole('checkbox', { name: 'NURS 1 used for exams' })).toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /health unit/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('form', { name: /add a venue/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Edit G 12' }))

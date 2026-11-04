@@ -219,12 +219,12 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
         units: b.units.map((u) => ({ id: u.id, code: u.code, title: u.title, noWrittenExam: false, paperId: null, paperCodes: null, paperDepartment: null, defaultExaminerId: null, sittings: ['regular'], odelPaperId: null })),
         otherUnits: [], practicals: [],
         lecturers: state.lecturers.map((l) => ({ id: l.id, display: `${l.title ? `${l.title} ` : ''}${l.fullName}`, staffNumber: l.staffNumber, active: l.active })),
-        problems: b.units.map((u) => ({ code: 'unit_not_examined', message: `${u.code} is on no paper; add it to one, or mark it 'no written exam'.` })),
+        problems: papers.length ? [] : [{ code: 'no_exam_list', message: 'Upload your moderation letter: its units are the ones on the exam timetable.' }],
         warnings: papers.filter((p) => p.students === 0).map((p) => ({
           code: 'no_students',
           message: `Nobody has synced ${p.codes} in SMARTTT yet. It still goes to the Director and gets a date; enter its students under Numbers so it gets a room.`,
         })),
-        summary: { papers: 0, students: 0, changed: 0, problems: b.units.length },
+        summary: { papers: papers.length, students: papers.reduce((n, p) => n + p.students, 0), changed: 0, problems: papers.length ? 0 : 1 },
       })
     })),
     // No shared draft in the mock: papers aren't timetabled, but their main invigilator can be named.

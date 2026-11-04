@@ -149,7 +149,6 @@ export interface InvigilationBoard {
 }
 
 export interface PaperInput {
-  unitIds: string[]
   title: string
   sitting: Sitting
   examinerId: string | null
@@ -212,20 +211,10 @@ function useSave<V, R>(fn: (vars: V) => Promise<R>) {
 }
 
 export const useSavePaper = (term: string | undefined) =>
-  useSave(async ({ id, body }: { id?: string; body: PaperInput }) =>
-    id ? (await api.patch(`${BASE}/exam-papers/${id}`, body, { params: params(term) })).data : (await api.post(`${BASE}/exam-papers`, body, { params: params(term) })).data,
-  )
+  useSave(async ({ id, body }: { id: string; body: PaperInput }) => (await api.patch(`${BASE}/exam-papers/${id}`, body, { params: params(term) })).data)
 
 export const useDeletePaper = (term: string | undefined) =>
   useSave(async (id: string) => (await api.delete(`${BASE}/exam-papers/${id}`, { params: params(term) })).data)
-
-export const usePapersFromUnits = (term: string | undefined) =>
-  useSave(async () => (await api.post<{ created: number }>(`${BASE}/exam-papers/from-units`, undefined, { params: params(term) })).data)
-
-export const useNoWrittenExam = (term: string | undefined) =>
-  useSave(async ({ unitId, value }: { unitId: string; value: boolean }) =>
-    (await api.put(`${BASE}/units/${unitId}/no-written-exam`, { noWrittenExam: value }, { params: params(term) })).data,
-  )
 
 export const useSavePractical = (term: string | undefined) =>
   useSave(async ({ id, body }: { id?: string; body: PracticalInput }) =>
@@ -235,7 +224,7 @@ export const useSavePractical = (term: string | undefined) =>
 export const useDeletePractical = (term: string | undefined) =>
   useSave(async (id: string) => (await api.delete(`${BASE}/practicals/${id}`, { params: params(term) })).data)
 
-export const useExamBulk = (term: string | undefined, kind: 'exam-papers' | 'practicals') =>
+export const useExamBulk = (term: string | undefined, kind: 'practicals') =>
   useSave(async (rows: Record<string, string>[]) =>
     (await api.post<BulkResult>(`${BASE}/${kind}/bulk`, { rows }, { params: params(term), timeout: 120_000 })).data,
   )
@@ -254,7 +243,7 @@ export const useSaveExamList = (term: string | undefined) =>
     (await api.post<{ created: number; updated: number; smarttt: ExamListReview['smarttt'] }>(`${BASE}/exam-list`, { papers }, { params: params(term), timeout: 120_000 })).data,
   )
 
-/** Every paper of the uploaded list removed at once; papers built from units stay. */
+/** Every paper of the uploaded list removed at once. */
 export const useDeleteExamList = (term: string | undefined) =>
   useSave(async () => (await api.delete<{ deleted: number }>(`${BASE}/exam-list`, { params: params(term) })).data)
 
