@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { errorMessage } from '@/lib/api'
 import type { SmartttVenue, SmartttVenueInput, SmartttVenueStatus, SmartttVenueType, SmartttVenueUpload } from '@/types'
 import { Badge, FileUpload, Notice, type Tone } from './parts'
-import { useSaveVenue, useUploadVenues, useVenues, useVenueSummary } from './smartttApi'
+import { useDuplicateVenues, useMergeDuplicateVenues, useMergeVenues, useSaveVenue, useUploadVenues, useVenues, useVenueSummary } from './smartttApi'
 
 const TEMPLATE =
   'code,name,building,floor,capacity,type,status\nLH1,Lecture Hall 1,Main Block,Ground,120,lecture hall,active\nLAB2,Computer Lab 2,Science Block,1,40,lab,active\n'
@@ -68,6 +68,73 @@ function VenueForm({ venue, onClose }: { venue: SmartttVenue | null; onClose: ()
   )
 }
 
+/** One room under several codes ("TC1", "TC 1"): what merging would do, and the button that does it. */
+function DuplicateVenues() {
+  const groups = useDuplicateVenues()
+  const merge = useMergeDuplicateVenues()
+  const list = groups.data ?? []
+  if (merge.isSuccess && list.length === 0) {
+    return <Notice tone="success">Merged. Each room is now one venue; generate the exam timetable again so it uses them.</Notice>
+  }
+  if (list.length === 0) return null
+  return (
+    <Card className="border-orange-200 p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-navy-900">{list.length} room{list.length === 1 ? ' is' : 's are'} listed under more than one code</h2>
+          <p className="mt-1 text-sm text-muted">
+            An upload and a capacities file can name one room differently. Merging keeps one venue and moves its timetable
+            slots and exam seats there. If any copy is marked not for exams, the room stays out of exams.
+          </p>
+        </div>
+        <Button loading={merge.isPending} onClick={() => { if (window.confirm(`Merge ${list.length} room(s)? This can't be undone.`)) merge.mutate() }}>
+          Merge duplicates
+        </Button>
+      </div>
+      {merge.isError && <Notice tone="error">{errorMessage(merge.error)}</Notice>}
+      <div className="mt-3 max-h-64 overflow-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="text-muted">
+            <tr><th className="px-2 py-1">Keep</th><th className="px-2 py-1">Merge into it</th><th className="px-2 py-1">Capacity</th><th className="px-2 py-1">Exams</th></tr>
+          </thead>
+          <tbody>
+            {list.map((g) => (
+              <tr key={g.keep.id} className="border-t border-slate-100">
+                <td className="px-2 py-1 font-medium text-navy-900">{g.keep.code}</td>
+                <td className="px-2 py-1">{g.merge.map((r) => `${r.code} (${r.capacity})`).join(', ')}</td>
+                <td className="px-2 py-1">{g.result.capacity}{!g.result.capacity_confirmed && <> <Badge tone="warning">Placeholder</Badge></>}</td>
+                <td className="px-2 py-1">{g.result.for_exams ? 'Used' : 'Not used'}{g.result.health_unit && ' · Health unit'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  )
+}
+
+/** Venues the administrator knows are one room though their codes don't say so ("Conference Hall", "ED 4"). */
+function MergeInto({ venue, venues, onDone }: { venue: SmartttVenue; venues: SmartttVenue[]; onDone: () => void }) {
+  const merge = useMergeVenues()
+  const [other, setOther] = useState('')
+  const name = venues.find((v) => v.id === other)?.code
+  return (
+    <div className="mt-3 rounded-lg border border-slate-200 p-4 text-sm">
+      <label className="block">Merge another venue into {venue.code}
+        <select value={other} onChange={(e) => setOther(e.target.value)} className={input}>
+          <option value="">Choose the same room under another name</option>
+          {venues.filter((v) => v.id !== venue.id).map((v) => <option key={v.id} value={v.id}>{v.code}{v.name !== v.code ? ` (${v.name})` : ''}</option>)}
+        </select>
+      </label>
+      {merge.isError && <p role="alert" className="mt-2 text-red-700">{errorMessage(merge.error)}</p>}
+      <Button type="button" variant="secondary" className="mt-2" disabled={!other} loading={merge.isPending}
+        onClick={() => { if (window.confirm(`Merge ${name} into ${venue.code}? ${name} goes away, and its timetable slots move to ${venue.code}. This can't be undone.`)) merge.mutate({ keep: venue.id, merge: [other] }, { onSuccess: onDone }) }}>
+        Merge into {venue.code}
+      </Button>
+    </div>
+  )
+}
+
 function VenueTable() {
   const venues = useVenues()
   const save = useSaveVenue()
@@ -88,6 +155,7 @@ function VenueTable() {
         <Button onClick={() => setEditing('new')}><Plus className="size-4" aria-hidden /> Add a venue</Button>
       </div>
       {editing && <VenueForm key={editing === 'new' ? 'new' : editing.id} venue={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
+      {editing && editing !== 'new' && <MergeInto key={`merge-${editing.id}`} venue={editing} venues={venues.data ?? []} onDone={() => setEditing(null)} />}
       {save.isError && <Notice tone="error">{errorMessage(save.error)}</Notice>}
       {venues.isError ? (
         <p role="alert" className="mt-3 text-sm text-red-700">{errorMessage(venues.error, 'Could not load the venues from SMARTTT.')}</p>
@@ -150,6 +218,7 @@ export function VenuesPage() {
 
   return (
     <div className="space-y-6">
+      <DuplicateVenues />
       <VenueTable />
       <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
