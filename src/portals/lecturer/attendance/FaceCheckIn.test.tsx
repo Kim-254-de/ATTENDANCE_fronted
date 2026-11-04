@@ -4,6 +4,7 @@ import { vi } from 'vitest'
 import { openMockSessionForScan } from '@/mocks/handlers'
 import { renderApp } from '@/test/renderApp'
 import { server } from '@/test/setup'
+import { answerConfirm } from '@/test/confirmDialog'
 
 /**
  * jsdom has no camera, so FaceCamera is replaced by a stand-in whose "photo"
@@ -184,12 +185,12 @@ describe('registering faces from the unit roster', () => {
   })
 
   it("removes a registered face, keeping the student's consent", async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = await signIn('LEC00123', '/units/u1')
     const students = await screen.findByRole('region', { name: 'Students' })
     const amina = () => within(students).getByText('Amina Wanjiku Kamau').closest('li')!
 
     await user.click(within(amina()).getByRole('button', { name: /^remove face$/i }))
+    await answerConfirm(user, /remove amina wanjiku kamau's registered face\?/i, /^remove face$/i)
     expect(await screen.findByText("Amina Wanjiku Kamau's face was removed.")).toBeInTheDocument()
     expect(await within(amina()).findByRole('button', { name: /register face/i })).toBeInTheDocument()
   })
@@ -197,7 +198,6 @@ describe('registering faces from the unit roster', () => {
 
 describe("the student's face check-in consent", () => {
   it('is off until the student agrees, and turning it off says it deletes their face', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = await signIn('STU00042', '/student-profile')
 
     const card = await screen.findByRole('heading', { name: 'Face check-in' })
@@ -211,7 +211,8 @@ describe("the student's face check-in consent", () => {
     expect(await screen.findByText(/your face isn't registered yet/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /turn off and delete my face data/i }))
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/will be deleted/i))
+    const dialog = await answerConfirm(user, /turn off face check-in\?/i, /^turn off$/i)
+    expect(dialog).toHaveTextContent(/will be deleted/i)
     expect(await screen.findByText(/you check in by scanning the qr code only/i)).toBeInTheDocument()
     expect(card).toBeInTheDocument()
   })

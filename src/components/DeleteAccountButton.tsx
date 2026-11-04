@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 import clsx from 'clsx'
-import { api, errorMessage } from '@/lib/api'
+import { useConfirm } from '@/components/ui/useConfirm'
+import { api } from '@/lib/api'
 
 type Scope = 'department'
 type Kind = 'lecturer' | 'student'
@@ -42,16 +43,24 @@ export function DeleteAccountButton({
     },
   })
 
+  const [ask, confirmDialog] = useConfirm()
+
   const who = name ?? `this ${kind}`
   const onClick = () => {
     const consequence = kind === 'lecturer'
       ? 'They are signed out, any class they have open is closed, and their units and past sessions stay in the figures without their name.'
       : 'They are signed out, their registered face, fingerprint and card are removed, and their past attendance stays in the figures without their name.'
-    if (!window.confirm(`Delete ${who}'s account? ${consequence} This cannot be undone.`)) return
-    remove.mutate(undefined, { onError: (error) => window.alert(errorMessage(error, 'Could not delete the account.')) })
+    ask({
+      title: `Delete ${who}'s account?`,
+      message: `${consequence} This cannot be undone.`,
+      confirmLabel: 'Delete account',
+      action: () => remove.mutateAsync(),
+      errorFallback: 'Could not delete the account.',
+    })
   }
 
   return (
+    <>
     <button
       type="button"
       onClick={onClick}
@@ -66,5 +75,7 @@ export function DeleteAccountButton({
       <Trash2 className="size-4" aria-hidden />
       {!compact && (remove.isPending ? 'Deleting…' : 'Delete account')}
     </button>
+    {confirmDialog}
+    </>
   )
 }

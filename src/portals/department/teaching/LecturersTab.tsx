@@ -13,7 +13,9 @@ import {
   type LecturerInput,
   type TeachingLecturer,
 } from './teachingApi'
-import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { useConfirm } from '@/components/ui/useConfirm'
+import { Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const LECTURER_COLUMNS: BulkColumn[] = [
   { key: 'name', label: 'Name', example: 'Dr. Jane Otieno (FT)', required: true },
@@ -91,6 +93,7 @@ export function LecturersTab({ term, board }: { term: string | undefined; board:
   const [editing, setEditing] = useState<BoardLecturer | 'new' | null>(null)
   const [pasting, setPasting] = useState(false)
   const remove = useDeleteLecturer(term)
+  const [ask, confirmDialog] = useConfirm()
   const bulk = useBulk(term, 'lecturers')
 
   return (
@@ -99,7 +102,7 @@ export function LecturersTab({ term, board }: { term: string | undefined; board:
         <Button variant="secondary" onClick={() => setPasting(true)}>Paste from Excel</Button>
         <Button onClick={() => setEditing('new')}>Add a lecturer</Button>
       </div>
-      {remove.isError && <p role="alert" className="text-sm text-danger">{errorMessage(remove.error)}</p>}
+      {remove.isError && !confirmDialog && <p role="alert" className="text-sm text-danger">{errorMessage(remove.error)}</p>}
       <TableCard>
         <thead className="bg-surface">
           <tr>
@@ -122,7 +125,13 @@ export function LecturersTab({ term, board }: { term: string | undefined; board:
               </td>
               <td className={`${td} space-x-3 text-right whitespace-nowrap`}>
                 <button onClick={() => setEditing(x)} className={linkButton}>Edit</button>
-                <button onClick={() => { if (window.confirm(`Remove ${x.fullName}?`)) remove.mutate(x.id) }} className={dangerLink}>Remove</button>
+                <button onClick={() => ask({
+                  title: `Remove ${x.fullName}?`,
+                  message: "They come off your department's teaching list for this term. Their account isn't affected.",
+                  confirmLabel: 'Remove lecturer',
+                  action: () => remove.mutateAsync(x.id),
+                  errorFallback: 'Could not remove the lecturer.',
+                })} className={dangerLink}>Remove</button>
               </td>
             </tr>
           ))}
@@ -135,6 +144,7 @@ export function LecturersTab({ term, board }: { term: string | undefined; board:
       {pasting && (
         <BulkPaste title="Paste lecturers" columns={LECTURER_COLUMNS} templateName="lecturers.csv" submit={(rows) => bulk.mutateAsync(rows)} onClose={() => setPasting(false)} />
       )}
+      {confirmDialog}
     </section>
   )
 }

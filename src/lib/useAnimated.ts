@@ -6,16 +6,14 @@ import { useEffect, useState } from 'react'
  * (see `useFirstVisit`) to skip straight to `target` with no animation.
  */
 export function useAnimated(target: number, animate = true) {
-  const [value, setValue] = useState(animate ? 0 : target)
+  const [value, setValue] = useState(0)
   useEffect(() => {
-    if (!animate) {
-      setValue(target)
-      return
-    }
+    if (!animate) return
     const id = requestAnimationFrame(() => setValue(target))
     return () => cancelAnimationFrame(id)
   }, [target, animate])
-  return value
+  // Not animating: the target is the answer, read during render rather than copied into state.
+  return animate ? value : target
 }
 
 // Keys that have finished their intro animation at least once this session. Module-scoped so it

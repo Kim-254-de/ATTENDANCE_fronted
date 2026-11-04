@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { getGreeting, initials } from '@/lib/format'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { StudentBottomNav } from './StudentBottomNav'
@@ -25,8 +26,9 @@ export function StudentLayout() {
         {showHomeHeader && (
           <header className="flex items-center gap-3 rounded-2xl bg-linear-to-b from-brand-600 to-brand-800 px-5 py-4 text-white shadow-lg sm:px-7">
             <div><p className="font-bold">{user ? getGreeting() : 'Smart Attendance'}</p><p className="text-sm text-brand-200">{user ? user.fullName : 'Student Portal'}</p></div>
+            <ThemeToggle className="ml-auto text-brand-100 hover:bg-white/15 hover:text-white" />
             {user && (
-              <Link to="/student-profile" aria-label="My profile" className="ml-auto flex items-center text-white hover:text-gold-300">
+              <Link to="/student-profile" aria-label="My profile" className="flex items-center text-white hover:text-gold-300">
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt="" className="size-9 rounded-full object-cover" />
                 ) : (

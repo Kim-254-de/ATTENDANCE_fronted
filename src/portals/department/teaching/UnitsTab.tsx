@@ -21,7 +21,9 @@ import {
   type UnitGroup,
   type UnitInput,
 } from './teachingApi'
-import { Dialog, Field, TableCard, dangerLink, linkButton, td, th } from './ui'
+import { Dialog } from '@/components/ui/Dialog'
+import { useConfirm } from '@/components/ui/useConfirm'
+import { Field, TableCard, dangerLink, linkButton, td, th } from './ui'
 
 const UNIT_COLUMNS: BulkColumn[] = [
   { key: 'code', label: 'Code', example: 'COSC 103', required: true },
@@ -55,6 +57,7 @@ export function UnitsTab({ term, board }: { term: string | undefined; board: Boa
   const [teaching, setTeaching] = useState<{ unit: TeachingUnit; group: UnitGroup } | null>(null)
   const [pasting, setPasting] = useState<'units' | 'groups' | null>(null)
   const remove = useDeleteUnit(term)
+  const [ask, confirmDialog] = useConfirm()
   const bulkUnits = useBulk(term, 'units')
   const bulkGroups = useBulk(term, 'groups')
   const editable = board.canEdit
@@ -70,7 +73,7 @@ export function UnitsTab({ term, board }: { term: string | undefined; board: Boa
           <Button onClick={() => setEditing('new')} disabled={noCourses} title={noCourses ? 'Add your courses first' : undefined}>Add a unit</Button>
         </div>
       )}
-      {remove.isError && <p role="alert" className="text-sm text-danger">{errorMessage(remove.error)}</p>}
+      {remove.isError && !confirmDialog && <p role="alert" className="text-sm text-danger">{errorMessage(remove.error)}</p>}
       <TableCard>
         <thead className="bg-surface">
           <tr>
@@ -95,7 +98,13 @@ export function UnitsTab({ term, board }: { term: string | undefined; board: Boa
                       <div className="mt-1 space-x-3">
                         <button onClick={() => setEditing(u)} className={linkButton}>Edit</button>
                         <button onClick={() => setSplitting(u)} className={linkButton}>Groups</button>
-                        <button onClick={() => { if (window.confirm(`Remove ${u.code}?`)) remove.mutate(u.id) }} className={dangerLink}>Remove</button>
+                        <button onClick={() => ask({
+                          title: `Remove ${u.code}?`,
+                          message: "It comes off this term's teaching list, with its groups.",
+                          confirmLabel: 'Remove unit',
+                          action: () => remove.mutateAsync(u.id),
+                          errorFallback: 'Could not remove the unit.',
+                        })} className={dangerLink}>Remove</button>
                       </div>
                     )}
                   </td>
@@ -139,6 +148,7 @@ export function UnitsTab({ term, board }: { term: string | undefined; board: Boa
       {pasting === 'groups' && (
         <BulkPaste title="Paste groups and lecturers" columns={GROUP_COLUMNS} templateName="groups-and-lecturers.csv" submit={(rows) => bulkGroups.mutateAsync(rows)} onClose={() => setPasting(null)} />
       )}
+      {confirmDialog}
     </section>
   )
 }

@@ -2,13 +2,9 @@ import { UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import type { StudentUnit } from '@/types'
+import { formatRate, rateTone } from './attendanceStats'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-/** Shared with the Progress page's per-unit breakdown. */
-export const formatRate = (rate: number | null) => (rate === null ? '—' : `${Math.round(rate)}%`)
-export const rateTone = (rate: number | null) =>
-  rate === null ? 'text-muted' : rate >= 75 ? 'text-success' : rate >= 50 ? 'text-accent-ink' : 'text-danger'
-
 /** Shared between the dashboard's preview grid and the full My Units page. */
 export function UnitCard({ unit, evaluationPending = false }: { unit: StudentUnit; evaluationPending?: boolean }) {
   return (

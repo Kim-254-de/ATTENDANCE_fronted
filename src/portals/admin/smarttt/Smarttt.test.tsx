@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, vi } from 'vitest'
 import { api } from '@/lib/api'
 import { renderApp } from '@/test/renderApp'
+import { answerConfirm } from '@/test/confirmDialog'
 
 /**
  * The one admin console: SMARTTT's admin functions (its old separate admin
@@ -97,8 +98,8 @@ describe("SMARTTT's admin functions in the console", () => {
     expect(screen.getByText(/2 matched, 1 not matched, 4 slot\(s\) updated/)).toBeInTheDocument()
     expect(screen.getByText(/MATH 999/)).toBeInTheDocument()
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: /remove computer science and ict's allocation/i }))
+    await answerConfirm(user, /remove computer science and ict's allocation\?/i, /^remove allocation$/i)
     expect(await screen.findByText('Removed the allocation from Computer Science and ICT.')).toBeInTheDocument()
   })
 
@@ -125,9 +126,9 @@ describe("SMARTTT's admin functions in the console", () => {
     await openSmarttt(user, /staff ids/i)
     expect(await screen.findByText('STF/0002')).toBeInTheDocument()
 
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: 'Remove STF/0001' }))
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('lecturer account registered with it is disabled'))
+    const dialog = await answerConfirm(user, /remove stf\/0001 from the list\?/i, /^remove$/i)
+    expect(dialog).toHaveTextContent('lecturer account registered with it is disabled')
     expect(await screen.findByText('Staff ID removed.')).toBeInTheDocument()
     await vi.waitFor(() => expect(screen.queryByText('STF/0001')).not.toBeInTheDocument())
   })
@@ -165,7 +166,7 @@ describe("SMARTTT's admin functions in the console", () => {
     await vi.waitFor(() => expect(screen.queryByRole('checkbox', { name: 'TC1 used for exams' })).not.toBeInTheDocument())
   })
 
-  it('adds a venue and edits one without a file, with exam use and the health unit', async () => {
+  it('adds a venue and edits one without a file, with exam use', async () => {
     const user = userEvent.setup()
     await signInAsAdmin(user)
     await openSmarttt(user, /venues/i)
@@ -178,9 +179,9 @@ describe("SMARTTT's admin functions in the console", () => {
     const form = screen.getByRole('form', { name: /add a venue/i })
     await user.type(within(form).getByLabelText('Code'), 'NURS 1')
     await user.type(within(form).getByLabelText('Building'), 'Health Unit')
-    await user.click(within(form).getByRole('checkbox', { name: /in the health unit/i }))
     await user.click(within(form).getByRole('button', { name: /^save$/i }))
-    expect(await screen.findByRole('checkbox', { name: 'NURS 1 in the health unit' })).toBeChecked()
+    expect(await screen.findByRole('checkbox', { name: 'NURS 1 used for exams' })).toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: /health unit/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('form', { name: /add a venue/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Edit G 12' }))

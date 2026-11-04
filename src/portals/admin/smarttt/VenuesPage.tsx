@@ -57,7 +57,6 @@ function VenueForm({ venue, onClose }: { venue: SmartttVenue | null; onClose: ()
       </div>
       <div className="flex flex-wrap gap-4">
         <label className="flex items-center gap-2"><input type="checkbox" checked={form.for_exams} onChange={(e) => set({ for_exams: e.target.checked })} /> Used for exams</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={form.health_unit} onChange={(e) => set({ health_unit: e.target.checked })} /> In the health unit</label>
       </div>
       {save.isError && <p role="alert" className="text-red-700">{errorMessage(save.error)}</p>}
       <div className="flex gap-2">
@@ -103,7 +102,7 @@ function DuplicateVenues() {
                 <td className="px-2 py-1 font-medium text-navy-900">{g.keep.code}</td>
                 <td className="px-2 py-1">{g.merge.map((r) => `${r.code} (${r.capacity})`).join(', ')}</td>
                 <td className="px-2 py-1">{g.result.capacity}{!g.result.capacity_confirmed && <> <Badge tone="warning">Placeholder</Badge></>}</td>
-                <td className="px-2 py-1">{g.result.for_exams ? 'Used' : 'Not used'}{g.result.health_unit && ' · Health unit'}</td>
+                <td className="px-2 py-1">{g.result.for_exams ? 'Used' : 'Not used'}</td>
               </tr>
             ))}
           </tbody>
@@ -149,7 +148,6 @@ function VenueTable() {
           <h2 className="font-semibold text-navy-900">Venues</h2>
           <p className="mt-1 text-sm text-muted">
             Add or change a venue here, without a file. The Director can overrule “Used for exams” for the exam timetable.
-            Health and nursing papers sit only in venues in the health unit.
           </p>
         </div>
         <Button onClick={() => setEditing('new')}><Plus className="size-4" aria-hidden /> Add a venue</Button>
@@ -170,7 +168,7 @@ function VenueTable() {
               <thead className="sticky top-0 bg-white text-muted">
                 <tr>
                   <th className="px-2 py-2">Code</th><th className="px-2 py-2">Building</th><th className="px-2 py-2">Capacity</th>
-                  <th className="px-2 py-2">Status</th><th className="px-2 py-2">Used for exams</th><th className="px-2 py-2">Health unit</th><th className="px-2 py-2"><span className="sr-only">Edit</span></th>
+                  <th className="px-2 py-2">Status</th><th className="px-2 py-2">Used for exams</th><th className="px-2 py-2"><span className="sr-only">Edit</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -183,10 +181,6 @@ function VenueTable() {
                     <td className="px-2 py-2">
                       <input type="checkbox" checked={v.for_exams} aria-label={`${v.code} used for exams`} disabled={save.isPending}
                         onChange={(e) => save.mutate({ id: v.id, body: { for_exams: e.target.checked } })} />
-                    </td>
-                    <td className="px-2 py-2">
-                      <input type="checkbox" checked={v.health_unit} aria-label={`${v.code} in the health unit`} disabled={save.isPending}
-                        onChange={(e) => save.mutate({ id: v.id, body: { health_unit: e.target.checked } })} />
                     </td>
                     <td className="px-2 py-2 text-right">
                       <button type="button" onClick={() => setEditing(v)} aria-label={`Edit ${v.code}`} className="text-brand"><Pencil className="size-4" aria-hidden /></button>

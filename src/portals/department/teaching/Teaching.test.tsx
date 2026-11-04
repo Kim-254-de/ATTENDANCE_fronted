@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, vi } from 'vitest'
 import { env } from '@/lib/env'
 import { renderApp } from '@/test/renderApp'
+import { answerConfirm } from '@/test/confirmDialog'
 
 /**
  * The department's Teaching page, against the in-memory teaching API
@@ -86,25 +87,22 @@ describe('department teaching', () => {
     expect(screen.getByRole('link', { name: /excel/i })).toHaveAttribute('href', `${env.apiUrl}/departments/teaching/export/xlsx`)
   })
 
-  it('says why a paper cannot be saved until a unit is ticked', async () => {
+  it('makes papers only from an uploaded moderation letter, not from units', async () => {
     const user = await openTeaching()
     await user.click(screen.getByRole('tab', { name: /^exams$/i }))
-    await user.click(await screen.findByRole('button', { name: /add a paper/i }))
-    const dialog = await screen.findByRole('dialog', { name: /add a paper/i })
-    expect(within(dialog).getByText(/tick at least one unit to save/i)).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: /^save$/i })).toBeDisabled()
-    await user.click(within(dialog).getByRole('checkbox', { name: /cosc 103/i }))
-    expect(within(dialog).queryByText(/tick at least one unit to save/i)).not.toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: /^save$/i })).toBeEnabled()
+    expect(await screen.findByText(/its units are the ones on the\s+exam timetable/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /add a paper/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /a paper for each unit/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/units on no paper/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /no written exam/i })).not.toBeInTheDocument()
   })
 
   it('has exam papers and invigilators on their own tabs, without the teaching publish button', async () => {
     const user = await openTeaching()
     await user.click(screen.getByRole('tab', { name: /^exams$/i }))
-    expect(await screen.findByText("COSC 103 is on no paper; add it to one, or mark it 'no written exam'.")).toBeInTheDocument()
+    expect(await screen.findByText(/upload your moderation letter: the word document/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /publish papers/i })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /publish to the director/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: /no written exam/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /invigilators/i }))
     expect(await screen.findByText(/the director hasn't shared an exam draft yet/i)).toBeInTheDocument()
@@ -170,8 +168,8 @@ describe('editing an uploaded paper', () => {
     await waitFor(() => expect(screen.queryByText(/nobody has synced math 999/i)).not.toBeInTheDocument())
     expect(within(screen.getByRole('row', { name: /math 999/i })).getByText('40')).toBeInTheDocument()
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: /remove uploaded list/i }))
+    await answerConfirm(user, /remove the uploaded exam list\?/i, /^remove list$/i)
     expect(await screen.findByText(/no papers yet/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /remove uploaded list/i })).not.toBeInTheDocument()
   })

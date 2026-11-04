@@ -92,7 +92,7 @@ export const useExamReport = (sessionId: string | undefined, live: boolean) =>
 /** An invigilator may open the room from this long before the paper (backend OPEN_EARLY_MINUTES). */
 export const OPEN_EARLY_MINUTES = 30
 
-export const canOpenNow = (s: ExamSession, now = Date.now()) =>
+export const canOpenNow = (s: ExamSession, now: number) =>
   s.status === 'NOT_OPENED' &&
   now >= new Date(s.startsAt).getTime() - OPEN_EARLY_MINUTES * 60_000 &&
   now <= new Date(s.endsAt).getTime()
