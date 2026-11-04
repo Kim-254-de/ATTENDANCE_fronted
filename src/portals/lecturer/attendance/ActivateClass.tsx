@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
+import { useNow } from '@/lib/useNow'
 import { useCurrentUnit } from '@/portals/lecturer/units/unitsApi'
 import { useCreateSession, useLiveSessions } from './sessionApi'
 
@@ -18,8 +19,10 @@ export function ActivateClass() {
   const liveSessions = useLiveSessions()
   const navigate = useNavigate()
   const create = useCreateSession()
+  // Ticks so a class that has run past its closing time stops counting as live without a reload.
+  const now = useNow(15_000)
   const activeSession = liveSessions.data?.find((session) =>
-    session.unitId === unit?.id && session.status !== 'CLOSED' && new Date(session.closesAt).getTime() > Date.now(),
+    session.unitId === unit?.id && session.status !== 'CLOSED' && new Date(session.closesAt).getTime() > now,
   )
 
   const activate = () => {

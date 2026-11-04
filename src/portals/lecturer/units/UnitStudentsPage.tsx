@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { errorMessage } from '@/lib/api'
 import { useRemoveFaceEnrollment } from '@/portals/lecturer/attendance/faceApi'
 import type { Allocation } from '@/types'
@@ -27,16 +28,21 @@ export function UnitStudentsPage() {
   const [enrolling, setEnrolling] = useState<(Allocation & { studentUserId: string }) | null>(null)
   const [faceNotice, setFaceNotice] = useState<string | null>(null)
   const removeFace = useRemoveFaceEnrollment(unitId)
+  const [ask, confirmDialog] = useConfirm()
 
   const faceActions: FaceActions = {
     register: (student) => { setFaceNotice(null); setEnrolling(student) },
-    remove: (student) => {
-      if (!window.confirm(`Remove ${student.fullName ?? 'this student'}'s registered face? They can still check in by QR code.`)) return
-      removeFace.mutate(student.studentUserId, {
-        onSuccess: () => setFaceNotice(`${student.fullName ?? 'The student'}'s face was removed.`),
-        onError: (err) => setFaceNotice(errorMessage(err, 'Could not remove the face.')),
-      })
-    },
+    remove: (student) =>
+      ask({
+        title: `Remove ${student.fullName ?? 'this student'}'s registered face?`,
+        message: 'They can still check in by QR code, and you can register their face again.',
+        confirmLabel: 'Remove face',
+        action: async () => {
+          await removeFace.mutateAsync(student.studentUserId)
+          setFaceNotice(`${student.fullName ?? 'The student'}'s face was removed.`)
+        },
+        errorFallback: 'Could not remove the face.',
+      }),
   }
 
   const active = students?.filter((s) => s.status === 'ACTIVE') ?? []
@@ -99,6 +105,7 @@ export function UnitStudentsPage() {
           onDone={(message) => { setEnrolling(null); setFaceNotice(message) }}
         />
       )}
+      {confirmDialog}
     </div>
   )
 }

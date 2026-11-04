@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { errorMessage } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import type { SmartttAllocationResult, SmartttAllocationRow } from '@/types'
@@ -24,6 +25,7 @@ export function AllocationPage() {
   const documents = useAllocationDocuments()
   const send = useUploadAllocation()
   const remove = useRemoveAllocation()
+  const [ask, confirmDialog] = useConfirm()
   const [dryRun, setDryRun] = useState(false)
   const [result, setResult] = useState<SmartttAllocationResult | null>(null)
   const [notice, setNotice] = useState<{ tone: Tone; text: string } | null>(null)
@@ -88,9 +90,13 @@ export function AllocationPage() {
                         variant="ghost"
                         aria-label={`Remove ${d.source}'s allocation`}
                         loading={remove.isPending && remove.variables === d.source}
-                        onClick={() => {
-                          if (window.confirm(`Remove ${d.source}'s allocation? The lecturers it set are taken off their slots.`)) remove.mutate(d.source)
-                        }}
+                        onClick={() => ask({
+                          title: `Remove ${d.source}'s allocation?`,
+                          message: 'The lecturers it set are taken off their slots.',
+                          confirmLabel: 'Remove allocation',
+                          action: () => remove.mutateAsync(d.source),
+                          errorFallback: 'Could not remove the allocation.',
+                        })}
                       >
                         <Trash2 className="size-4" aria-hidden />
                       </Button>
@@ -102,6 +108,7 @@ export function AllocationPage() {
           </Card>
         )}
       </section>
+      {confirmDialog}
     </div>
   )
 }

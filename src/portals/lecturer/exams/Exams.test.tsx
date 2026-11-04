@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { mockExamRooms } from '@/mocks/exams'
@@ -17,8 +17,8 @@ vi.mock('@/portals/student/QrCameraScanner', () => ({
 
 beforeEach(() => fakeGeolocation([8]))
 
-async function signIn(identifier: string, path: string) {
-  const user = userEvent.setup()
+async function signIn(identifier: string, path: string, options?: Parameters<typeof userEvent.setup>[0]) {
+  const user = userEvent.setup(options)
   renderApp(path)
   await user.type(await screen.findByLabelText(/(staff|registration) number or email/i), identifier)
   await user.type(screen.getByLabelText(/^password$/i), 'password')
@@ -36,7 +36,7 @@ async function scan(user: ReturnType<typeof userEvent.setup>, code: string) {
 describe('invigilation', () => {
   it('lists the lecturer’s exam rooms; only the one in its slot can be opened', async () => {
     await signIn('LEC00123', '/exams')
-    expect(await screen.findByRole('heading', { name: /your exam rooms/i })).toBeInTheDocument()
+    expect(await screen.findByText(/open your room from 30 minutes before the paper/i)).toBeInTheDocument()
     const today = (await screen.findByText('LH1')).closest('div.rounded-2xl') as HTMLElement
     expect(within(today).getByText('Main invigilator')).toBeInTheDocument()
     expect(within(today).getByText('2 seated')).toBeInTheDocument()
@@ -60,10 +60,50 @@ describe('invigilation', () => {
     expect(within(screen.getByRole('list', { name: 'Absent in LH1' })).getByText('STU00042')).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Absent in LH2' })).getByText('STU00099')).toBeInTheDocument()
 
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: /close room/i }))
+    const dialog = await screen.findByRole('dialog', { name: 'Close this room?' })
+    expect(dialog).toHaveTextContent('Students in Room LH1 can no longer check in.')
+    // Focus starts on Cancel, so a stray Enter doesn't close the room.
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(mockExamRooms().lh1.session.status).toBe('OPEN')
+
+    await user.click(screen.getByRole('button', { name: /close room/i }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Close room' }))
     expect(await screen.findByText(/room closed/i)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(mockExamRooms().lh1.session.status).toBe('CLOSED')
+  })
+
+  it('shows Open room by itself once the room’s slot starts', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const { lh1 } = mockExamRooms()
+      const start = Date.now() + 31 * 60_000
+      lh1.session.startsAt = new Date(start).toISOString()
+      lh1.session.endsAt = new Date(start + 2 * 60 * 60_000).toISOString()
+      await signIn('LEC00123', '/exams', { advanceTimers: vi.advanceTimersByTime })
+      const card = (await screen.findByText('LH1')).closest('div.rounded-2xl') as HTMLElement
+      expect(within(card).queryByRole('button', { name: /open room/i })).not.toBeInTheDocument()
+      expect(within(card).getByText(/opens 30 minutes before/i)).toBeInTheDocument()
+
+      act(() => vi.advanceTimersByTime(90_000))
+      expect(within(card).getByRole('button', { name: /open room/i })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('offers to open without the location check when this phone can’t tell where the room is', async () => {
+    fakeGeolocation('denied')
+    const user = await signIn('LEC00123', '/exams')
+    const card = (await screen.findByText('LH1')).closest('div.rounded-2xl') as HTMLElement
+    await user.click(within(card).getByRole('button', { name: /open room/i }))
+    expect(await within(card).findByRole('alert')).toHaveTextContent(/hasn’t been mapped/)
+    await user.click(within(card).getByRole('button', { name: /open without the location check/i }))
+    expect(await screen.findByRole('heading', { name: 'Room LH1' })).toBeInTheDocument()
+    expect(mockExamRooms().lh1.session.geofence).toBe('OFF')
   })
 })
 

@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useMatches } from 'react-router-dom'
 import { useMe } from '@/auth/authApi'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { formatLongDate, getGreeting, firstName, initials } from '@/lib/format'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { BottomNav } from './BottomNav'
@@ -22,6 +23,7 @@ export function AppLayout() {
             </h1>
             <p className="mt-0.5 text-sm text-muted">{formatLongDate()}</p>
           </div>
+          <ThemeToggle />
           {user && !onProfilePage && (
             <Link to="/profile" aria-label="View Profile" className="border-l border-line pl-4">
               {user.avatarUrl ? (

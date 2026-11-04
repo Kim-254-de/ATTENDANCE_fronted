@@ -1,14 +1,17 @@
 import { ArrowLeft, LocateFixed, Pause, PictureInPicture2, Play, ScanFace, Smartphone, TabletSmartphone, TriangleAlert, X } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { errorMessage } from '@/lib/api'
 import { formatElapsed } from '@/lib/format'
 import { bestPosition } from '@/lib/geolocation'
+import { useNow } from '@/lib/useNow'
 import type { SessionAttendance, SessionStatus, SessionSummary } from '@/types'
 import { useSessionAttendance, useSessionQr, useSetGeofence, useSetSessionStatus, useTerminalLink } from './sessionApi'
+import { SkipLocationDialog } from './SkipLocationDialog'
 
 /**
  * Experimental, Chrome/Edge 116+ only — not yet in the standard DOM lib types.
@@ -22,15 +25,6 @@ declare global {
   interface Window {
     documentPictureInPicture?: DocumentPictureInPicture
   }
-}
-
-const subscribeToSeconds = (notify: () => void) => {
-  const t = setInterval(notify, 1000)
-  return () => clearInterval(t)
-}
-const currentSecond = () => Math.floor(Date.now() / 1000) * 1000
-function useNow() {
-  return useSyncExternalStore(subscribeToSeconds, currentSecond)
 }
 
 /**
@@ -49,6 +43,7 @@ export function LiveSessionPage() {
   // we just made). Until we've made one, the session shown is whatever the QR poll last reported —
   // derived at render time so there's no query-result-into-state effect to keep in sync.
   const [linkingTerminal, setLinkingTerminal] = useState(false)
+  const [confirmingEnd, setConfirmingEnd] = useState(false)
   const [override, setOverride] = useState<SessionSummary | null>((location.state as { session?: SessionSummary } | null)?.session ?? null)
   const canPoll = override === null || override.status === 'OPEN'
   const qr = useSessionQr(sessionId, canPoll)
@@ -57,14 +52,13 @@ export function LiveSessionPage() {
   // The fence changes on another device (the lecturer's phone), so the poll is the source of truth for it.
   const awaitingLocation = (qr.data?.session.geofence ?? session?.geofence)?.mode === 'AWAITING_LOCATION'
 
-  const changeStatus = (status: SessionStatus) => {
+  const changeStatus = (status: SessionStatus, then?: () => void) => {
     setStatus.mutate(status, {
-      onSuccess: (updated) => setOverride(updated),
+      onSuccess: (updated) => {
+        setOverride(updated)
+        then?.()
+      },
     })
-  }
-
-  const endClass = () => {
-    if (window.confirm('End this class? Students will no longer be able to check in.')) changeStatus('CLOSED')
   }
 
   const secondsLeft = qr.data ? Math.max(0, Math.round((new Date(qr.data.rotatesAt).getTime() - now) / 1000)) : null
@@ -152,14 +146,29 @@ export function LiveSessionPage() {
               payload={session.status === 'OPEN' && !awaitingLocation ? qr.data?.payload : undefined}
               refreshLabel={secondsLeft !== null ? `Refreshes in ${secondsLeft}s` : undefined}
             />
-            <Button variant="ghost" onClick={endClass} disabled={setStatus.isPending} className="text-red-300 hover:bg-red-500/10">
-              End Class
+            <Button variant="ghost" onClick={() => setConfirmingEnd(true)} disabled={setStatus.isPending} className="text-on-dark-danger hover:bg-white/10">
+              End class
             </Button>
           </div>
+        )}
+        {setStatus.error && !confirmingEnd && (
+          <p role="alert" className="text-sm text-gold-300">{errorMessage(setStatus.error, 'Could not change the class. Try again.')}</p>
         )}
       </main>
 
       {linkingTerminal && sessionId && <TerminalLinkDialog sessionId={sessionId} onClose={() => setLinkingTerminal(false)} />}
+      {confirmingEnd && (
+        <ConfirmDialog
+          title="End this class?"
+          confirmLabel="End class"
+          onConfirm={() => changeStatus('CLOSED', () => setConfirmingEnd(false))}
+          onClose={() => { setConfirmingEnd(false); setStatus.reset() }}
+          pending={setStatus.isPending}
+          error={setStatus.error ? errorMessage(setStatus.error, 'Could not end the class.') : null}
+        >
+          Students can no longer check in to {session?.unitCode ?? 'this class'}.
+        </ConfirmDialog>
+      )}
     </div>
   )
 }
@@ -188,7 +197,7 @@ function TerminalLinkDialog({ sessionId, onClose }: { sessionId: string; onClose
             <QRCodeCanvas value={link.data.linkCode} size={240} level="M" marginSize={2} />
           </div>
         ) : link.error ? (
-          <p role="alert" className="text-sm text-amber-200">{errorMessage(link.error, 'Could not get a link code.')}</p>
+          <p role="alert" className="text-sm text-gold-300">{errorMessage(link.error, 'Could not get a link code.')}</p>
         ) : (
           <p role="status" className="text-sm text-brand-300">Getting a code…</p>
         )}
@@ -212,7 +221,7 @@ function CheckedInStat({ checkedIn, capacity }: { checkedIn: number; capacity?: 
         <p className="text-center text-xs uppercase tracking-widest text-brand-400">Checked in</p>
         {pct !== null && (
           <div className="mt-2 h-1.5 w-full rounded-full bg-white/10" role="img" aria-label={`${pct}% checked in`}>
-            <div className="h-full rounded-full bg-emerald-400 transition-[width]" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-full bg-on-dark-success transition-[width] motion-reduce:transition-none" style={{ width: `${pct}%` }} />
           </div>
         )}
       </div>
@@ -270,11 +279,7 @@ function AwaitingLocation({ session }: { session: SessionSummary }) {
     }
   }
 
-  const skip = () => {
-    if (window.confirm('Open this class without checking where students are? Anyone with the code could check in from anywhere.')) {
-      setGeofence.mutate({ mode: 'OFF' })
-    }
-  }
+  const [confirmingSkip, setConfirmingSkip] = useState(false)
 
   const busy = locating || setGeofence.isPending
 
@@ -299,11 +304,11 @@ function AwaitingLocation({ session }: { session: SessionSummary }) {
       </div>
 
       <p className="flex items-center justify-center gap-2 text-sm text-brand-300" role="status">
-        <span className="size-2 animate-pulse rounded-full bg-amber-300" aria-hidden /> Waiting for your phone…
+        <span className="size-2 animate-pulse rounded-full bg-gold-300 motion-reduce:animate-none" aria-hidden /> Waiting for your phone…
       </p>
 
       {(locateError || setGeofence.error) && (
-        <p role="alert" className="text-sm text-amber-200">
+        <p role="alert" className="text-sm text-gold-300">
           {locateError ?? errorMessage(setGeofence.error, 'Could not set the location.')}
         </p>
       )}
@@ -312,10 +317,11 @@ function AwaitingLocation({ session }: { session: SessionSummary }) {
         <Button variant="secondary" onClick={useThisDevice} loading={locating} disabled={busy}>
           <LocateFixed className="size-4" aria-hidden /> Use this device's location
         </Button>
-        <Button variant="ghost" onClick={skip} disabled={busy} className="text-brand-200 hover:bg-white/10">
+        <Button variant="ghost" onClick={() => setConfirmingSkip(true)} disabled={busy} className="text-brand-200 hover:bg-white/10">
           Open without a location check
         </Button>
       </div>
+      {confirmingSkip && <SkipLocationDialog sessionId={session.id} onClose={() => setConfirmingSkip(false)} />}
     </div>
   )
 }
@@ -332,14 +338,14 @@ function QrPanel({ payload }: { payload: string }) {
 function StatusBadge({ status }: { status?: SessionStatus }) {
   if (!status) return null
   const style = {
-    OPEN: 'bg-emerald-400/15 text-emerald-300',
-    PAUSED: 'bg-amber-400/15 text-amber-300',
+    OPEN: 'bg-on-dark-success/15 text-on-dark-success',
+    PAUSED: 'bg-gold-300/15 text-gold-300',
     CLOSED: 'bg-white/10 text-brand-300',
   }[status]
   const label = { OPEN: 'Live', PAUSED: 'Paused', CLOSED: 'Ended' }[status]
   return (
     <span className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${style}`}>
-      {status === 'OPEN' && <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" aria-hidden />}
+      {status === 'OPEN' && <span className="size-1.5 animate-pulse rounded-full bg-on-dark-success motion-reduce:animate-none" aria-hidden />}
       {label}
     </span>
   )
@@ -367,7 +373,7 @@ function ClosedState({ onDone }: { onDone: () => void }) {
 function ErrorState({ message, onBack }: { message: string; onBack: () => void }) {
   return (
     <div className="space-y-3" role="alert">
-      <TriangleAlert className="mx-auto size-8 text-amber-300" aria-hidden />
+      <TriangleAlert className="mx-auto size-8 text-gold-300" aria-hidden />
       <p className="text-sm text-brand-100">{message}</p>
       <Button variant="secondary" onClick={onBack}>Back to dashboard</Button>
     </div>

@@ -1,9 +1,10 @@
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { RouteError } from '@/components/RouteError'
 import { LoginPage } from '@/auth/LoginPage'
 import { ForgotPasswordPage } from '@/auth/ForgotPasswordPage'
 import { RequireAuth } from '@/auth/RequireAuth'
 import { SetPasswordPage } from '@/auth/SetPasswordPage'
+import { SignupRedirect } from '@/auth/SignupRedirect'
 import { VerifyEmailPage } from '@/auth/VerifyEmailPage'
 import { AppLayout } from '@/portals/lecturer/layout/AppLayout'
 import { DepartmentLayout } from '@/portals/department/layout/DepartmentLayout'
@@ -17,19 +18,6 @@ import { LandingPage } from '@/pages/LandingPage'
 const officerProfile = (role: 'admin' | 'department' | 'management' | 'qa') => async () => {
   const { OfficerProfilePage } = await import('@/components/officers/OfficerProfilePage')
   return { Component: () => <OfficerProfilePage role={role} /> }
-}
-
-/** Sends an old sign-up link to the matching sign-in page, saying why. */
-function SignupRedirect() {
-  const [searchParams] = useSearchParams()
-  const role = searchParams.get('role') === 'student' ? 'student' : 'lecturer'
-  return (
-    <Navigate
-      to={`/login?role=${role}`}
-      replace
-      state={{ message: 'There is no separate sign-up for attendance. Sign in with your SMARTTT account; if you have none, create it in SMARTTT first.' }}
-    />
-  )
 }
 
 // Pages are code-split so the login screen doesn't download the dashboard.

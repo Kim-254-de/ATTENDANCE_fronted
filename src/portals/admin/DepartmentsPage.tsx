@@ -3,6 +3,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { errorMessage, fieldErrors } from '@/lib/api'
 import type { AdminDepartment, DuplicateDepartment } from '@/types'
 import {
@@ -261,12 +262,20 @@ function DuplicateGroup({ group }: { group: DuplicateDepartment[] }) {
   const [keepId, setKeepId] = useState(group[0]!.departmentId)
   const merge = useMergeDepartment()
   const keep = group.find((d) => d.departmentId === keepId)!
+  const [ask, confirmDialog] = useConfirm()
 
-  const mergeAll = async () => {
+  const mergeAll = () => {
     const others = group.filter((d) => d.departmentId !== keepId)
     const names = others.map((d) => `“${d.name}”`).join(', ')
-    if (!window.confirm(`Merge ${names} into “${keep.name}”?\n\nIts lecturers, officers, courses, units, audits and evaluation results move to “${keep.name}”. This cannot be undone.`)) return
-    for (const d of others) await merge.mutateAsync({ duplicateId: d.departmentId, intoDepartmentId: keepId })
+    ask({
+      title: `Merge into “${keep.name}”?`,
+      message: `The lecturers, officers, courses, units, audits and evaluation results of ${names} move to “${keep.name}”. This cannot be undone.`,
+      confirmLabel: 'Merge',
+      action: async () => {
+        for (const d of others) await merge.mutateAsync({ duplicateId: d.departmentId, intoDepartmentId: keepId })
+      },
+      errorFallback: 'Could not merge the departments.',
+    })
   }
 
   return (
@@ -292,7 +301,8 @@ function DuplicateGroup({ group }: { group: DuplicateDepartment[] }) {
       <Button type="button" variant="secondary" className="mt-4" onClick={mergeAll} loading={merge.isPending}>
         <GitMerge className="size-4" aria-hidden /> Merge into “{keep.name}”
       </Button>
-      {merge.error && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(merge.error)}</p>}
+      {merge.error && !confirmDialog && <p role="alert" className="mt-2 text-sm text-danger">{errorMessage(merge.error)}</p>}
+      {confirmDialog}
     </Card>
   )
 }

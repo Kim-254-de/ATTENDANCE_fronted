@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { errorMessage } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import type { SmartttUploadStatus } from '@/types'
@@ -40,6 +41,7 @@ export function TimetablePage() {
   const uploads = useTimetableUploads()
   const send = useUploadTimetable()
   const remove = useDeleteTimetableUpload()
+  const [ask, confirmDialog] = useConfirm()
   const [batchId, setBatchId] = useState<string | null>(null)
   const progress = useUploadProgress(batchId)
   const [notice, setNotice] = useState<{ tone: Tone; text: string } | null>(null)
@@ -118,9 +120,13 @@ export function TimetablePage() {
                         variant="ghost"
                         aria-label={`Delete the record of ${fileName(u.source_file)}`}
                         loading={remove.isPending && remove.variables === u.id}
-                        onClick={() => {
-                          if (window.confirm('Delete this upload record? The timetable slots it created stay.')) remove.mutate(u.id)
-                        }}
+                        onClick={() => ask({
+                          title: `Delete the record of ${fileName(u.source_file)}?`,
+                          message: 'Only the upload record goes. The timetable slots it created stay.',
+                          confirmLabel: 'Delete record',
+                          action: () => remove.mutateAsync(u.id),
+                          errorFallback: 'Could not delete the upload record.',
+                        })}
                       >
                         <Trash2 className="size-4" aria-hidden />
                       </Button>
@@ -132,6 +138,7 @@ export function TimetablePage() {
           </Card>
         )}
       </section>
+      {confirmDialog}
     </div>
   )
 }

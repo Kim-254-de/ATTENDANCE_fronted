@@ -1,11 +1,12 @@
 import clsx from 'clsx'
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, Ref } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
   loading?: boolean
+  ref?: Ref<HTMLButtonElement>
 }
 
 const styles: Record<Variant, string> = {

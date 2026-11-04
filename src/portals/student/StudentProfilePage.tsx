@@ -1,20 +1,22 @@
 import { useRef, type ChangeEvent } from 'react'
-import { BookOpen, Camera, LogOut, Mail, ShieldCheck } from 'lucide-react'
+import { BookOpen, Camera, LogOut, Mail } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { errorMessage } from '@/lib/api'
 import { initials } from '@/lib/format'
 import { resizeImageFile } from '@/lib/image'
-import { useForgotPassword, useLogout, useMe, useRemoveAvatar, useSetAvatar } from '@/auth/authApi'
-import { DeleteAccountCard } from '@/auth/DeleteAccountCard'
+import { useLogout, useMe, useRemoveAvatar, useSetAvatar } from '@/auth/authApi'
+import { ChangePasswordRow } from '@/auth/ChangePasswordRow'
+import { DeleteAccountRow } from '@/auth/DeleteAccountRow'
 import { FaceCheckInCard } from './FaceCheckInCard'
 
 /**
  * A student's own details. Read-only: name, email and registration number are
  * what the student records check verified at registration, so they aren't
  * editable here (ask the registrar). The password and profile photo can be changed,
- * and the account deleted.
+ * and the account deleted. Same order as the lecturer's: identity, details, settings,
+ * Sign out, then a quiet Delete account.
  */
 export function StudentProfilePage() {
   const { data: me } = useMe()
@@ -23,7 +25,6 @@ export function StudentProfilePage() {
   const user = me?.role === 'student' ? me : undefined
   const setAvatar = useSetAvatar()
   const removeAvatar = useRemoveAvatar()
-  const forgotPassword = useForgotPassword()
   const fileInputRef = useRef<HTMLInputElement>(null)
   if (!user) return null
 
@@ -76,28 +77,18 @@ export function StudentProfilePage() {
           )}
         </div>
         <div className="space-y-4 p-6">
-          <Info icon={<Mail className="size-5" />} label="Email" value={user.email} />
-          <Info icon={<BookOpen className="size-5" />} label="Year of study" value={user.yearOfStudy ? `Year ${user.yearOfStudy}` : 'Not recorded'} />
-          <Info icon={<ShieldCheck className="size-5 text-success" />} label="Account status" value="Active and verified" valueClass="text-success" />
-          <div className="space-y-3 border-t border-line pt-4">
-            {forgotPassword.isSuccess ? (
-              <p role="status" className="flex items-center gap-2 text-sm font-medium text-success"><Mail className="size-4" aria-hidden /> Check your inbox for the reset link.</p>
-            ) : (
-              <>
-                <Button className="w-full" loading={forgotPassword.isPending} onClick={() => forgotPassword.mutate(user.email)}>
-                  Send reset link
-                </Button>
-                {forgotPassword.isError && <p className="text-sm text-danger">{errorMessage(forgotPassword.error)}</p>}
-              </>
-            )}
-            <Button variant="danger" className="w-full" loading={logout.isPending} onClick={signOut}>
-              <LogOut className="size-4" aria-hidden /> Sign out
-            </Button>
-          </div>
+          <Info icon={<Mail className="size-5 text-muted" />} label="Email" value={user.email} />
+          <Info icon={<BookOpen className="size-5 text-muted" />} label="Year of study" value={user.yearOfStudy ? `Year ${user.yearOfStudy}` : 'Not recorded'} />
+        </div>
+        <div className="border-t border-line px-6 py-3">
+          <ChangePasswordRow />
         </div>
       </Card>
       <FaceCheckInCard />
-      <DeleteAccountCard />
+      <Button variant="danger" className="w-full" loading={logout.isPending} onClick={signOut}>
+        <LogOut className="size-4" aria-hidden /> Sign out
+      </Button>
+      <DeleteAccountRow />
     </div>
   )
 }
