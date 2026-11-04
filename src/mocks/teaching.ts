@@ -297,10 +297,10 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
     http.post(`${base}/exam-list`, read(async ({ request }) => {
       const { papers } = (await request.json()) as { papers: Array<{ classes?: Array<{ programme: string; year: number; semester: number; students: number }>; codes: string[]; title: string; sitting: 'regular' | 'odel' }> }
       for (const p of papers) {
-        const rows = p.codes.flatMap((c) => SYNCED[c] ?? []).map((r) => ({
+        const rows: (typeof state.listed)[number]['rows'] = p.codes.flatMap((c) => SYNCED[c] ?? []).map((r) => ({
           id: id('row'), programme: r.programme, year: r.year, semester: 1, stream: '', students: r.students, smartttStudents: r.students, edited: false,
         }))
-        for (const c of p.classes ?? []) rows.push({ id: id('row'), programme: c.programme, year: c.year, semester: c.semester, stream: '', students: c.students, smartttStudents: null, edited: true } as (typeof rows)[number])
+        for (const c of p.classes ?? []) rows.push({ id: id('row'), programme: c.programme, year: c.year, semester: c.semester, stream: '', students: c.students, smartttStudents: null, edited: true })
         state.listed.push({ id: id('paper'), codes: p.codes, title: p.title, sitting: p.sitting, rows })
       }
       return ok({ created: papers.length, updated: 0, smarttt: { available: true, reason: null } })
