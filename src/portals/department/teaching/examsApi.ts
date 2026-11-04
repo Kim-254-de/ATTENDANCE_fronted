@@ -261,6 +261,23 @@ export async function readExamList(term: string | undefined, file: File): Promis
   return data
 }
 
+/**
+ * Unit codes as a person types them: 'math 241' -> ['MATH 241'], 'COSC 0172/0170' ->
+ * ['COSC 0172', 'COSC 0170'], 'BITE 131/COSC 130' -> both. Null when any part isn't a code.
+ */
+export function typedCodes(text: string): string[] | null {
+  let prefix = ''
+  const out: string[] = []
+  for (const part of text.split(/[/&,]/).map((p) => p.trim()).filter(Boolean)) {
+    const m = /^(?:([A-Za-z]{2,6})\s*-?\s*)?(\d{2,5}[A-Za-z]?)$/.exec(part)
+    if (!m) return null
+    if (m[1]) prefix = m[1].toUpperCase()
+    if (!prefix) return null
+    out.push(`${prefix} ${m[2]!.toUpperCase()}`)
+  }
+  return out.length ? [...new Set(out)] : null
+}
+
 export const useSaveExamList = (term: string | undefined) =>
   useSave(async (papers: ListedPaperInput[]) =>
     (await api.post<{ created: number; updated: number; smarttt: ExamListReview['smarttt'] }>(`${BASE}/exam-list`, { papers }, { params: params(term), timeout: 120_000 })).data,
