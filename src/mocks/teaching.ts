@@ -255,14 +255,30 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
       return ok(null)
     })),
     // The uploaded exam list: any file reads as the same letter (the browser can't read .docx).
-    http.post(`${base}/exam-list/read`, read(() => {
+    http.post(`${base}/exam-list/read`, read(async ({ request }) => {
+      const { file } = (await request.clone().json()) as { file: string }
       const entry = (line: number, code: string, title: string, extra: object = {}) => {
         const rows = SYNCED[code] ?? []
         return {
           line, codes: [code], title, section: '', sitting: 'regular', students: rows.reduce((n, r) => n + r.students, 0),
           classRows: rows.map((r) => ({ label: `${r.programme} Y${r.year}S1`, students: r.students })),
-          unknownCodes: [], duplicateOf: null, otherDepartments: [], existingPaperId: null, examiner: null, ...extra,
+          unknownCodes: [], duplicateOf: null, otherDepartments: [], existingPaperId: null, examiner: null, letterClasses: [], ...extra,
         }
+      }
+      if (atob(file) === 'nursing letter') {
+        return ok({
+          entries: [
+            entry(1, 'NURS 111', 'Anatomy', { section: 'BSc Nursing Y1S1 (107 students)', letterClasses: ['NURSING|1|1'] }),
+            entry(2, 'HRIM 111', 'Records', { section: 'BSc Health Records (14 students)', letterClasses: ['RECORDS||'] }),
+          ],
+          classes: [
+            { id: 'NURSING|1|1', heading: 'BSc Nursing Y1S1 (107 students)', name: 'BSc Nursing', year: 1, semester: 1, students: 107, programme: 'BSC.NURS' },
+            { id: 'RECORDS||', heading: 'BSc Health Records (14 students)', name: 'BSc Health Records', year: null, semester: null, students: 14, programme: '' },
+          ],
+          programmes: [{ code: 'BSC.NURS', name: 'BSc Nursing' }, { code: 'BSC.HRIM', name: 'BSc Health Records' }],
+          smarttt: { available: true, reason: null },
+          summary: { papers: 2, newPapers: 2, duplicates: 0, unknown: 0, noStudents: 2, noClasses: 2 },
+        })
       }
       return ok({
         entries: [
@@ -272,16 +288,19 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
           entry(4, 'MATH 999', 'Not a unit', { unknownCodes: ['MATH 999'] }),
           entry(5, 'STAT 300', 'Regression', { classRows: [{ label: 'BSC.STAT Y3S2', students: 0 }] }),
         ],
+        classes: [],
+        programmes: [],
         smarttt: { available: true, reason: null },
         summary: { papers: 4, newPapers: 4, duplicates: 1, unknown: 1, noStudents: 2, noClasses: 1 },
       })
     })),
     http.post(`${base}/exam-list`, read(async ({ request }) => {
-      const { papers } = (await request.json()) as { papers: Array<{ codes: string[]; title: string; sitting: 'regular' | 'odel' }> }
+      const { papers } = (await request.json()) as { papers: Array<{ classes?: Array<{ programme: string; year: number; semester: number; students: number }>; codes: string[]; title: string; sitting: 'regular' | 'odel' }> }
       for (const p of papers) {
         const rows = p.codes.flatMap((c) => SYNCED[c] ?? []).map((r) => ({
           id: id('row'), programme: r.programme, year: r.year, semester: 1, stream: '', students: r.students, smartttStudents: r.students, edited: false,
         }))
+        for (const c of p.classes ?? []) rows.push({ id: id('row'), programme: c.programme, year: c.year, semester: c.semester, stream: '', students: c.students, smartttStudents: null, edited: true } as (typeof rows)[number])
         state.listed.push({ id: id('paper'), codes: p.codes, title: p.title, sitting: p.sitting, rows })
       }
       return ok({ created: papers.length, updated: 0, smarttt: { available: true, reason: null } })

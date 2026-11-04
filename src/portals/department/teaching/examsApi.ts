@@ -49,8 +49,30 @@ export interface ListedRow {
 }
 
 /** The uploaded exam list as read, before anything is saved. */
+/** A class a letter's heading names and gives a number. Year or semester null: nothing says, so check it. */
+export interface LetterClass {
+  id: string
+  heading: string
+  name: string
+  year: number | null
+  semester: number | null
+  students: number
+  /** '' when no single SMARTTT programme has this name. */
+  programme: string
+}
+
+export interface LetterClassInput {
+  programme: string
+  year: number
+  semester: number
+  students: number
+}
+
 export interface ExamListReview {
+  classes: LetterClass[]
+  programmes: Array<{ code: string; name: string }>
   entries: Array<{
+    letterClasses: string[]
     line: number
     codes: string[]
     title: string
@@ -73,6 +95,7 @@ export interface ListedPaperInput {
   codes: string[]
   title: string
   sitting: Sitting
+  classes?: LetterClassInput[]
 }
 
 export interface RowInput {

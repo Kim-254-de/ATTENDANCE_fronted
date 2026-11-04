@@ -14,6 +14,7 @@ import {
   type EditedRow,
   type ExamListReview,
   type ExamPaper,
+  type LetterClassInput,
   type RowInput,
   type Sitting,
 } from './examsApi'
@@ -29,20 +30,75 @@ interface Draft {
   sitting: Sitting
 }
 
+interface ClassDraft {
+  use: boolean
+  programme: string
+  year: number
+  semester: number
+  students: number
+}
+
 const splitCodes = (codes: string) => codes.split('/').map((c) => c.trim()).filter(Boolean)
+
+/** The classes the letter's headings give a number for: checked, and matched to SMARTTT's programmes. */
+function LetterClasses({ review, classes, set }: { review: ExamListReview; classes: Record<string, ClassDraft>; set: (id: string, patch: Partial<ClassDraft>) => void }) {
+  if (review.classes.length === 0) return null
+  const unmatched = review.classes.filter((c) => classes[c.id]?.use && !classes[c.id]!.programme.trim()).length
+  const num = 'input w-16'
+  return (
+    <div className="space-y-2">
+      <h3 className="font-semibold text-ink">Classes named in the letter</h3>
+      <p className="text-muted">
+        Each number goes on every paper under that class's heading, and replaces what the class had on those papers, a number entered earlier too.
+        Other classes keep what they have, and their numbers can be entered after saving.
+        {unmatched > 0 && <span className="text-warning"> {unmatched} have no programme yet: choose one, or their numbers won't be saved.</span>}
+      </p>
+      <datalist id="smarttt-programmes">{review.programmes.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}</datalist>
+      <TableCard>
+        <thead className="bg-surface">
+          <tr>
+            <th className={th}>Use</th><th className={th}>Class in the letter</th><th className={th}>SMARTTT programme</th>
+            <th className={th}>Year</th><th className={th}>Semester</th><th className={th}>Students</th>
+          </tr>
+        </thead>
+        <tbody>
+          {review.classes.map((c) => {
+            const d = classes[c.id]
+            if (!d) return null
+            return (
+              <tr key={c.id} className="border-t border-line">
+                <td className={td}><input type="checkbox" checked={d.use} onChange={(e) => set(c.id, { use: e.target.checked })} aria-label={`Use ${c.name}`} /></td>
+                <td className={td} title={c.heading}>{c.name}</td>
+                <td className={clsx(td, !d.programme.trim() && 'bg-warning-soft/40')}>
+                  <input list="smarttt-programmes" value={d.programme} onChange={(e) => set(c.id, { programme: e.target.value })} placeholder="Programme code" className="input w-36" aria-label={`Programme of ${c.name}`} />
+                </td>
+                <td className={clsx(td, c.year === null && 'bg-warning-soft/40')}><input type="number" min={1} max={10} value={d.year} onChange={(e) => set(c.id, { year: Number(e.target.value) })} className={num} aria-label={`Year of ${c.name}`} /></td>
+                <td className={clsx(td, c.semester === null && 'bg-warning-soft/40')}><input type="number" min={1} max={3} value={d.semester} onChange={(e) => set(c.id, { semester: Number(e.target.value) })} className={num} aria-label={`Semester of ${c.name}`} /></td>
+                <td className={td}><input type="number" min={1} max={5000} value={d.students} onChange={(e) => set(c.id, { students: Number(e.target.value) })} className={num} aria-label={`Students of ${c.name}`} /></td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </TableCard>
+      <p className="text-xs text-muted">Highlighted: the letter and the timetable don't say, so check it.</p>
+    </div>
+  )
+}
 
 /**
  * The department's exam list uploaded as the Word letter it sends for
  * moderation: read, shown for review with what needs a look (duplicates,
  * codes SMARTTT doesn't know, codes another department listed, papers with no
  * class), corrected, then saved. Classes come from SMARTTT's master timetable
- * and who synced; numbers from who synced.
+ * and who synced, and from the letter's headings; numbers from those headings,
+ * else who synced.
  */
 export function ExamListUpload({ term, onClose }: { term: string | undefined; onClose: () => void }) {
   const [reading, setReading] = useState(false)
   const [readError, setReadError] = useState<unknown>(null)
   const [review, setReview] = useState<ExamListReview | null>(null)
   const [drafts, setDrafts] = useState<Draft[]>([])
+  const [classes, setClasses] = useState<Record<string, ClassDraft>>({})
   const save = useSaveExamList(term)
 
   const read = async (file: File | undefined) => {
@@ -53,6 +109,7 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
       const r = await readExamList(term, file)
       setReview(r)
       setDrafts(r.entries.map((e) => ({ include: e.duplicateOf === null, codes: e.codes.join('/'), title: e.title, sitting: e.sitting })))
+      setClasses(Object.fromEntries(r.classes.map((c) => [c.id, { use: true, programme: c.programme, year: c.year ?? 1, semester: c.semester ?? 1, students: c.students }])))
     } catch (error) {
       setReadError(error)
     } finally {
@@ -61,9 +118,24 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
   }
 
   const chosen = drafts.filter((d) => d.include && splitCodes(d.codes).length > 0)
+  /** The letter's classes on a line's paper that are in use and have a programme and a number. */
+  const classesOf = (d: Draft): LetterClassInput[] => {
+    const entry = review?.entries[drafts.indexOf(d)]
+    return (entry?.letterClasses ?? []).flatMap((id) => {
+      const c = classes[id]
+      if (!c?.use || !c.programme.trim() || !(c.students > 0)) return []
+      return [{ programme: c.programme.trim(), year: c.year, semester: c.semester, students: c.students }]
+    })
+  }
   const set = (i: number, patch: Partial<Draft>) => setDrafts(drafts.map((d, j) => (j === i ? { ...d, ...patch } : d)))
   const submit = () =>
-    save.mutate(chosen.map((d) => ({ codes: splitCodes(d.codes), title: d.title.trim(), sitting: d.sitting })), { onSuccess: onClose })
+    save.mutate(
+      chosen.map((d) => {
+        const named = classesOf(d)
+        return { codes: splitCodes(d.codes), title: d.title.trim(), sitting: d.sitting, ...(named.length > 0 ? { classes: named } : {}) }
+      }),
+      { onSuccess: onClose },
+    )
 
   return (
     <Dialog title="Upload your exam list" onClose={onClose} wide>
@@ -74,7 +146,9 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
               Upload the Word document you send for moderation (.docx). Every table row with a unit code becomes a
               paper; rows under an ODEL or part-time heading, or written “MATH 241 odel”, are ODEL papers. The classes
               taking each unit come from the SMARTTT master timetable, so the Director's timetable keeps them from
-              clashing. Student numbers come from who synced each unit, and you can correct them after saving.
+              clashing. A heading that gives a class's size, like “BSc Nursing Y1S1 (107 students)”, sets that class's number on
+              its papers, and uploading again overwrites with the new letter's numbers. Other numbers come from who
+              synced each unit, and you can enter or correct them after saving.
             </p>
             <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-line px-4 py-8 text-center hover:bg-surface">
               <FileUp className="size-6 text-brand" aria-hidden />
@@ -97,6 +171,7 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
                 Classes and student numbers couldn't be read from SMARTTT: {review.smarttt.reason} You can still save, and enter or re-count them later.
               </p>
             )}
+            <LetterClasses review={review} classes={classes} set={(id, patch) => setClasses({ ...classes, [id]: { ...classes[id]!, ...patch } })} />
             <TableCard>
               <thead className="bg-surface">
                 <tr>
@@ -112,11 +187,12 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
                     e.duplicateOf !== null && `Same as line ${e.duplicateOf}`,
                     e.unknownCodes.length > 0 && `SMARTTT doesn't know ${e.unknownCodes.join(', ')}: check the code`,
                     e.otherDepartments.length > 0 && `Also listed by ${e.otherDepartments.join(', ')}`,
-                    e.students === 0 && e.classRows.length > 0 && 'On the master timetable, nobody synced yet: enter the numbers after saving',
-                    e.students === 0 && e.classRows.length === 0 && 'Not on the master timetable and nobody synced: add its classes after saving',
+                    e.letterClasses.length === 0 && e.students === 0 && e.classRows.length > 0 && 'On the master timetable, nobody synced yet: enter the numbers after saving',
+                    e.letterClasses.length === 0 && e.students === 0 && e.classRows.length === 0 && 'Not on the master timetable and nobody synced: add its classes after saving',
+                    e.letterClasses.length > 0 && `Numbers from the letter's ${e.letterClasses.length === 1 ? 'class' : `${e.letterClasses.length} classes`}`,
                     e.existingPaperId && 'Already yours: updates it',
                   ].filter((n): n is string => !!n)
-                  const warn = e.unknownCodes.length > 0 || e.otherDepartments.length > 0 || (e.students === 0 && e.classRows.length === 0)
+                  const warn = e.unknownCodes.length > 0 || e.otherDepartments.length > 0 || (e.letterClasses.length === 0 && e.students === 0 && e.classRows.length === 0)
                   return (
                     <tr key={e.line} className={clsx('border-t border-line align-top', !d.include && 'opacity-50', warn && d.include && 'bg-warning-soft/40')}>
                       <td className={td}>
@@ -140,7 +216,7 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
                         {e.classRows.length > 0 && <span className="block text-xs text-muted">{e.classRows.length} class{e.classRows.length > 1 ? 'es' : ''}</span>}
                       </td>
                       <td className={`${td} text-xs`}>
-                        {notes.map((n) => <span key={n} className={clsx('block', /^(Already|Same)/.test(n) ? 'text-muted' : 'text-warning')}>{n}</span>)}
+                        {notes.map((n) => <span key={n} className={clsx('block', /^(Already|Same|Numbers)/.test(n) ? 'text-muted' : 'text-warning')}>{n}</span>)}
                       </td>
                     </tr>
                   )
