@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { errorMessage } from '@/lib/api'
 import { formatShortDate } from '@/lib/format'
 import type { SmartttTerm } from '@/types'
@@ -20,14 +21,22 @@ export function TermsPage() {
   const setCurrent = useSetCurrentTerm()
   const clearSlots = useClearTermSlots()
   const [notice, setNotice] = useState<{ tone: Tone; text: string } | null>(null)
+  const [ask, confirmDialog] = useConfirm()
 
   const onError = (error: unknown) => setNotice({ tone: 'error', text: errorMessage(error) })
   const makeCurrent = (t: SmartttTerm) =>
     setCurrent.mutate(t.id, { onSuccess: () => setNotice({ tone: 'success', text: `${termName(t)} is now the current term.` }), onError })
-  const clear = (t: SmartttTerm) => {
-    if (!window.confirm(`Delete every timetable slot of ${termName(t)}? This cannot be undone.`)) return
-    clearSlots.mutate(t.id, { onSuccess: (r) => setNotice({ tone: 'success', text: r.detail ?? 'Slots cleared.' }), onError })
-  }
+  const clear = (t: SmartttTerm) =>
+    ask({
+      title: `Clear the slots of ${termName(t)}?`,
+      message: 'Every timetable slot of this term is deleted. This cannot be undone.',
+      confirmLabel: 'Clear slots',
+      action: async () => {
+        const r = await clearSlots.mutateAsync(t.id)
+        setNotice({ tone: 'success', text: r.detail ?? 'Slots cleared.' })
+      },
+      errorFallback: 'Could not clear the slots.',
+    })
 
   return (
     <div className="space-y-4">
@@ -66,6 +75,7 @@ export function TermsPage() {
           </table>
         </Card>
       )}
+      {confirmDialog}
     </div>
   )
 }

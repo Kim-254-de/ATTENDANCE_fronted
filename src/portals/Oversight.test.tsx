@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, vi } from 'vitest'
 import { renderApp } from '@/test/renderApp'
+import { answerConfirm } from '@/test/confirmDialog'
 
 /**
  * The oversight backlog across portals: exam eligibility, placing lecturers in departments,
@@ -108,8 +109,8 @@ describe('unifying department spellings', () => {
     const keep = await screen.findByRole('radio', { name: /^computer science/i })
     expect(screen.getByRole('radio', { name: /department of computer science/i })).toBeInTheDocument()
     await user.click(keep)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: /merge into “computer science”/i }))
+    await answerConfirm(user, /merge into “computer science”\?/i, /^merge$/i)
 
     expect(await screen.findByText(/every department has a single spelling/i)).toBeInTheDocument()
     // Both names already mean the same once normalised, so no extra spelling needs remembering.

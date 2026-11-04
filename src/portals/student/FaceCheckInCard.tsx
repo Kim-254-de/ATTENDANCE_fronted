@@ -2,6 +2,7 @@ import { ScanFace } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { errorMessage } from '@/lib/api'
 import { useMyFaceStatus, useSetFaceConsent } from './faceApi'
 
@@ -18,11 +19,16 @@ export function FaceCheckInCard() {
   const setConsent = useSetFaceConsent()
   const [agreeing, setAgreeing] = useState(false)
   const [agreed, setAgreed] = useState(false)
+  const [ask, confirmDialog] = useConfirm()
 
-  const turnOff = () => {
-    if (!window.confirm('Turn off face check-in? Your registered face will be deleted. You can still check in by scanning the QR code.')) return
-    setConsent.mutate(false)
-  }
+  const turnOff = () =>
+    ask({
+      title: 'Turn off face check-in?',
+      message: 'Your registered face will be deleted. You can still check in by scanning the QR code.',
+      confirmLabel: 'Turn off',
+      action: () => setConsent.mutateAsync(false),
+      errorFallback: 'Could not turn off face check-in.',
+    })
 
   return (
     <Card className="space-y-4 p-6" aria-labelledby="face-checkin-title">
@@ -73,7 +79,8 @@ export function FaceCheckInCard() {
           <Button className="w-full" onClick={() => setAgreeing(true)}>Turn on face check-in</Button>
         </div>
       )}
-      {setConsent.isError && <p role="alert" className="text-sm text-danger">{errorMessage(setConsent.error)}</p>}
+      {setConsent.isError && !confirmDialog && <p role="alert" className="text-sm text-danger">{errorMessage(setConsent.error)}</p>}
+      {confirmDialog}
     </Card>
   )
 }

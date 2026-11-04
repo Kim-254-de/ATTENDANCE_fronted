@@ -1,7 +1,8 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, vi } from 'vitest'
 import { renderApp } from '@/test/renderApp'
+import { answerConfirm } from '@/test/confirmDialog'
 
 /**
  * The portal renders a sidebar (lg+) and a bottom nav (below lg) from the same
@@ -18,7 +19,6 @@ async function signInAsDepartment(user: ReturnType<typeof userEvent.setup>, path
   await user.click(screen.getByRole('button', { name: /sign in/i }))
 }
 
-// The delete tests stub window.confirm.
 afterEach(() => { vi.restoreAllMocks() })
 
 describe('department portal', () => {
@@ -84,7 +84,6 @@ describe('department portal', () => {
   })
 
   it('deletes a lecturer’s account from their page, after a confirmation', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
     await signInAsDepartment(user)
     await screen.findByText('82.3%')
@@ -93,13 +92,13 @@ describe('department portal', () => {
     await user.click(within(rows[0]!).getByRole('link', { name: /peter njuguna/i }))
 
     await user.click(await screen.findByRole('button', { name: /delete mr\. peter njuguna's account/i }))
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/cannot be undone/i))
+    const dialog = await answerConfirm(user, /delete mr\. peter njuguna's account\?/i, /^delete account$/i)
+    expect(dialog).toHaveTextContent(/cannot be undone/i)
     expect(await screen.findByText('2 lecturers')).toBeInTheDocument()
     expect(screen.queryByText('Mr. Peter Njuguna')).not.toBeInTheDocument()
   })
 
   it('deletes a student’s account from the students list, and keeps it when the officer cancels', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const user = userEvent.setup()
     await signInAsDepartment(user)
     await screen.findByText('82.3%')
@@ -107,10 +106,12 @@ describe('department portal', () => {
     expect(await screen.findByText('9 students')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /delete amina wanjiku kamau's account/i }))
+    await answerConfirm(user, /delete amina wanjiku kamau's account\?/i, /^cancel$/i)
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(screen.getByText('9 students')).toBeInTheDocument()
 
-    confirm.mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: /delete amina wanjiku kamau's account/i }))
+    await answerConfirm(user, /delete amina wanjiku kamau's account\?/i, /^delete account$/i)
     expect(await screen.findByText('8 students')).toBeInTheDocument()
     expect(screen.queryByText('Amina Wanjiku Kamau')).not.toBeInTheDocument()
   })

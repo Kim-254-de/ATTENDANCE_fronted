@@ -1,5 +1,6 @@
 import { MailPlus, UserX } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { errorMessage } from '@/lib/api'
 import { formatDateTime, initials } from '@/lib/format'
 import type { Officer } from '@/types'
@@ -37,6 +38,7 @@ export function OfficersTable({
   emptyText: string
 }) {
   const { resend, deactivate } = useOfficerActions(base, listKey)
+  const [ask, confirmDialog] = useConfirm()
 
   const onResend = (officer: Officer) =>
     resend.mutate(officer.userId, {
@@ -45,10 +47,14 @@ export function OfficersTable({
       onError: (error) => window.alert(errorMessage(error, 'Could not re-send the invitation.')),
     })
 
-  const onDeactivate = (officer: Officer) => {
-    if (!window.confirm(`Remove ${officer.fullName}'s access? They are signed out at once and their invitation link stops working. Invite them again to restore it.`)) return
-    deactivate.mutate(officer.userId, { onError: (error) => window.alert(errorMessage(error, 'Could not remove access.')) })
-  }
+  const onDeactivate = (officer: Officer) =>
+    ask({
+      title: `Remove ${officer.fullName}'s access?`,
+      message: 'They are signed out at once and their invitation link stops working. Invite them again to restore it.',
+      confirmLabel: 'Remove access',
+      action: () => deactivate.mutateAsync(officer.userId),
+      errorFallback: 'Could not remove access.',
+    })
 
   if (officers.length === 0) return <Card className="p-10 text-center text-sm text-muted">{emptyText}</Card>
 
@@ -100,6 +106,7 @@ export function OfficersTable({
           ))}
         </tbody>
       </table>
+      {confirmDialog}
     </Card>
   )
 }
