@@ -83,12 +83,22 @@ export interface ExamListReview {
     classRows: Array<{ label: string; students: number }>
     unknownCodes: string[]
     duplicateOf: number | null
+    /** The line this repeats: a unit listed a second time is its ODEL paper. */
+    secondListingOf: number | null
     otherDepartments: string[]
     existingPaperId: string | null
+    /** Your regular paper of these codes that becomes this ODEL paper (the letter lists it only as ODEL now). */
+    switchesPaperId: string | null
     examiner: { lecturerId: string | null; staffNumber: string; name: string } | null
   }>
   smarttt: { available: boolean; reason: string | null }
-  summary: { papers: number; newPapers: number; duplicates: number; unknown: number; noStudents: number; noClasses: number }
+  summary: {
+    papers: number; newPapers: number; duplicates: number; unknown: number; noStudents: number; noClasses: number
+    /** Lines taken as a unit's ODEL paper for being its second listing. */
+    secondListings: number
+    /** Your regular papers this letter turns into ODEL papers. */
+    toOdel: number
+  }
 }
 
 export interface ListedPaperInput {
@@ -96,6 +106,8 @@ export interface ListedPaperInput {
   title: string
   sitting: Sitting
   classes?: LetterClassInput[]
+  /** For an ODEL paper: your regular paper that becomes it, keeping its examiner, invigilators and numbers. */
+  replacesPaperId?: string
 }
 
 export interface RowInput {
@@ -280,7 +292,7 @@ export function typedCodes(text: string): string[] | null {
 
 export const useSaveExamList = (term: string | undefined) =>
   useSave(async (papers: ListedPaperInput[]) =>
-    (await api.post<{ created: number; updated: number; smarttt: ExamListReview['smarttt'] }>(`${BASE}/exam-list`, { papers }, { params: params(term), timeout: 120_000 })).data,
+    (await api.post<{ created: number; updated: number; switched: number; smarttt: ExamListReview['smarttt'] }>(`${BASE}/exam-list`, { papers }, { params: params(term), timeout: 120_000 })).data,
   )
 
 /** Every paper of the uploaded list removed at once. */

@@ -62,8 +62,13 @@ function seed(): State {
 let state = seed()
 
 /** Tests only: back to the seeded department. */
+/** The exam lists saved since the last reset, as sent: for tests to check what the review sent. */
+let examListSaves: Array<Array<Record<string, unknown>>> = []
+export const savedExamLists = () => examListSaves
+
 export function resetTeaching() {
   state = seed()
+  examListSaves = []
   seq = 0
 }
 
@@ -262,8 +267,22 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
         return {
           line, codes: [code], title, section: '', sitting: 'regular', students: rows.reduce((n, r) => n + r.students, 0),
           classRows: rows.map((r) => ({ label: `${r.programme} Y${r.year}S1`, students: r.students })),
-          unknownCodes: [], duplicateOf: null, otherDepartments: [], existingPaperId: null, examiner: null, letterClasses: [], ...extra,
+          unknownCodes: [], duplicateOf: null, secondListingOf: null, otherDepartments: [], existingPaperId: null, switchesPaperId: null, examiner: null, letterClasses: [], ...extra,
         }
+      }
+      if (atob(file) === 'odel letter') {
+        // A unit listed twice (the second is its ODEL paper), and a regular paper of yours the letter lists only as ODEL.
+        return ok({
+          entries: [
+            entry(1, 'MATH 241', 'Linear Algebra'),
+            entry(2, 'MATH 241', 'Linear Algebra II', { sitting: 'odel', secondListingOf: 1 }),
+            entry(3, 'MATH 446', 'Statistical Inference II', { sitting: 'odel', section: 'ODEL / PART-TIME DRAFTS', switchesPaperId: 'p-math446' }),
+          ],
+          classes: [],
+          programmes: [],
+          smarttt: { available: true, reason: null },
+          summary: { papers: 3, newPapers: 3, duplicates: 0, unknown: 0, noStudents: 1, noClasses: 0, secondListings: 1, toOdel: 1 },
+        })
       }
       if (atob(file) === 'nursing letter') {
         return ok({
@@ -277,7 +296,7 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
           ],
           programmes: [{ code: 'BSC.NURS', name: 'BSc Nursing' }, { code: 'BSC.HRIM', name: 'BSc Health Records' }],
           smarttt: { available: true, reason: null },
-          summary: { papers: 2, newPapers: 2, duplicates: 0, unknown: 0, noStudents: 2, noClasses: 2 },
+          summary: { papers: 2, newPapers: 2, duplicates: 0, unknown: 0, noStudents: 2, noClasses: 2, secondListings: 0, toOdel: 0 },
         })
       }
       return ok({
@@ -291,11 +310,12 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
         classes: [],
         programmes: [],
         smarttt: { available: true, reason: null },
-        summary: { papers: 4, newPapers: 4, duplicates: 1, unknown: 1, noStudents: 2, noClasses: 1 },
+        summary: { papers: 4, newPapers: 4, duplicates: 1, unknown: 1, noStudents: 2, noClasses: 1, secondListings: 0, toOdel: 0 },
       })
     })),
     http.post(`${base}/exam-list`, read(async ({ request }) => {
-      const { papers } = (await request.json()) as { papers: Array<{ classes?: Array<{ programme: string; year: number; semester: number; students: number }>; codes: string[]; title: string; sitting: 'regular' | 'odel' }> }
+      const { papers } = (await request.json()) as { papers: Array<{ classes?: Array<{ programme: string; year: number; semester: number; students: number }>; codes: string[]; title: string; sitting: 'regular' | 'odel'; replacesPaperId?: string }> }
+      examListSaves.push(papers)
       for (const p of papers) {
         const rows: (typeof state.listed)[number]['rows'] = p.codes.flatMap((c) => SYNCED[c] ?? []).map((r) => ({
           id: id('row'), programme: r.programme, year: r.year, semester: 1, stream: '', students: r.students, smartttStudents: r.students, edited: false,
@@ -303,7 +323,8 @@ export function teachingHandlers(api: string, guard: () => Response | undefined 
         for (const c of p.classes ?? []) rows.push({ id: id('row'), programme: c.programme, year: c.year, semester: c.semester, stream: '', students: c.students, smartttStudents: null, edited: true })
         state.listed.push({ id: id('paper'), codes: p.codes, title: p.title, sitting: p.sitting, rows })
       }
-      return ok({ created: papers.length, updated: 0, smarttt: { available: true, reason: null } })
+      const switched = papers.filter((p) => p.replacesPaperId).length
+      return ok({ created: papers.length - switched, updated: 0, switched, smarttt: { available: true, reason: null } })
     })),
     http.patch(`${base}/exam-papers/:id`, read(async ({ params, request }) => {
       const paper = state.listed.find((p) => p.id === params.id)
