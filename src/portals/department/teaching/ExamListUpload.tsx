@@ -28,6 +28,8 @@ interface Draft {
   codes: string
   title: string
   sitting: Sitting
+  /** Turn your regular paper into this ODEL one (when the review offers it), rather than add another paper. */
+  switchFrom: boolean
 }
 
 interface ClassDraft {
@@ -108,7 +110,7 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
     try {
       const r = await readExamList(term, file)
       setReview(r)
-      setDrafts(r.entries.map((e) => ({ include: e.duplicateOf === null, codes: e.codes.join('/'), title: e.title, sitting: e.sitting })))
+      setDrafts(r.entries.map((e) => ({ include: e.duplicateOf === null, codes: e.codes.join('/'), title: e.title, sitting: e.sitting, switchFrom: !!e.switchesPaperId })))
       setClasses(Object.fromEntries(r.classes.map((c) => [c.id, { use: true, programme: c.programme, year: c.year ?? 1, semester: c.semester ?? 1, students: c.students }])))
     } catch (error) {
       setReadError(error)
@@ -132,7 +134,14 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
     save.mutate(
       chosen.map((d) => {
         const named = classesOf(d)
-        return { codes: splitCodes(d.codes), title: d.title.trim(), sitting: d.sitting, ...(named.length > 0 ? { classes: named } : {}) }
+        const replaces = review?.entries[drafts.indexOf(d)]?.switchesPaperId
+        return {
+          codes: splitCodes(d.codes),
+          title: d.title.trim(),
+          sitting: d.sitting,
+          ...(named.length > 0 ? { classes: named } : {}),
+          ...(replaces && d.switchFrom && d.sitting === 'odel' ? { replacesPaperId: replaces } : {}),
+        }
       }),
       { onSuccess: onClose },
     )
@@ -144,7 +153,8 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
           <>
             <p className="text-muted">
               Upload the Word document you send for moderation (.docx). Every table row with a unit code becomes a
-              paper; rows under an ODEL or part-time heading, or written “MATH 241 odel”, are ODEL papers. The classes
+              paper; rows under an ODEL or part-time heading, written “MATH 241 odel” or titled “… ODEL”, are ODEL papers, and so
+              is a unit's second listing. A unit your list has as regular but the letter lists only as ODEL becomes an ODEL paper. The classes
               taking each unit come from the SMARTTT master timetable, so the Director's timetable keeps them from
               clashing. A heading that gives a class's size, like “BSc Nursing Y1S1 (107 students)”, sets that class's number on
               its papers, and uploading again overwrites with the new letter's numbers. Other numbers come from who
@@ -163,6 +173,8 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
             <p className="text-muted">
               {review.summary.papers} papers read
               {review.summary.newPapers < review.summary.papers && `, ${review.summary.papers - review.summary.newPapers} already yours (their titles update)`}.
+              {review.summary.secondListings > 0 && ` ${review.summary.secondListings} units listed twice: the second listing is taken as the ODEL paper.`}
+              {review.summary.toOdel > 0 && ` ${review.summary.toOdel} of your regular papers become ODEL papers.`}
               {review.summary.duplicates > 0 && ` ${review.summary.duplicates} repeated rows are left out.`}
               {' '}Check the highlighted rows, then save.
             </p>
@@ -183,8 +195,12 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
               <tbody>
                 {review.entries.map((e, i) => {
                   const d = drafts[i]!
+                  const repeated = e.secondListingOf !== null ? review.entries.find((x) => x.line === e.secondListingOf) : undefined
                   const notes = [
                     e.duplicateOf !== null && `Same as line ${e.duplicateOf}`,
+                    repeated && `ODEL: second listing of line ${repeated.line}`,
+                    repeated && repeated.title.trim().toLowerCase() !== e.title.trim().toLowerCase() &&
+                      `Title differs from line ${repeated.line} (“${repeated.title}”): check the code`,
                     e.unknownCodes.length > 0 && `SMARTTT doesn't know ${e.unknownCodes.join(', ')}: check the code`,
                     e.otherDepartments.length > 0 && `Also listed by ${e.otherDepartments.join(', ')}`,
                     e.letterClasses.length === 0 && e.students === 0 && e.classRows.length > 0 && 'On the master timetable, nobody synced yet: enter the numbers after saving',
@@ -192,6 +208,7 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
                     e.letterClasses.length > 0 && `Numbers from the letter's ${e.letterClasses.length === 1 ? 'class' : `${e.letterClasses.length} classes`}`,
                     e.existingPaperId && 'Already yours: updates it',
                   ].filter((n): n is string => !!n)
+                  const switchable = !!e.switchesPaperId && d.sitting === 'odel'
                   const warn = e.unknownCodes.length > 0 || e.otherDepartments.length > 0 || (e.letterClasses.length === 0 && e.students === 0 && e.classRows.length === 0)
                   return (
                     <tr key={e.line} className={clsx('border-t border-line align-top', !d.include && 'opacity-50', warn && d.include && 'bg-warning-soft/40')}>
@@ -216,7 +233,16 @@ export function ExamListUpload({ term, onClose }: { term: string | undefined; on
                         {e.classRows.length > 0 && <span className="block text-xs text-muted">{e.classRows.length} class{e.classRows.length > 1 ? 'es' : ''}</span>}
                       </td>
                       <td className={`${td} text-xs`}>
-                        {notes.map((n) => <span key={n} className={clsx('block', /^(Already|Same|Numbers)/.test(n) ? 'text-muted' : 'text-warning')}>{n}</span>)}
+                        {notes.map((n) => <span key={n} className={clsx('block', /^(Already|Same|Numbers|ODEL)/.test(n) ? 'text-muted' : 'text-warning')}>{n}</span>)}
+                        {switchable && (
+                          <label className="mt-1 flex items-start gap-1.5 text-ink">
+                            <input type="checkbox" checked={d.switchFrom} onChange={(x) => set(i, { switchFrom: x.target.checked })} className="mt-0.5" />
+                            <span>
+                              Your regular paper becomes this ODEL paper, keeping its examiner and invigilators.
+                              {!d.switchFrom && <span className="block text-warning">Unticked: the regular paper stays and a separate ODEL paper is added.</span>}
+                            </span>
+                          </label>
+                        )}
                       </td>
                     </tr>
                   )

@@ -5,6 +5,7 @@ import { env } from '@/lib/env'
 import { renderApp } from '@/test/renderApp'
 import { answerConfirm } from '@/test/confirmDialog'
 import { typedCodes } from './examsApi'
+import { savedExamLists } from '@/mocks/teaching'
 
 /**
  * The department's Teaching page, against the in-memory teaching API
@@ -142,6 +143,27 @@ describe('the uploaded exam list', () => {
     await user.type(counts[0]!, '95')
     await user.click(within(numbers).getByRole('button', { name: /^save$/i }))
     expect(await screen.findByText('107')).toBeInTheDocument()
+  })
+
+  it("takes a unit's second listing as its ODEL paper, and turns a regular paper the letter lists only as ODEL into it", async () => {
+    const user = await openTeaching()
+    await user.click(screen.getByRole('tab', { name: /^exams$/i }))
+    await user.click((await screen.findAllByRole('button', { name: /upload exam list/i }))[0]!)
+    const dialog = await screen.findByRole('dialog', { name: /upload your exam list/i })
+    await user.upload(within(dialog).getByLabelText(/choose the \.docx file/i), new File(['odel letter'], 'odel.docx'))
+
+    expect(await within(dialog).findByText(/1 units listed twice: the second listing is taken as the ODEL paper/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/1 of your regular papers become ODEL papers/i)).toBeInTheDocument()
+    expect(within(dialog).getByText('ODEL: second listing of line 1')).toBeInTheDocument()
+    expect(within(dialog).getByText(/title differs from line 1/i)).toBeInTheDocument()
+    expect(within(dialog).getByRole('combobox', { name: 'Sitting, line 2' })).toHaveValue('odel')
+    const keep = within(dialog).getByRole('checkbox', { name: /your regular paper becomes this ODEL paper/i })
+    expect(keep).toBeChecked()
+    await user.click(within(dialog).getByRole('button', { name: /save 3 papers/i }))
+    await waitFor(() => expect(savedExamLists()).toHaveLength(1))
+    expect(savedExamLists()[0]!.map((p) => [p.sitting, p.replacesPaperId ?? null])).toEqual([
+      ['regular', null], ['odel', null], ['odel', 'p-math446'],
+    ])
   })
 
   it("takes classes and numbers from the letter's headings, and leaves out a class with no programme until one is chosen", async () => {
