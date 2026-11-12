@@ -36,7 +36,7 @@ export function InvigilatorsTab({ term }: { term: string | undefined }) {
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted">
-          {data.draft ? `${data.draft.name} · ` : ''}{named} of {seats} invigilators named
+          {data.draft ? `${data.draft.name} · ` : ''}{seats > 0 && `${named} of ${seats} invigilators named`}
           {data.published && data.publication && ` · published on ${new Date(data.publication.publishedAt).toLocaleDateString()}`}
         </p>
         {data.published ? (
@@ -52,8 +52,7 @@ export function InvigilatorsTab({ term }: { term: string | undefined }) {
       </div>
       {!data.draft && (
         <Card className="p-4 text-sm text-muted">
-          The Director hasn't shared an exam draft yet. You can name each paper's main invigilator now: the timetable
-          then keeps their papers in different sessions. Dates, rooms and any extra rooms show here once the draft is shared.
+          Waiting for the Director's exam draft. You can name each paper's main invigilator now.
         </Card>
       )}
       {publish.isError && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{errorMessage(publish.error)}</p>}
