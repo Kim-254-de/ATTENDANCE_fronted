@@ -36,3 +36,10 @@ Unchanged on purpose: the pink row for a unit with no lecturer, and the
 L / P / CF / When columns.
 
 Files: `src/portals/department/teaching/TeachingPage.tsx`, `ExamsTab.tsx`, `InvigilatorsTab.tsx`.
+
+
+## Theme button everywhere (12 Nov 2026)
+
+The light / dark / system theme button was only in the signed-in headers (and, in
+the SMARTTT app, only on the Profile screens). It is now on every screen people land on:
+every sign-in page and the landing page (`src/auth/AuthShell.tsx`, top right), as well as every portal header as before.
