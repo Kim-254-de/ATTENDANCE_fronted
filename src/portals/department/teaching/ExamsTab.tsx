@@ -74,9 +74,11 @@ export function ExamsTab({ term }: { term: string | undefined }) {
           {data.published && data.publication && ` · published to the Director on ${new Date(data.publication.publishedAt).toLocaleDateString()}`}
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setLetter(true)} disabled={data.papers.length === 0}>
-            <Download className="size-4" aria-hidden /> Moderation letter
-          </Button>
+          {data.papers.length > 0 && (
+            <Button variant="secondary" onClick={() => setLetter(true)}>
+              <Download className="size-4" aria-hidden /> Moderation letter
+            </Button>
+          )}
           {editable && (
             <Button variant={data.papers.length ? 'secondary' : 'primary'} onClick={() => setUploading(true)}>
               <FileUp className="size-4" aria-hidden /> Upload exam list
@@ -126,12 +128,7 @@ export function ExamsTab({ term }: { term: string | undefined }) {
       {failure && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{errorMessage(failure)}</p>}
       {data.papers.length === 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand-ink">
-          <p>
-            Upload your moderation letter, the Word document you send with your exam drafts, or add its units one by one.
-            These are the units on the exam timetable. The classes sitting them come from the SMARTTT master timetable and
-            student numbers from who synced each unit.
-          </p>
-          {editable && <Button onClick={() => setUploading(true)}><FileUp className="size-4" aria-hidden /> Upload exam list</Button>}
+          <p>Upload your moderation letter (Word), or add its units one by one.</p>
         </div>
       )}
       {data.warnings.length > 0 && (

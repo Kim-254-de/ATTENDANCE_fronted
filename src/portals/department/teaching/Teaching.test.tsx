@@ -92,7 +92,7 @@ describe('department teaching', () => {
   it('makes papers only from an uploaded moderation letter, not from units', async () => {
     const user = await openTeaching()
     await user.click(screen.getByRole('tab', { name: /^exams$/i }))
-    expect(await screen.findByText(/these are the units on the exam\s+timetable/i)).toBeInTheDocument()
+    expect(await screen.findByText(/upload your moderation letter \(word\), or add its units one by one/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /add a paper/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /a paper for each unit/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/units on no paper/i)).not.toBeInTheDocument()
@@ -102,12 +102,12 @@ describe('department teaching', () => {
   it('has exam papers and invigilators on their own tabs, without the teaching publish button', async () => {
     const user = await openTeaching()
     await user.click(screen.getByRole('tab', { name: /^exams$/i }))
-    expect(await screen.findByText(/upload your moderation letter, the word document/i)).toBeInTheDocument()
+    expect(await screen.findByText(/upload your moderation letter \(word\)/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /publish papers/i })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /publish to the director/i })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /invigilators/i }))
-    expect(await screen.findByText(/the director hasn't shared an exam draft yet/i)).toBeInTheDocument()
+    expect(await screen.findByText(/waiting for the director's exam draft/i)).toBeInTheDocument()
   })
 })
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export function AuthShell({ title, subtitle, children, hero = false }: { title: string; subtitle?: ReactNode; children: ReactNode; hero?: boolean }) {
   return (
@@ -12,6 +13,8 @@ export function AuthShell({ title, subtitle, children, hero = false }: { title: 
       )}
 
       <section className="relative flex min-h-dvh items-center justify-center px-5 py-10 sm:px-10 lg:px-16 xl:px-24">
+        {/* The theme button on every sign-in page too, as in every portal's header. */}
+        <ThemeToggle className="absolute right-4 top-4 text-muted hover:bg-card hover:text-ink" />
         <div className="auth-card-in w-full max-w-xl">
           <div className="mb-8">
             <h1 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">{title}</h1>
